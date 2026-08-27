@@ -1,12 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { QrCode, ArrowRight } from "lucide-react";
+import { ArrowRight, User } from "lucide-react";
 import { loadSavedMatchState, saveMatchStateLocally, sendGameEvent } from "@/lib/supabase";
 import { MatchState } from "@/types/game";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 function JoinForm() {
@@ -36,15 +36,16 @@ function JoinForm() {
     setErrorMsg("");
 
     if (!playerName.trim()) {
-      setErrorMsg("Vui lòng nhập họ và tên của bạn!");
+      setErrorMsg("Vui long nhap ho va ten cua ban!");
       return;
     }
 
     const targetPlayer = matchState.players.find((p) => p.slot_number === selectedSlot);
-    const validPin = targetPlayer?.pin_code || `${selectedSlot}${selectedSlot}${selectedSlot}${selectedSlot}`;
+    const validPin = (targetPlayer?.pin_code || `${selectedSlot}${selectedSlot}${selectedSlot}${selectedSlot}`).toUpperCase().trim();
+    const enteredPin = pinCode.toUpperCase().trim();
 
-    if (pinCode.trim() !== validPin && pinCode.trim() !== "1234" && pinCode.trim() !== "") {
-      setErrorMsg(`Mã bí mật của Thí sinh ${selectedSlot} không đúng! Vui lòng liên hệ MC/Admin.`);
+    if (enteredPin !== validPin && enteredPin !== "1234" && enteredPin !== "") {
+      setErrorMsg(`Ma bao mat cua Thi sinh ${selectedSlot} khong dung! Vui long lien he MC.`);
       return;
     }
 
@@ -74,22 +75,24 @@ function JoinForm() {
   };
 
   return (
-    <Card className="w-full max-w-md border-zinc-800 bg-zinc-900/60 shadow-2xl">
+    <Card className="w-full max-w-md border-2 border-blue-900/80 bg-[#0b1329] shadow-2xl">
       <CardHeader className="text-center pb-4">
-        <div className="w-11 h-11 rounded-xl bg-zinc-800 border border-zinc-700 mx-auto flex items-center justify-center text-zinc-100 mb-2">
-          <QrCode className="w-6 h-6 text-amber-400" />
+        <div className="w-12 h-12 rounded-xl bg-blue-600 mx-auto flex items-center justify-center text-white mb-2 shadow-md">
+          <User className="w-6 h-6" />
         </div>
-        <CardTitle className="text-xl">Kết Nối Máy Thí Sinh</CardTitle>
-        <CardDescription className="text-xs text-zinc-400">
-          Nhập mã bí mật do Admin cấp và đặt tên hiển thị của bạn
-        </CardDescription>
+        <CardTitle className="text-xl font-black text-white uppercase">
+          KET NOI MAY THI SINH
+        </CardTitle>
+        <p className="text-xs text-slate-400 font-medium">
+          Nhap ma bao mat va dat ten thi dau cua ban
+        </p>
       </CardHeader>
 
       <CardContent>
         <form onSubmit={handleJoin} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
-              Vị Trí Máy Thi Đấu:
+            <label className="text-xs font-bold text-slate-300 block mb-1.5 uppercase">
+              CHON VI TRI MAY:
             </label>
             <div className="grid grid-cols-4 gap-2">
               {[1, 2, 3, 4].map((slot) => (
@@ -97,85 +100,79 @@ function JoinForm() {
                   key={slot}
                   type="button"
                   onClick={() => setSelectedSlot(slot)}
-                  className={`h-11 rounded-lg font-bold text-sm transition-all border ${
+                  className={`h-11 rounded-xl font-black text-sm transition-all border-2 ${
                     selectedSlot === slot
-                      ? "bg-zinc-100 border-zinc-100 text-zinc-950 shadow"
-                      : "bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                      ? "bg-blue-600 border-blue-400 text-white shadow"
+                      : "bg-[#060a14] border-blue-950 text-slate-400 hover:border-blue-800"
                   }`}
                 >
-                  Vị trí {slot}
+                  MAY {slot}
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-zinc-400 block mb-1">
-              Mã Bí Mật Do MC Cấp:
+            <label className="text-xs font-bold text-slate-300 block mb-1 uppercase">
+              MA BAO MAT (CHU & SO):
             </label>
             <input
               type="text"
               value={pinCode}
-              onChange={(e) => setPinCode(e.target.value)}
-              placeholder="Nhập mã PIN 4 số..."
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-100 font-mono placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+              onChange={(e) => setPinCode(e.target.value.toUpperCase())}
+              placeholder="Nhap ma bao mat MC cap..."
+              className="w-full bg-[#060a14] border border-blue-900 rounded-xl px-4 py-2.5 text-sm text-white font-mono uppercase placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-zinc-400 block mb-1">
-              Họ Và Tên Của Bạn:
+            <label className="text-xs font-bold text-slate-300 block mb-1 uppercase">
+              HO VA TEN THI SINH:
             </label>
             <input
               type="text"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Ví dụ: Nguyễn Văn A"
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-100 font-semibold placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+              placeholder="Vi du: Nguyen Van A"
+              className="w-full bg-[#060a14] border border-blue-900 rounded-xl px-4 py-2.5 text-sm text-white font-bold placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-zinc-400 block mb-1">
-              Trường / Đơn Vị Đại Diện:
+            <label className="text-xs font-bold text-slate-300 block mb-1 uppercase">
+              TRUONG / DON VI DAI DIEN:
             </label>
             <input
               type="text"
               value={schoolName}
               onChange={(e) => setSchoolName(e.target.value)}
-              placeholder="Ví dụ: THPT Chuyên..."
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-xs text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+              placeholder="Vi du: THPT Chuyen..."
+              className="w-full bg-[#060a14] border border-blue-900 rounded-xl px-4 py-2.5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
             />
           </div>
 
           {errorMsg && (
-            <p className="text-xs font-medium text-red-400 bg-red-950/30 p-2.5 rounded border border-red-800/40">
+            <p className="text-xs font-bold text-red-400 bg-red-950/40 p-3 rounded-xl border border-red-800/60 text-center">
               {errorMsg}
             </p>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-bold text-xs h-11 gap-1.5"
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs h-12 rounded-xl uppercase tracking-wider"
           >
-            Vào Phòng Thi Đấu <ArrowRight className="w-4 h-4" />
+            Vao Phong Thi Dau <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
         </form>
       </CardContent>
-
-      <CardFooter className="border-t border-zinc-800/80 pt-4 flex justify-center text-xs text-zinc-500">
-        <Link href="/" className="hover:text-zinc-300">
-          Về Trang Chủ ➔
-        </Link>
-      </CardFooter>
     </Card>
   );
 }
 
 export default function JoinPage() {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4 font-sans">
-      <Suspense fallback={<div className="text-xs text-zinc-500">Đang tải...</div>}>
+    <div className="min-h-screen bg-[#060a14] text-white flex items-center justify-center p-4 font-sans">
+      <Suspense fallback={<div className="text-xs text-slate-500">Dang tai...</div>}>
         <JoinForm />
       </Suspense>
     </div>
