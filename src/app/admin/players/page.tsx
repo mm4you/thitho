@@ -9,8 +9,9 @@ import {
   subscribeToGameChannel,
   getAdminPassword,
   setAdminPassword,
+  syncMatchStateToCloud,
 } from "@/lib/supabase";
-import { MatchState, RealtimeEventPayload } from "@/types/game";
+import { MatchState, RealtimeEventPayload, PlayerState } from "@/types/game";
 import {
   Users,
   KeyRound,
@@ -23,6 +24,7 @@ import {
   RotateCcw,
   Sliders,
   ExternalLink,
+  UserX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -67,6 +69,8 @@ export default function AdminPlayersManagementPage() {
               : p
           ),
         }));
+      } else if (event.type === "SYNC_STATE") {
+        setMatchState(event.state);
       }
     });
     return () => unsubscribe();
@@ -83,7 +87,8 @@ export default function AdminPlayersManagementPage() {
     setAdminPassword(tempAdminPass.trim());
     setCurrentAdminPass(tempAdminPass.trim());
     setIsEditingAdminPass(false);
-    setAdminPassSavedAlert(true); sendGameEvent({ type: "REVOKE_ADMIN_SESSIONS", new_code_timestamp: Date.now() });
+    setAdminPassSavedAlert(true);
+    sendGameEvent({ type: "REVOKE_ADMIN_SESSIONS", new_code_timestamp: Date.now() });
     setTimeout(() => setAdminPassSavedAlert(false), 3000);
   };
 
@@ -101,7 +106,7 @@ export default function AdminPlayersManagementPage() {
 
     const newState = { ...matchState, players: updatedPlayers };
     setMatchState(newState);
-    saveMatchStateLocally(newState);
+    syncMatchStateToCloud(newState);
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
@@ -112,13 +117,40 @@ export default function AdminPlayersManagementPage() {
     setTimeout(() => setCopiedSlot(null), 2000);
   };
 
-  const handleResetScores = () => {
-    if (confirm("Bạn có chắc chắn muốn đặt lại điểm số của 4 thí sinh về 0?")) {
+  const handleResetScoresOnly = () => {
+    if (confirm("Bạn có chắc chắn muốn đặt lại điểm số của 4 thí sinh về 0? (Tên và trường giữ nguyên)")) {
       const updatedPlayers = matchState.players.map((p) => ({ ...p, score: 0 }));
       const newState = { ...matchState, players: updatedPlayers };
       setMatchState(newState);
-      saveMatchStateLocally(newState);
+      syncMatchStateToCloud(newState);
       sendGameEvent({ type: "SYNC_STATE", state: newState });
+    }
+  };
+
+  // Reset Toan Bo 4 Thi Sinh Cho Luot Thi Moi
+  const handleResetAllPlayers = () => {
+    if (confirm("BẮT ĐẦU LƯỢT THI MỚI: Bạn có chắc chắn muốn xóa tên 4 thí sinh cũ, đưa điểm về 0 và cấp 4 mã PIN mới?")) {
+      const defaultNames = ["Thí sinh 1", "Thí sinh 2", "Thí sinh 3", "Thí sinh 4"];
+      const updatedPlayers: PlayerState[] = matchState.players.map((p, idx) => ({
+        slot_number: p.slot_number,
+        name: defaultNames[idx],
+        school_name: "Chưa kết nối",
+        score: 0,
+        pin_code: generateAlphanumericCode(5),
+      }));
+
+      const newState: MatchState = {
+        ...matchState,
+        players: updatedPlayers,
+        current_responses: {},
+        buzzer_winner_slot: null,
+        buzzer_winner_time_ms: null,
+      };
+
+      setMatchState(newState);
+      syncMatchStateToCloud(newState);
+      sendGameEvent({ type: "SYNC_STATE", state: newState });
+      alert("Đã reset 4 thí sinh và cấp 4 mã PIN mới cho lượt thi mới thành công!");
     }
   };
 
@@ -245,7 +277,7 @@ export default function AdminPlayersManagementPage() {
         )}
       </div>
 
-      {/* KHU VỰC 2: MÃ 4 THÍ SINH */}
+      {/* KHU VỰC 2: MÃ 4 THÍ SINH & RESET LƯỢT THI MỚI */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -253,21 +285,33 @@ export default function AdminPlayersManagementPage() {
             <p className="text-xs text-slate-400 font-medium">Gửi link kèm mã cho 4 thí sinh đăng nhập trên laptop</p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={handleResetScores}
-              className="border-slate-800 text-slate-400 hover:text-red-400 text-xs h-8 cursor-pointer"
+              onClick={handleResetScoresOnly}
+              className="border-slate-800 text-slate-400 hover:text-amber-400 text-xs h-9 cursor-pointer"
+              title="Chỉ đưa điểm 4 thí sinh về 0, giữ nguyên tên thí sinh"
             >
-              <RotateCcw className="w-3 h-3 mr-1" /> Reset Điểm
+              <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset Điểm
             </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetAllPlayers}
+              className="border-red-800/60 bg-red-950/20 text-red-400 hover:bg-red-900/30 text-xs h-9 px-3 gap-1 cursor-pointer font-bold"
+              title="Xóa tên thí sinh cũ, đưa điểm về 0 và cấp 4 mã PIN mới cho lượt thi mới"
+            >
+              <UserX className="w-3.5 h-3.5" /> Reset 4 Thí Sinh (Lượt Thi Mới)
+            </Button>
+
             <Button
               size="sm"
               onClick={handleGenerateRandomPlayerCodes}
-              className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-8 px-3 gap-1.5 cursor-pointer shadow"
+              className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-9 px-3 gap-1.5 cursor-pointer shadow"
             >
-              <RefreshCw className="w-3 h-3" /> Sinh Mã 4 Máy
+              <RefreshCw className="w-3.5 h-3.5" /> Sinh Mã Mới 4 Máy
             </Button>
           </div>
         </div>
