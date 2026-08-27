@@ -1,0 +1,52 @@
+====================================================================
+OLYMQUIZ - FILE ĐỀ THI MẪU CHUẨN 4 VÒNG THI (OLYMPIA ARENA)
+Hướng dẫn:
+- Giữ nguyên các tiêu đề [VÒNG 1: ...], [VÒNG 2: ...], [VÒNG 3: ...], [VÒNG 4: ...]
+- Hỗ trợ cả 2 dạng: Trắc nghiệm A/B/C/D hoặc Cú pháp 1 dòng (Câu hỏi | Đáp án | Giây | Điểm)
+====================================================================
+
+[VÒNG 1: KHỞI ĐỘNG]
+Câu 1: Thủ đô của nước CHXHCN Việt Nam là thành phố nào?
+A. Hà Nội
+B. Đà Nẵng
+C. TP. Hồ Chí Minh
+D. Hải Phòng
+Đáp án: A
+Thời gian: 15
+Điểm: 10
+
+Câu 2: Kim loại nào có tính dẫn điện tốt nhất trong các kim loại sau?
+A. Vàng
+B. Bạc
+C. Đồng
+D. Nhôm
+Đáp án: B
+Thời gian: 15
+Điểm: 10
+
+Câu 3: Đơn vị đo cường độ dòng điện trong hệ đo lường quốc tế SI là gì?
+A. Vôn (V)
+B. Oát (W)
+C. Ampe (A)
+D. Ôm (Ω)
+Đáp án: C
+Thời gian: 15
+Điểm: 10
+
+[VÒNG 2: VƯỢT CHƯỚNG NGẠI VẬT]
+Hàng ngang số 1: Quốc gia nào có diện tích lớn nhất thế giới? | NGA | 15 | 10
+Hàng ngang số 2: Đại dương nào có diện tích lớn nhất hành tinh? | THÁI BÌNH DƯƠNG | 15 | 10
+Hàng ngang số 3: Nguyên tố hóa học nào có ký hiệu là Fe? | SẮT | 15 | 10
+Hàng ngang số 4: Hành tinh nào có khối lượng lớn nhất trong Hệ Mặt Trời? | SAO MỘC | 15 | 10
+Từ khóa chướng ngại vật: ĐỊA LÝ VÀ VŨ TRỤ | ĐỊA LÝ VÀ VŨ TRỤ | 15 | 40
+
+[VÒNG 3: TĂNG TỐC]
+Câu 1: Sắp xếp các chữ cái sau thành từ có nghĩa: O L Y M P I A | OLYMPIA | 10 | 40
+Câu 2: Hình ảnh gợi nhớ đến chiến dịch lịch sử lừng lẫy năm 1954? | ĐIỆN BIÊN PHỦ | 20 | 40
+Câu 3: Tìm số tiếp theo trong dãy số: 2, 4, 8, 16, ... | 32 | 30 | 40
+Câu 4: Tỉnh nào có diện tích tự nhiên lớn nhất Việt Nam hiện nay? | NGHỆ AN | 40 | 40
+
+[VÒNG 4: VỀ ĐÍCH]
+Câu 1: Nhà thơ nào trong văn học cổ điển được mệnh danh là Thi Tiên? | LÝ BẠCH | 20 | 20
+Câu 2: Ai là người đầu tiên bay vào không gian vũ trụ vào năm 1961? | YURI GAGARIN | 30 | 30
+Câu 3: Chiến thắng Bạch Đằng đánh tan quân Nam Hán năm 938 do ai chỉ huy? | NGÔ QUYỀN | 20 | 20
