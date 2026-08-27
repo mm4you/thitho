@@ -19,16 +19,15 @@ import {
   RotateCcw,
   ChevronRight,
   ChevronLeft,
-  Sparkles,
   Sliders,
   ExternalLink,
   Settings,
   Bell,
-  Clock,
-  Trophy,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -73,9 +72,10 @@ export default function AdminLivePage() {
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
 
+  // BƯỚC 1: BẮT ĐẦU ĐẾM NGƯỢC
   const handleStartTimer = () => {
     const timeLimit = currentQuestion?.time_limit || 15;
-    const newState = {
+    const newState: MatchState = {
       ...matchState,
       is_timer_running: true,
       time_left: timeLimit,
@@ -96,18 +96,21 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "PAUSE_TIMER" });
   };
 
+  // BƯỚC 2: KHÓA BÀI (HẾT GIỜ)
   const handleLockAnswers = () => {
     const newState = { ...matchState, is_locked: true, is_timer_running: false };
     setMatchState(newState);
     sendGameEvent({ type: "LOCK_ANSWERS" });
   };
 
+  // BƯỚC 3: MỞ ĐÁP ÁN 4 THÍ SINH
   const handleRevealAnswers = () => {
     const newState = { ...matchState, is_revealed: true };
     setMatchState(newState);
     sendGameEvent({ type: "REVEAL_ANSWERS" });
   };
 
+  // BƯỚC 4: CHẤM ĐIỂM TỰ ĐỘNG THEO THỜI GIAN & ĐÁP ÁN
   const handleAutoGrade = () => {
     if (!currentQuestion) return;
     const isTangToc = currentRound.round_type === "tang_toc";
@@ -117,7 +120,11 @@ export default function AdminLivePage() {
     const correctSubmissions = submissions
       .filter((sub) => {
         const text = sub.answer_text.toLowerCase().trim();
-        return text.includes(correctAnswers) || correctAnswers.includes(text) || (currentQuestion.options && sub.answer_text.startsWith(currentQuestion.correct_answer[0]));
+        return (
+          text.includes(correctAnswers) ||
+          correctAnswers.includes(text) ||
+          (currentQuestion.options && sub.answer_text.startsWith(currentQuestion.correct_answer[0]))
+        );
       })
       .sort((a, b) => a.response_time_ms - b.response_time_ms);
 
@@ -173,6 +180,7 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "GRADE_ANSWERS", results });
   };
 
+  // CHẤM THỦ CÔNG TỪNG THÍ SINH
   const handleManualGrade = (slot: number, isCorrect: boolean) => {
     const points = isCorrect ? currentQuestion.points_correct : -currentQuestion.points_wrong;
     const results = {
@@ -186,7 +194,11 @@ export default function AdminLivePage() {
     const updatedResponses = {
       ...matchState.current_responses,
       [slot]: {
-        ...(matchState.current_responses[slot] || { slot_number: slot, answer_text: "", response_time_ms: 0 }),
+        ...(matchState.current_responses[slot] || {
+          slot_number: slot,
+          answer_text: "",
+          response_time_ms: 0,
+        }),
         is_correct: isCorrect,
         points_awarded: points,
       },
@@ -201,6 +213,32 @@ export default function AdminLivePage() {
 
     setMatchState(newState);
     sendGameEvent({ type: "GRADE_ANSWERS", results });
+  };
+
+  // BƯỚC 5: CHUYỂN SANG CÂU TIẾP THEO
+  const handleNextQuestion = () => {
+    if (matchState.current_question_index < (currentRound?.questions.length || 1) - 1) {
+      handleChangeQuestion(matchState.current_round_index, matchState.current_question_index + 1);
+    } else if (matchState.current_round_index < matchState.rounds.length - 1) {
+      handleChangeQuestion(matchState.current_round_index + 1, 0);
+    }
+  };
+
+  const handleChangeQuestion = (roundIdx: number, questionIdx: number) => {
+    const newState = {
+      ...matchState,
+      current_round_index: roundIdx,
+      current_question_index: questionIdx,
+      is_timer_running: false,
+      is_locked: false,
+      is_revealed: false,
+      is_scored: false,
+      buzzer_winner_slot: null,
+      buzzer_winner_time_ms: null,
+      current_responses: {},
+    };
+    setMatchState(newState);
+    sendGameEvent({ type: "CHANGE_QUESTION", round_index: roundIdx, question_index: questionIdx });
   };
 
   const handleScoreOverride = (slot: number, delta: number) => {
@@ -220,25 +258,9 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "RESET_BUZZER" });
   };
 
-  const handleChangeQuestion = (roundIdx: number, questionIdx: number) => {
-    const newState = {
-      ...matchState,
-      current_round_index: roundIdx,
-      current_question_index: questionIdx,
-      is_locked: false,
-      is_revealed: false,
-      is_scored: false,
-      buzzer_winner_slot: null,
-      buzzer_winner_time_ms: null,
-      current_responses: {},
-    };
-    setMatchState(newState);
-    sendGameEvent({ type: "CHANGE_QUESTION", round_index: roundIdx, question_index: questionIdx });
-  };
-
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-6 font-sans">
-      {/* Top Bar */}
+      {/* Top Header */}
       <header className="flex flex-wrap items-center justify-between border-b border-zinc-800 pb-4 mb-6 gap-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-100">
@@ -247,10 +269,10 @@ export default function AdminLivePage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-semibold tracking-tight text-zinc-100">
-                Bảng Điều Khiển MC & Ban Giám Khảo
+                Bảng Điều Khiển Trận Đấu MC
               </h1>
               <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px]">
-                Live Realtime
+                Realtime Active
               </Badge>
             </div>
             <p className="text-xs text-zinc-400">{matchState.title}</p>
@@ -265,110 +287,170 @@ export default function AdminLivePage() {
           </Link>
           <Link href="/admin">
             <Button variant="outline" size="sm" className="border-zinc-800 hover:bg-zinc-800 gap-1.5 text-xs text-zinc-300">
-              <Settings className="w-3.5 h-3.5" /> Soạn Đề & Thể Lệ
+              <Settings className="w-3.5 h-3.5" /> Soạn Đề
             </Button>
           </Link>
         </div>
       </header>
 
-      {/* Control Action Toolbar */}
-      <Card className="border-zinc-800 bg-zinc-900/60 mb-6">
-        <CardContent className="p-4 flex flex-wrap items-center justify-between gap-4">
-          {/* Round & Question Select */}
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              value={matchState.current_round_index}
-              onChange={(e) => handleChangeQuestion(Number(e.target.value), 0)}
-              className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs font-semibold text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
-            >
-              {matchState.rounds.map((r, idx) => (
-                <option key={r.id} value={idx}>
-                  {r.title}
-                </option>
-              ))}
-            </select>
+      {/* THANH ĐIỀU KHIỂN THEO 5 BƯỚC LOGIC CỦA MỘT CÂU HỎI */}
+      <Card className="border-zinc-800 bg-zinc-900/70 mb-6">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+            <div className="flex items-center gap-3">
+              <select
+                value={matchState.current_round_index}
+                onChange={(e) => handleChangeQuestion(Number(e.target.value), 0)}
+                className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs font-semibold text-zinc-200"
+              >
+                {matchState.rounds.map((r, idx) => (
+                  <option key={r.id} value={idx}>
+                    {r.title}
+                  </option>
+                ))}
+              </select>
 
-            <div className="flex items-center gap-1 border border-zinc-800 rounded-md bg-zinc-950 p-0.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-zinc-400 hover:text-zinc-100"
-                disabled={matchState.current_question_index === 0}
-                onClick={() =>
-                  handleChangeQuestion(matchState.current_round_index, matchState.current_question_index - 1)
-                }
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-xs font-medium px-2 text-zinc-300">
-                Câu {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-zinc-400 hover:text-zinc-100"
-                disabled={matchState.current_question_index >= (currentRound?.questions.length || 1) - 1}
-                onClick={() =>
-                  handleChangeQuestion(matchState.current_round_index, matchState.current_question_index + 1)
-                }
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-1 border border-zinc-800 rounded-md bg-zinc-950 p-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-zinc-400 hover:text-zinc-100"
+                  disabled={matchState.current_question_index === 0}
+                  onClick={() =>
+                    handleChangeQuestion(matchState.current_round_index, matchState.current_question_index - 1)
+                  }
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-xs font-medium px-2 text-zinc-300">
+                  Câu {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-zinc-400 hover:text-zinc-100"
+                  disabled={matchState.current_question_index >= (currentRound?.questions.length || 1) - 1}
+                  onClick={() =>
+                    handleChangeQuestion(matchState.current_round_index, matchState.current_question_index + 1)
+                  }
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Trạng thái hiện tại */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-400">Trạng thái câu:</span>
+              {matchState.is_scored ? (
+                <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Đã Chấm Điểm</Badge>
+              ) : matchState.is_revealed ? (
+                <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30">Đã Mở Đáp Án</Badge>
+              ) : matchState.is_locked ? (
+                <Badge className="bg-red-500/20 text-red-400 border border-red-500/30">Đã Khóa Máy</Badge>
+              ) : matchState.is_timer_running ? (
+                <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse">Đang Đếm Ngược</Badge>
+              ) : (
+                <Badge variant="outline" className="border-zinc-700 text-zinc-400">Sẵn Sàng</Badge>
+              )}
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* 5 NÚT THAO TÁC THEO ĐÚNG TIẾN TRÌNH LUẬT CHƠI */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+            {/* Bước 1: Bắt đầu */}
             <Button
               onClick={handleStartTimer}
-              className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold text-xs gap-1.5 h-8"
+              className={`h-11 font-bold text-xs gap-1.5 flex flex-col items-center justify-center ${
+                !matchState.is_timer_running && !matchState.is_locked
+                  ? "bg-zinc-100 text-zinc-950 hover:bg-zinc-200 ring-2 ring-zinc-400"
+                  : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+              }`}
             >
-              <Play className="w-3.5 h-3.5 fill-current" /> Bắt Đầu ({currentQuestion?.time_limit}s)
+              <div className="flex items-center gap-1.5">
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>1. BẮT ĐẦU ({currentQuestion?.time_limit}S)</span>
+              </div>
             </Button>
+
+            {/* Bước 2: Khóa máy */}
             <Button
               variant="secondary"
-              onClick={handlePauseTimer}
-              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs h-8 gap-1"
-            >
-              <Pause className="w-3.5 h-3.5" /> Dừng
-            </Button>
-            <Button
-              variant="destructive"
               onClick={handleLockAnswers}
-              className="text-xs h-8 gap-1.5"
+              disabled={matchState.is_locked}
+              className={`h-11 font-bold text-xs gap-1.5 flex flex-col items-center justify-center ${
+                matchState.is_timer_running && !matchState.is_locked
+                  ? "bg-red-600 text-white hover:bg-red-500 ring-2 ring-red-400"
+                  : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+              }`}
             >
-              <Lock className="w-3.5 h-3.5" /> Khóa Máy
+              <div className="flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5" />
+                <span>2. KHÓA BÀI</span>
+              </div>
             </Button>
+
+            {/* Bước 3: Mở đáp án */}
             <Button
               variant="outline"
               onClick={handleRevealAnswers}
-              className="border-zinc-700 bg-zinc-950 text-zinc-200 hover:bg-zinc-800 text-xs h-8 gap-1.5"
+              disabled={matchState.is_revealed}
+              className={`h-11 font-bold text-xs gap-1.5 flex flex-col items-center justify-center ${
+                matchState.is_locked && !matchState.is_revealed
+                  ? "bg-amber-500/20 border-amber-500 text-amber-300 ring-2 ring-amber-400 hover:bg-amber-500/30"
+                  : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+              }`}
             >
-              <Eye className="w-3.5 h-3.5 text-amber-400" /> Mở Đáp Án
+              <div className="flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5" />
+                <span>3. MỞ ĐÁP ÁN</span>
+              </div>
             </Button>
+
+            {/* Bước 4: Chấm điểm */}
             <Button
               onClick={handleAutoGrade}
-              className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold h-8 gap-1.5"
+              disabled={matchState.is_scored}
+              className={`h-11 font-bold text-xs gap-1.5 flex flex-col items-center justify-center ${
+                matchState.is_revealed && !matchState.is_scored
+                  ? "bg-blue-600 text-white hover:bg-blue-500 ring-2 ring-blue-400"
+                  : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+              }`}
             >
-              <CheckCircle2 className="w-3.5 h-3.5" /> Chấm Tự Động
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>4. CHẤM ĐIỂM</span>
+              </div>
+            </Button>
+
+            {/* Bước 5: Câu tiếp theo */}
+            <Button
+              onClick={handleNextQuestion}
+              className={`h-11 font-bold text-xs gap-1.5 flex flex-col items-center justify-center ${
+                matchState.is_scored
+                  ? "bg-emerald-600 text-white hover:bg-emerald-500 ring-2 ring-emerald-400"
+                  : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <span>5. CÂU TIẾP ➔</span>
+              </div>
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Main Grid: Current Question Preview & Buzzer Box */}
+      {/* Main Grid: Câu hỏi & Chuông */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <Card className="lg:col-span-2 border-zinc-800 bg-zinc-900/40">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-300 uppercase text-[10px]">
-                  {currentQuestion?.question_type}
-                </Badge>
-                <span className="text-xs text-zinc-500">
-                  Thời gian: {currentQuestion?.time_limit}s • Đúng: +{currentQuestion?.points_correct}đ | Sai: -{currentQuestion?.points_wrong}đ
-                </span>
-              </div>
+              <Badge variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-300 uppercase text-[10px]">
+                {currentQuestion?.question_type}
+              </Badge>
+              <span className="text-xs text-zinc-500">
+                Thời gian: {currentQuestion?.time_limit}s • Đúng: +{currentQuestion?.points_correct}đ | Sai: -{currentQuestion?.points_wrong}đ
+              </span>
             </div>
             <CardTitle className="text-base font-semibold text-zinc-100 pt-2">
               {currentQuestion?.question_text}
@@ -377,7 +459,7 @@ export default function AdminLivePage() {
           <CardContent>
             <div className="rounded-lg bg-zinc-950 border border-zinc-800 p-3.5">
               <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider block mb-1">
-                Đáp Án Chuẩn Của Giám Khảo:
+                Đáp Án Chuẩn Giám Khảo:
               </span>
               <p className="text-sm font-bold text-zinc-100">{currentQuestion?.correct_answer}</p>
               {currentQuestion?.explanation && (
@@ -425,10 +507,10 @@ export default function AdminLivePage() {
         </Card>
       </div>
 
-      {/* 4 Contestants Live Telemetry Cards */}
+      {/* 4 Contestants Live Telemetry & Manual Override */}
       <div className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-          Giám Sát Trực Tiếp 4 Máy Thí Sinh
+          Giám Sát Trực Tiếp & Duyệt Điểm 4 Thí Sinh
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -461,7 +543,7 @@ export default function AdminLivePage() {
 
                 <CardContent className="p-4 pt-2 space-y-3">
                   <div className="rounded-md bg-zinc-950 border border-zinc-850 p-2.5 min-h-[56px] flex flex-col justify-center">
-                    <span className="text-[10px] text-zinc-500 uppercase block">Đáp án đã gửi:</span>
+                    <span className="text-[10px] text-zinc-500 uppercase block">Đáp án thí sinh:</span>
                     {resp ? (
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-sm text-zinc-100 uppercase line-clamp-1">
@@ -476,7 +558,7 @@ export default function AdminLivePage() {
                     )}
                   </div>
 
-                  {/* Manual Grading */}
+                  {/* Manual Correct / Wrong Buttons */}
                   <div className="grid grid-cols-2 gap-1.5">
                     <Button
                       size="sm"
@@ -484,7 +566,7 @@ export default function AdminLivePage() {
                       onClick={() => handleManualGrade(player.slot_number, true)}
                       className="border-emerald-800/40 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/30 text-xs h-7 gap-1"
                     >
-                      <CheckCircle2 className="w-3 h-3" /> Đúng
+                      <CheckCircle2 className="w-3 h-3" /> Đúng (+{currentQuestion?.points_correct}đ)
                     </Button>
                     <Button
                       size="sm"
@@ -492,13 +574,13 @@ export default function AdminLivePage() {
                       onClick={() => handleManualGrade(player.slot_number, false)}
                       className="border-red-800/40 bg-red-950/20 text-red-400 hover:bg-red-900/30 text-xs h-7 gap-1"
                     >
-                      <XCircle className="w-3 h-3" /> Sai
+                      <XCircle className="w-3 h-3" /> Sai (-{currentQuestion?.points_wrong}đ)
                     </Button>
                   </div>
 
-                  {/* Score Adjustment */}
+                  {/* Manual Score Adjustment */}
                   <div className="flex items-center justify-between pt-2 border-t border-zinc-800/60 text-xs text-zinc-500">
-                    <span>Chỉnh điểm:</span>
+                    <span>Sửa điểm:</span>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleScoreOverride(player.slot_number, 10)}
