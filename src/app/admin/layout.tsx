@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { SUPER_ADMIN_EMAIL } from "@/lib/supabase";
+import { SUPER_ADMIN_EMAIL, subscribeToGameChannel } from "@/lib/supabase";
+import { RealtimeEventPayload } from "@/types/game";
 
 export default function AdminLayout({
   children,
@@ -25,8 +26,6 @@ export default function AdminLayout({
         return;
       }
 
-      // Neu la Ban Giam Khao va co gang vao trang quan ly ma toi cao (/admin, /admin/players)
-      // thi tu dong chuyen ve trang /admin/live
       const isSuperAdmin = email === SUPER_ADMIN_EMAIL || token.startsWith("SUPER_ADMIN_");
       if (!isSuperAdmin && (pathname === "/admin" || pathname === "/admin/players")) {
         router.push("/admin/live");
@@ -36,6 +35,28 @@ export default function AdminLayout({
       setIsAuthorized(true);
     }
   }, [router, pathname]);
+
+  // Tu dong dang xuat va da Ban Giam Khao cu ra ngoai neu Quan Tri Vien doi ma moi
+  useEffect(() => {
+    const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
+      if (event.type === "REVOKE_ADMIN_SESSIONS") {
+        if (typeof window !== "undefined") {
+          const email = localStorage.getItem("admin_email");
+          const token = localStorage.getItem("admin_auth_token");
+          const isSuperAdmin = email === SUPER_ADMIN_EMAIL || token?.startsWith("SUPER_ADMIN_");
+
+          // Neu khong phai Super Admin (tuc la Ban Giam Khao dung ma cu), lap tuc da ra trang login
+          if (!isSuperAdmin) {
+            localStorage.removeItem("admin_auth_token");
+            alert("Quản trị viên đã đổi mã Giám Khảo mới. Phiên đăng nhập cũ đã hết hạn!");
+            router.push("/login");
+          }
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   if (isAuthorized === null) {
     return (

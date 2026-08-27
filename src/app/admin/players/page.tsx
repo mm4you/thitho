@@ -83,7 +83,7 @@ export default function AdminPlayersManagementPage() {
     setAdminPassword(tempAdminPass.trim());
     setCurrentAdminPass(tempAdminPass.trim());
     setIsEditingAdminPass(false);
-    setAdminPassSavedAlert(true);
+    setAdminPassSavedAlert(true); sendGameEvent({ type: "REVOKE_ADMIN_SESSIONS", new_code_timestamp: Date.now() });
     setTimeout(() => setAdminPassSavedAlert(false), 3000);
   };
 
