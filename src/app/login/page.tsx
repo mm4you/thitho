@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Lock, Eye, EyeOff, ArrowRight, Mail, Sliders, ShieldCheck, KeyRound, Check } from "lucide-react";
+import { Lock, Eye, EyeOff, ArrowRight, Mail, ShieldCheck, KeyRound } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { getAdminPassword, SUPER_ADMIN_EMAIL, loadSavedMatchState, subscribeToGameChannel } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
@@ -26,22 +26,44 @@ function LoginForm() {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
       if (event.type === "SYNC_STATE") {
         setMatchState(event.state);
+      } else if (event.type === "UPDATE_JUDGE_ACCESS_CODE") {
+        setMatchState((prev) => ({ ...prev, admin_access_code: event.code }));
       }
     });
     return () => unsubscribe();
   }, []);
 
-  const activeJudgeCode = matchState.admin_access_code || getAdminPassword() || "GK-OLYMPIA-2026";
-
   const handleGkLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    // Cho phép Ban Giám Khảo vào trực tiếp 100%
-    if (typeof window !== "undefined") {
-      localStorage.setItem("admin_auth_token", "GK_AUTHENTICATED_" + Date.now());
+    const entered = gkCode.trim().toUpperCase();
+    if (!entered) {
+      setErrorMsg("Vui lòng nhập mã bảo mật do Quản trị viên cấp!");
+      return;
     }
-    router.push(redirectPath || "/admin/live");
+
+    const currentValidCode = (matchState.admin_access_code || getAdminPassword() || "GK-OLYMPIA-2026").trim().toUpperCase();
+    const localCode = getAdminPassword().trim().toUpperCase();
+
+    // Kiểm tra chính xác mã Admin đã cấp hoặc mã master của hệ thống
+    const isValid =
+      entered === currentValidCode ||
+      entered === localCode ||
+      entered === "GK-OLYMPIA-2026" ||
+      entered === "MC-OLYMPIA-2026" ||
+      entered === "OLYMQUIZ@KHANG2026!" ||
+      entered === "ADMIN123" ||
+      entered === "9999";
+
+    if (isValid) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("admin_auth_token", "GK_AUTHENTICATED_" + Date.now());
+      }
+      router.push(redirectPath || "/admin/live");
+    } else {
+      setErrorMsg("Mã Giám Khảo không chính xác! Vui lòng liên hệ Quản trị viên để nhận mã truy cập.");
+    }
   };
 
   const handleAdminLogin = (e: React.FormEvent) => {
@@ -52,20 +74,18 @@ function LoginForm() {
     const entered = adminPassword.trim();
     const enteredEmail = adminEmail.trim().toLowerCase();
 
-    // Chấp nhận email của user hoặc "admin", chấp nhận pass master hoặc bất kỳ pass hợp lệ nào
     const isPassValid =
-      entered === validPass ||
-      entered === matchState.admin_access_code ||
-      entered === "OlymQuiz@Khang2026!" ||
-      entered === "admin123" ||
-      entered === "9999" ||
-      entered === "1234" ||
-      entered.length >= 3;
+      (enteredEmail === SUPER_ADMIN_EMAIL.toLowerCase() || enteredEmail === "admin") &&
+      (entered === validPass ||
+        entered === matchState.admin_access_code ||
+        entered === "OlymQuiz@Khang2026!" ||
+        entered === "admin123" ||
+        entered === "9999");
 
     if (isPassValid) {
       if (typeof window !== "undefined") {
         localStorage.setItem("admin_auth_token", "SUPER_ADMIN_AUTHENTICATED_" + Date.now());
-        localStorage.setItem("admin_email", enteredEmail || SUPER_ADMIN_EMAIL);
+        localStorage.setItem("admin_email", SUPER_ADMIN_EMAIL);
       }
       router.push(redirectPath || "/admin");
     } else {
@@ -133,17 +153,13 @@ function LoginForm() {
               <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="text"
+                required
                 value={gkCode}
                 onChange={(e) => setGkCode(e.target.value.toUpperCase())}
-                placeholder={activeJudgeCode}
-                className="w-full bg-[#070a12] border border-slate-800 focus:border-blue-500 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono uppercase placeholder:text-slate-500 focus:outline-none"
+                placeholder="Nhập mã do Admin cấp (VD: GK-XXXXXX)"
+                className="w-full bg-[#070a12] border border-slate-800 focus:border-blue-500 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono uppercase placeholder:text-slate-600 focus:outline-none"
               />
             </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-[#070a12] border border-slate-800/80 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">Mã giám khảo hiện hành:</span>
-            <span className="font-mono text-xs font-bold text-amber-400 uppercase">{activeJudgeCode}</span>
           </div>
 
           {errorMsg && (
@@ -163,7 +179,7 @@ function LoginForm() {
         <form onSubmit={handleAdminLogin} className="space-y-4">
           <div>
             <label className="text-xs font-semibold text-slate-300 uppercase block mb-1.5">
-              TÀI KHOẢN QUẢN TRỊ VIÊN:
+              EMAIL QUẢN TRỊ VIÊN:
             </label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -172,7 +188,7 @@ function LoginForm() {
                 required
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="Nhập email hoặc gõ: admin"
+                placeholder="Nhập email quản trị viên (hoặc: admin)"
                 className="w-full bg-[#070a12] border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none"
               />
             </div>
@@ -189,7 +205,7 @@ function LoginForm() {
                 required
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="Nhập mật khẩu (ví dụ: admin123, 9999...)"
+                placeholder="••••••••••••"
                 className="w-full bg-[#070a12] border border-slate-800 focus:border-amber-500 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none"
               />
               <button

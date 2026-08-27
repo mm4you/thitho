@@ -62,6 +62,8 @@ export interface MatchState {
 
 export type RealtimeEventPayload =
   | { type: "SYNC_STATE"; state: MatchState }
+  | { type: "REQUEST_SYNC" }
+  | { type: "UPDATE_JUDGE_ACCESS_CODE"; code: string }
   | { type: "TOGGLE_STANDBY"; is_standby: boolean }
   | { type: "START_TIMER"; time_limit: number; start_time: number }
   | { type: "SUBMIT_ANSWER"; slot_number: number; answer_text: string; response_time_ms: number }

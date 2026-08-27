@@ -30,16 +30,35 @@ export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) =>
   channel
     .on("broadcast", { event: "game_action" }, (payload) => {
       if (payload?.payload) {
-        onEvent(payload.payload as RealtimeEventPayload);
+        const ev = payload.payload as RealtimeEventPayload;
+        if (ev.type === "REQUEST_SYNC") {
+          // Tu dong gui lai state hien tai neu co
+          const currentState = loadSavedMatchState();
+          sendGameEvent({ type: "SYNC_STATE", state: currentState });
+        } else {
+          onEvent(ev);
+        }
       }
     })
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        // Yeu cau may Host gui state moi nhat
+        sendGameEvent({ type: "REQUEST_SYNC" });
+      }
+    });
 
   const handleLocal = (e: MessageEvent) => {
     if (e.data) {
-      onEvent(e.data as RealtimeEventPayload);
+      const ev = e.data as RealtimeEventPayload;
+      if (ev.type === "REQUEST_SYNC") {
+        const currentState = loadSavedMatchState();
+        sendGameEvent({ type: "SYNC_STATE", state: currentState });
+      } else {
+        onEvent(ev);
+      }
     }
   };
+
   if (broadcastChannel) {
     broadcastChannel.addEventListener("message", handleLocal);
   }
@@ -72,12 +91,10 @@ export async function sendGameEvent(event: RealtimeEventPayload) {
 const STORAGE_KEY = "olympia_current_match_state";
 const ADMIN_PASS_KEY = "custom_admin_password";
 
-// Dong bo len Cloud Supabase Database
 export async function syncMatchStateToCloud(state: MatchState) {
   saveMatchStateLocally(state);
 
   try {
-    // Broadcast cho tat ca thiet bi dang ket noi
     sendGameEvent({ type: "SYNC_STATE", state });
   } catch (err) {
     console.warn("Loi dong bo cloud:", err);
@@ -89,7 +106,12 @@ export function loadSavedMatchState(): MatchState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // Dam bao luon co admin_access_code
+      if (!parsed.admin_access_code) {
+        parsed.admin_access_code = getAdminPassword() || "GK-OLYMPIA-2026";
+      }
+      return parsed;
     }
   } catch {
     // Fallback
@@ -101,6 +123,9 @@ export function saveMatchStateLocally(state: MatchState) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (state.admin_access_code) {
+      localStorage.setItem(ADMIN_PASS_KEY, state.admin_access_code);
+    }
   } catch {
     // Fallback
   }
@@ -118,7 +143,7 @@ export function getAdminPassword(): string {
 export function setAdminPassword(newPassword: string) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(ADMIN_PASS_KEY, newPassword.trim());
+    localStorage.setItem(ADMIN_PASS_KEY, newPassword.trim().toUpperCase());
   } catch {
     // Fallback
   }
