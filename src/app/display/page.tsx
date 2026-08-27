@@ -1,11 +1,12 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Trophy, Zap, Check, X, Volume2, VolumeX } from "lucide-react";
+import { Trophy, Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home } from "lucide-react";
 
 export default function DisplayPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
@@ -13,6 +14,7 @@ export default function DisplayPage() {
   const [isTimerActive, setIsTimerActive] = useState<boolean>(false);
   const [timeLimit, setTimeLimit] = useState<number>(15);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   const slotThemes = [
     { name: "DO", border: "border-red-500", bg: "bg-red-950/40", badge: "bg-red-600" },
@@ -26,6 +28,25 @@ export default function DisplayPage() {
     setIsMuted(next);
     sound.setMuted(next);
   };
+
+  const toggleFullscreen = () => {
+    if (typeof document === "undefined") return;
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -71,7 +92,6 @@ export default function DisplayPage() {
           current_responses: {},
         }));
       } else if (event.type === "SUBMIT_ANSWER") {
-        // Cap nhat Realtime trang thai nop bai cua thi sinh ngay tren man hinh chieu
         setMatchState((prev) => ({
           ...prev,
           current_responses: {
@@ -185,25 +205,38 @@ export default function DisplayPage() {
         {/* Header */}
         <div className="flex items-center justify-between border-b-2 border-blue-900/60 pb-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/20">
-              <Trophy className="w-8 h-8 text-black" />
+            <Link href="/" className="p-2.5 rounded-xl bg-blue-950/60 border border-blue-900 text-slate-300 hover:text-white hover:bg-blue-900 flex items-center gap-1.5 text-xs font-bold" title="Ve Trang Chu">
+              <Home className="w-4 h-4" />
+              <span>Trang Chu</span>
+            </Link>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <Trophy className="w-7 h-7 text-black" />
             </div>
             <div>
-              <h1 className="text-3xl font-black tracking-wide uppercase text-white">
+              <h1 className="text-2xl font-black tracking-wide uppercase text-white">
                 DAU TRI ARENA
               </h1>
-              <p className="text-sm font-semibold tracking-wider text-blue-300">
+              <p className="text-xs font-semibold tracking-wider text-blue-300">
                 CHUNG KET TRUC TIEP
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={toggleFullscreen}
+              className="px-3.5 py-2 rounded-xl bg-blue-950 border border-blue-800 text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-bold"
+              title="Phong to toan man hinh"
+            >
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              <span>{isFullscreen ? "Thu Nho" : "Toan Man Hinh"}</span>
+            </button>
             <button
               onClick={toggleMute}
-              className="p-2 rounded-xl bg-blue-950 border border-blue-800 text-slate-300 hover:text-white"
+              className="p-2.5 rounded-xl bg-blue-950 border border-blue-800 text-slate-300 hover:text-white"
               title={isMuted ? "Bat am thanh" : "Tat am thanh"}
             >
-              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
             <div className="px-5 py-2 rounded-full bg-blue-900/40 border border-blue-500/30 text-blue-300 font-bold text-sm tracking-wider uppercase">
               {currentRound?.title || "VONG 1: KHOI DONG"}
@@ -275,6 +308,10 @@ export default function DisplayPage() {
       {/* Top Bar */}
       <div className="flex items-center justify-between border-b-2 border-blue-900/60 pb-4">
         <div className="flex items-center gap-3">
+          <Link href="/" className="p-2 rounded-xl bg-blue-950/60 border border-blue-900 text-slate-300 hover:text-white flex items-center gap-1 text-xs font-bold" title="Ve Trang Chu">
+            <Home className="w-4 h-4" />
+            <span>Trang Chu</span>
+          </Link>
           <div className="px-4 py-1.5 rounded-lg bg-blue-600 font-black text-sm uppercase">
             {currentRound?.title}
           </div>
@@ -283,17 +320,25 @@ export default function DisplayPage() {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={toggleFullscreen}
+            className="px-3.5 py-1.5 rounded-xl bg-blue-950 border border-blue-800 text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-bold"
+            title="Phong to toan man hinh"
+          >
+            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+            <span>{isFullscreen ? "Thu Nho" : "Toan Man Hinh"}</span>
+          </button>
           <button
             onClick={toggleMute}
             className="p-2 rounded-xl bg-blue-950 border border-blue-800 text-slate-300 hover:text-white"
             title={isMuted ? "Bat am thanh" : "Tat am thanh"}
           >
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
           {matchState.buzzer_winner_slot && (
-            <div className="px-6 py-2 rounded-xl bg-amber-500 text-black font-black text-base flex items-center gap-2 animate-bounce">
-              <Zap className="w-5 h-5 fill-current" />
+            <div className="px-5 py-1.5 rounded-xl bg-amber-500 text-black font-black text-sm flex items-center gap-2 animate-bounce">
+              <Zap className="w-4 h-4 fill-current" />
               THI SINH {matchState.buzzer_winner_slot} GIANG QUYEN! ({(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s)
             </div>
           )}
@@ -331,7 +376,7 @@ export default function DisplayPage() {
             {currentQuestion?.question_text}
           </h2>
 
-          {/* Multiple choice options */}
+          {/* Options */}
           {currentQuestion?.options && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 text-left">
               {currentQuestion.options.map((opt, i) => (
@@ -349,7 +394,7 @@ export default function DisplayPage() {
             </div>
           )}
 
-          {/* Reveal Correct Answer */}
+          {/* Reveal Answer */}
           {matchState.is_revealed && (
             <div className="p-5 rounded-2xl bg-emerald-950/80 border-2 border-emerald-400 text-center animate-in fade-in">
               <span className="text-xs uppercase font-bold text-emerald-400 block mb-1">

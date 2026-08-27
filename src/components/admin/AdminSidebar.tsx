@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Sliders, Users, HelpCircle, Tv, LogOut, Trophy } from "lucide-react";
+import { Sliders, Users, HelpCircle, Tv, LogOut, Trophy, Home } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export function AdminSidebar() {
@@ -11,18 +11,18 @@ export function AdminSidebar() {
 
   const navItems = [
     {
-      title: "Điều Khiển Trận Đấu",
+      title: "Dieu Khien Tran Dau",
       href: "/admin/live",
       icon: Sliders,
-      badge: "5 Bước",
+      badge: "5 Buoc",
     },
     {
-      title: "Kết Nối 4 Thí Sinh",
+      title: "Ket Noi 4 Thi Sinh",
       href: "/admin/players",
       icon: Users,
     },
     {
-      title: "Ngân Hàng Câu Hỏi",
+      title: "Ngan Hang Cau Hoi",
       href: "/admin/questions",
       icon: HelpCircle,
     },
@@ -36,25 +36,25 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 border-r border-zinc-800 bg-zinc-950 flex flex-col justify-between shrink-0 h-screen sticky top-0 font-sans select-none">
+    <aside className="w-64 border-r border-blue-900/60 bg-[#060a14] flex flex-col justify-between shrink-0 h-screen sticky top-0 font-sans select-none">
       <div>
         {/* Brand Header */}
-        <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+        <div className="p-5 border-b border-blue-900/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700 flex items-center justify-center text-zinc-100">
-              <Trophy className="w-4 h-4 text-amber-400" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-black font-black shadow-md">
+              <Trophy className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold tracking-tight text-zinc-100">Quản Trị MC</h2>
-              <p className="text-[10px] text-zinc-500 font-mono">DASHBOARD</p>
+              <h2 className="text-sm font-black tracking-tight text-white uppercase">QUAN TRI MC</h2>
+              <p className="text-[10px] text-blue-400 font-bold tracking-wider">OLYMPIA ARENA</p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="p-3 space-y-1">
-          <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-            Chức Năng Chính
+        <nav className="p-3 space-y-1.5">
+          <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            CHUC NANG CHINH
           </div>
 
           {navItems.map((item) => {
@@ -64,51 +64,61 @@ export function AdminSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all ${
                   isActive
-                    ? "bg-zinc-800 text-zinc-100 shadow-sm border border-zinc-700"
-                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                    : "text-slate-400 hover:text-white hover:bg-blue-950/40"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Icon className={`w-4 h-4 ${isActive ? "text-zinc-100" : "text-zinc-500"}`} />
+                  <Icon className="w-4 h-4" />
                   <span>{item.title}</span>
                 </div>
                 {item.badge && (
-                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 text-[10px] px-1.5 py-0">
+                  <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/40">
                     {item.badge}
-                  </Badge>
+                  </span>
                 )}
               </Link>
             );
           })}
 
-          <div className="pt-4 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-            Trình Chiếu
+          <div className="pt-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            TRINH CHIEU & DIEU HUONG
           </div>
 
           <Link
             href="/display"
             target="_blank"
-            className="flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 transition-all"
+            className="flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold text-slate-400 hover:text-amber-300 hover:bg-blue-950/40 transition-all"
           >
             <div className="flex items-center gap-2.5">
               <Tv className="w-4 h-4 text-amber-400" />
-              <span>Màn Hình Máy Chiếu</span>
+              <span>Mo Man Hinh May Chieu</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/"
+            className="flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-blue-950/40 transition-all"
+          >
+            <div className="flex items-center gap-2.5">
+              <Home className="w-4 h-4" />
+              <span>Ve Trang Chu</span>
             </div>
           </Link>
         </nav>
       </div>
 
       {/* Logout */}
-      <div className="p-3 border-t border-zinc-800">
+      <div className="p-3 border-t border-blue-900/60">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-red-400 hover:bg-zinc-900 transition-colors"
+          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors"
         >
           <div className="flex items-center gap-2">
             <LogOut className="w-4 h-4" />
-            <span>Đăng Xuất</span>
+            <span>Dang Xuat Quan Tri</span>
           </div>
         </button>
       </div>
