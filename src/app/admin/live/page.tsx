@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   subscribeToGameChannel,
   sendGameEvent,
@@ -10,23 +10,129 @@ import {
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import {
   Play,
-  Lock,
-  Eye,
   CheckCircle2,
-  XCircle,
-  RotateCcw,
   ChevronRight,
   ChevronLeft,
   Tv,
+  RotateCcw,
+  Sparkles,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AdminLivePage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
+  const stateRef = useRef<MatchState>(matchState);
+  stateRef.current = matchState;
 
   useEffect(() => {
     saveMatchStateLocally(matchState);
   }, [matchState]);
+
+  // Ham tu dong cham diem 100% cho 4 thi sinh
+  const executeAutoGrade = (currentState: MatchState) => {
+    const round = currentState.rounds[currentState.current_round_index] || currentState.rounds[0];
+    const question = round?.questions[currentState.current_question_index] || round?.questions[0];
+    if (!question) return;
+
+    const isTangToc = round.round_type === "tang_toc";
+    const correctAnswers = question.correct_answer.toLowerCase().trim();
+
+    const submissions = Object.values(currentState.current_responses);
+    const correctSubmissions = submissions
+      .filter((sub) => {
+        const text = sub.answer_text.toLowerCase().trim();
+        return (
+          text.includes(correctAnswers) ||
+          correctAnswers.includes(text) ||
+          (question.options && sub.answer_text.startsWith(question.correct_answer[0]))
+        );
+      })
+      .sort((a, b) => a.response_time_ms - b.response_time_ms);
+
+    const results: Record<number, { is_correct: boolean; points_awarded: number }> = {};
+    const tangTocPoints = [40, 30, 20, 10];
+
+    currentState.players.forEach((p) => {
+      const resp = currentState.current_responses[p.slot_number];
+      if (!resp) {
+        results[p.slot_number] = { is_correct: false, points_awarded: 0 };
+        return;
+      }
+
+      const rankIndex = correctSubmissions.findIndex((c) => c.slot_number === p.slot_number);
+      const isCorrect = rankIndex !== -1;
+      let points = 0;
+
+      if (isCorrect) {
+        if (isTangToc) {
+          points = tangTocPoints[rankIndex] || 10;
+        } else {
+          points = question.points_correct;
+        }
+      } else {
+        points = -question.points_wrong;
+      }
+
+      results[p.slot_number] = { is_correct: isCorrect, points_awarded: points };
+    });
+
+    const updatedPlayers = currentState.players.map((p) => ({
+      ...p,
+      score: p.score + (results[p.slot_number]?.points_awarded || 0),
+    }));
+
+    const updatedResponses = { ...currentState.current_responses };
+    Object.keys(results).forEach((k) => {
+      const slot = Number(k);
+      if (updatedResponses[slot]) {
+        updatedResponses[slot].is_correct = results[slot].is_correct;
+        updatedResponses[slot].points_awarded = results[slot].points_awarded;
+      }
+    });
+
+    const newState: MatchState = {
+      ...currentState,
+      is_locked: true,
+      is_revealed: true,
+      is_scored: true,
+      is_timer_running: false,
+      players: updatedPlayers,
+      current_responses: updatedResponses,
+    };
+
+    setMatchState(newState);
+    saveMatchStateLocally(newState);
+
+    // Broadcast tu dong mo dap an va cham diem sang man hinh may chieu & may thi sinh
+    sendGameEvent({ type: "LOCK_ANSWERS" });
+    sendGameEvent({ type: "REVEAL_ANSWERS" });
+    sendGameEvent({ type: "GRADE_ANSWERS", results });
+    sendGameEvent({ type: "SYNC_STATE", state: newState });
+  };
+
+  // Tu dong dem nguoc tren may MC va TU DONG CHAM DIEM khi het gio
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (matchState.is_timer_running && matchState.time_left > 0) {
+      interval = setInterval(() => {
+        setMatchState((prev) => {
+          const nextTime = prev.time_left - 1;
+          if (nextTime <= 0) {
+            // HET GIO -> KICH HOAT TU DONG CHAM DIEM 100%
+            setTimeout(() => {
+              executeAutoGrade(stateRef.current);
+            }, 100);
+            return { ...prev, time_left: 0, is_timer_running: false, is_locked: true };
+          }
+          return { ...prev, time_left: nextTime };
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [matchState.is_timer_running, matchState.time_left]);
 
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
@@ -79,7 +185,7 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
-  const handleStartTimer = () => {
+  const handleStartQuestion = () => {
     const timeLimit = currentQuestion?.time_limit || 15;
     const newState: MatchState = {
       ...matchState,
@@ -98,119 +204,8 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
-  const handleLockAnswers = () => {
-    const newState = { ...matchState, is_locked: true, is_timer_running: false };
-    setMatchState(newState);
-    sendGameEvent({ type: "LOCK_ANSWERS" });
-  };
-
-  const handleRevealAnswers = () => {
-    const newState = { ...matchState, is_revealed: true };
-    setMatchState(newState);
-    sendGameEvent({ type: "REVEAL_ANSWERS" });
-  };
-
-  const handleAutoGrade = () => {
-    if (!currentQuestion) return;
-    const isTangToc = currentRound.round_type === "tang_toc";
-    const correctAnswers = currentQuestion.correct_answer.toLowerCase().trim();
-
-    const submissions = Object.values(matchState.current_responses);
-    const correctSubmissions = submissions
-      .filter((sub) => {
-        const text = sub.answer_text.toLowerCase().trim();
-        return (
-          text.includes(correctAnswers) ||
-          correctAnswers.includes(text) ||
-          (currentQuestion.options && sub.answer_text.startsWith(currentQuestion.correct_answer[0]))
-        );
-      })
-      .sort((a, b) => a.response_time_ms - b.response_time_ms);
-
-    const results: Record<number, { is_correct: boolean; points_awarded: number }> = {};
-    const tangTocPoints = [40, 30, 20, 10];
-
-    matchState.players.forEach((p) => {
-      const resp = matchState.current_responses[p.slot_number];
-      if (!resp) {
-        results[p.slot_number] = { is_correct: false, points_awarded: 0 };
-        return;
-      }
-
-      const rankIndex = correctSubmissions.findIndex((c) => c.slot_number === p.slot_number);
-      const isCorrect = rankIndex !== -1;
-      let points = 0;
-
-      if (isCorrect) {
-        if (isTangToc) {
-          points = tangTocPoints[rankIndex] || 10;
-        } else {
-          points = currentQuestion.points_correct;
-        }
-      } else {
-        points = -currentQuestion.points_wrong;
-      }
-
-      results[p.slot_number] = { is_correct: isCorrect, points_awarded: points };
-    });
-
-    const updatedPlayers = matchState.players.map((p) => ({
-      ...p,
-      score: p.score + (results[p.slot_number]?.points_awarded || 0),
-    }));
-
-    const updatedResponses = { ...matchState.current_responses };
-    Object.keys(results).forEach((k) => {
-      const slot = Number(k);
-      if (updatedResponses[slot]) {
-        updatedResponses[slot].is_correct = results[slot].is_correct;
-        updatedResponses[slot].points_awarded = results[slot].points_awarded;
-      }
-    });
-
-    const newState = {
-      ...matchState,
-      is_scored: true,
-      players: updatedPlayers,
-      current_responses: updatedResponses,
-    };
-
-    setMatchState(newState);
-    sendGameEvent({ type: "GRADE_ANSWERS", results });
-  };
-
-  const handleManualGrade = (slot: number, isCorrect: boolean) => {
-    const points = isCorrect ? currentQuestion.points_correct : -currentQuestion.points_wrong;
-    const results = {
-      [slot]: { is_correct: isCorrect, points_awarded: points },
-    };
-
-    const updatedPlayers = matchState.players.map((p) =>
-      p.slot_number === slot ? { ...p, score: p.score + points } : p
-    );
-
-    const updatedResponses = {
-      ...matchState.current_responses,
-      [slot]: {
-        ...(matchState.current_responses[slot] || {
-          slot_number: slot,
-          answer_text: "",
-          response_time_ms: 0,
-        }),
-        is_correct: isCorrect,
-        points_awarded: points,
-      },
-    };
-
-    const newState = {
-      ...matchState,
-      is_scored: true,
-      players: updatedPlayers,
-      current_responses: updatedResponses,
-    };
-
-    setMatchState(newState);
-    sendGameEvent({ type: "GRADE_ANSWERS", results });
+  const handleManualLockAndGradeNow = () => {
+    executeAutoGrade(stateRef.current);
   };
 
   const handleNextQuestion = () => {
@@ -256,23 +251,24 @@ export default function AdminLivePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto font-sans">
+    <div className="space-y-6 max-w-5xl mx-auto font-sans select-none">
       {/* Tiêu đề Bảng MC */}
-      <div className="flex flex-wrap items-center justify-between border-b border-zinc-800 pb-4 gap-4">
+      <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white uppercase">
-            ĐIỀU KHIỂN TRẬN ĐẤU (BAN GIÁM KHẢO)
+          <h1 className="text-xl font-bold tracking-tight text-white uppercase flex items-center gap-2">
+            BẢNG ĐIỀU KHIỂN TRẬN ĐẤU (MC)
           </h1>
-          <p className="text-xs text-slate-400 font-medium">{matchState.title}</p>
+          <p className="text-xs text-slate-400 font-medium">
+            Hệ thống tự động chấm điểm và xếp hạng mili-giây 100% khi hết giờ
+          </p>
         </div>
 
-        {/* Nút Chuyển Màn Hình Chờ / Thi Đấu */}
         <Button
           onClick={handleToggleStandby}
-          className={`font-bold text-xs h-10 px-4 gap-2 transition-all ${
+          className={`font-semibold text-xs h-9 px-4 gap-2 transition-all ${
             matchState.is_standby
-              ? "bg-amber-500 hover:bg-amber-400 text-black font-black shadow-lg shadow-amber-500/20"
-              : "bg-blue-600 hover:bg-blue-500 text-white font-bold"
+              ? "bg-amber-500 hover:bg-amber-400 text-black font-bold shadow-sm"
+              : "bg-blue-600 hover:bg-blue-500 text-white"
           }`}
         >
           <Tv className="w-4 h-4" />
@@ -280,14 +276,14 @@ export default function AdminLivePage() {
         </Button>
       </div>
 
-      {/* 5 BƯỚC ĐIỀU KHIỂN TUẦN TỰ */}
-      <div className="bg-[#0b1329] border-2 border-blue-900/80 rounded-2xl p-5 space-y-4 shadow-xl">
-        <div className="flex items-center justify-between border-b border-blue-900/60 pb-3">
+      {/* KHU VỰC THAO TÁC MC SIÊU TINH GỌN (CHỈ CẦN 2 NÚT) */}
+      <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-6 space-y-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between border-b border-slate-800/80 pb-4 gap-3">
           <div className="flex items-center gap-3">
             <select
               value={matchState.current_round_index}
               onChange={(e) => handleChangeQuestion(Number(e.target.value), 0)}
-              className="bg-[#060a14] border border-blue-800 rounded-lg px-3 py-2 text-xs font-bold text-white focus:outline-none"
+              className="bg-[#070a12] border border-slate-800 rounded-lg px-3 py-2 text-xs font-bold text-white focus:outline-none"
             >
               {matchState.rounds.map((r, idx) => (
                 <option key={r.id} value={idx}>
@@ -296,185 +292,141 @@ export default function AdminLivePage() {
               ))}
             </select>
 
-            <div className="flex items-center gap-1 bg-[#060a14] border border-blue-800 rounded-lg p-0.5">
+            <div className="flex items-center gap-1 bg-[#070a12] border border-slate-800 rounded-lg p-0.5">
               <button
                 disabled={matchState.current_question_index === 0}
                 onClick={() => handleChangeQuestion(matchState.current_round_index, matchState.current_question_index - 1)}
-                className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30"
+                className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-xs font-bold px-2 text-blue-300">
+              <span className="text-xs font-semibold px-2 text-slate-200">
                 Câu {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
               </span>
               <button
                 disabled={matchState.current_question_index >= (currentRound?.questions.length || 1) - 1}
                 onClick={() => handleChangeQuestion(matchState.current_round_index, matchState.current_question_index + 1)}
-                className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30"
+                className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <div className="text-xs font-bold text-slate-300">
-            {matchState.is_scored ? (
-              <span className="px-3 py-1 rounded bg-emerald-600/30 text-emerald-400 border border-emerald-500/40">ĐÃ CHẤM ĐIỂM</span>
-            ) : matchState.is_revealed ? (
-              <span className="px-3 py-1 rounded bg-amber-600/30 text-amber-400 border border-amber-500/40">ĐÃ MỞ ĐÁP ÁN</span>
-            ) : matchState.is_locked ? (
-              <span className="px-3 py-1 rounded bg-red-600/30 text-red-400 border border-red-500/40">ĐÃ HẾT GIỜ / KHÓA BÀI</span>
-            ) : matchState.is_timer_running ? (
-              <span className="px-3 py-1 rounded bg-blue-600 text-white animate-pulse">ĐANG ĐẾM NGƯỢC</span>
+          <div className="flex items-center gap-3">
+            {matchState.is_timer_running ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/60 border border-blue-800 text-blue-400 text-xs font-bold animate-pulse">
+                ĐANG ĐẾM NGƯỢC: {matchState.time_left}s
+              </div>
+            ) : matchState.is_scored ? (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/60 text-emerald-400 text-xs font-bold">
+                <CheckCircle2 className="w-4 h-4" /> ĐÃ TỰ ĐỘNG CHẤM ĐIỂM
+              </div>
             ) : (
-              <span className="px-3 py-1 rounded bg-slate-800 text-slate-300">SẴN SÀNG</span>
+              <span className="text-xs text-slate-500 font-medium">Sẵn sàng bắt đầu</span>
             )}
           </div>
         </div>
 
-        {/* 5 Nút Tiến Trình Lớn */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <button
-            onClick={handleStartTimer}
-            className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
-              !matchState.is_timer_running && !matchState.is_locked
-                ? "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/30 scale-102 ring-2 ring-blue-400 cursor-pointer"
-                : "bg-slate-900 border border-slate-800 text-slate-400"
-            }`}
-          >
-            <span className="text-[10px] opacity-70">BƯỚC 1</span>
-            <span className="flex items-center gap-1"><Play className="w-3.5 h-3.5 fill-current" /> BẮT ĐẦU ({currentQuestion?.time_limit}S)</span>
-          </button>
-
-          <button
-            onClick={handleLockAnswers}
-            disabled={matchState.is_locked}
-            className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
-              matchState.is_timer_running && !matchState.is_locked
-                ? "bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/30 ring-2 ring-red-400 cursor-pointer"
-                : "bg-slate-900 border border-slate-800 text-slate-400"
-            }`}
-          >
-            <span className="text-[10px] opacity-70">BƯỚC 2</span>
-            <span className="flex items-center gap-1"><Lock className="w-3.5 h-3.5" /> KHÓA BÀI</span>
-          </button>
-
-          <button
-            onClick={handleRevealAnswers}
-            disabled={matchState.is_revealed}
-            className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
-              matchState.is_locked && !matchState.is_revealed
-                ? "bg-amber-500 text-black hover:bg-amber-400 shadow-lg shadow-amber-500/30 ring-2 ring-amber-400 cursor-pointer"
-                : "bg-slate-900 border border-slate-800 text-slate-400"
-            }`}
-          >
-            <span className="text-[10px] opacity-70">BƯỚC 3</span>
-            <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> MỞ ĐÁP ÁN</span>
-          </button>
-
-          <button
-            onClick={handleAutoGrade}
-            disabled={matchState.is_scored}
-            className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
-              matchState.is_revealed && !matchState.is_scored
-                ? "bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400 cursor-pointer"
-                : "bg-slate-900 border border-slate-800 text-slate-400"
-            }`}
-          >
-            <span className="text-[10px] opacity-70">BƯỚC 4</span>
-            <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> CHẤM ĐIỂM TỰ ĐỘNG</span>
-          </button>
+        {/* 2 NÚT ĐIỀU KHIỂN CHÍNH */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {!matchState.is_timer_running && !matchState.is_scored ? (
+            <button
+              onClick={handleStartQuestion}
+              className="h-16 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase flex items-center justify-center gap-2 shadow transition-colors cursor-pointer"
+            >
+              <Play className="w-5 h-5 fill-current" />
+              BẮT ĐẦU CÂU HỎI ({currentQuestion?.time_limit || 15} GIÂY)
+            </button>
+          ) : matchState.is_timer_running ? (
+            <button
+              onClick={handleManualLockAndGradeNow}
+              className="h-16 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm uppercase flex items-center justify-center gap-2 shadow transition-colors cursor-pointer"
+            >
+              <Sparkles className="w-5 h-5" />
+              KHÓA & CHẤM ĐIỂM NGAY LẬP TỨC
+            </button>
+          ) : (
+            <button
+              onClick={handleStartQuestion}
+              className="h-16 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-semibold text-xs uppercase flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Chạy Lại Câu Này
+            </button>
+          )}
 
           <button
             onClick={handleNextQuestion}
-            className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
-              matchState.is_scored
-                ? "bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/30 ring-2 ring-indigo-400 cursor-pointer"
-                : "bg-slate-900 border border-slate-800 text-slate-400"
-            }`}
+            className="h-16 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-600 hover:bg-slate-800 text-white font-bold text-sm uppercase flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
-            <span className="text-[10px] opacity-70">BƯỚC 5</span>
-            <span>CÂU TIẾP THEO ➔</span>
+            <span>CHUYỂN SANG CÂU TIẾP THEO</span>
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
 
       {/* Câu Hỏi & Đáp Án Chuẩn */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 bg-[#0b1329] border border-blue-900/60 rounded-2xl p-5 space-y-3">
-          <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
-            <span className="font-bold uppercase text-blue-400">NỘI DUNG CÂU HỎI</span>
-            <span>+{currentQuestion?.points_correct}đ đúng / -{currentQuestion?.points_wrong}đ sai</span>
-          </div>
-          <p className="text-base font-bold text-white leading-relaxed">
-            {currentQuestion?.question_text}
-          </p>
-          <div className="p-3 bg-[#060a14] rounded-xl border border-emerald-500/40">
-            <span className="text-[10px] uppercase font-bold text-emerald-400 block mb-0.5">Đáp án đúng:</span>
-            <span className="text-base font-black text-emerald-300">{currentQuestion?.correct_answer}</span>
-          </div>
+      <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 space-y-3">
+        <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+          <span className="font-bold uppercase text-blue-400">NỘI DUNG CÂU HỎI</span>
+          <span>+{currentQuestion?.points_correct}đ đúng / -{currentQuestion?.points_wrong}đ sai</span>
         </div>
-
-        {/* Trạng Thái Chuông */}
-        <div className="bg-[#0b1329] border border-blue-900/60 rounded-2xl p-5 flex flex-col justify-between">
-          <span className="text-xs font-bold text-slate-400 uppercase">CHUÔNG BÁO GIÀNH QUYỀN</span>
-          {matchState.buzzer_winner_slot ? (
-            <div className="p-4 rounded-xl bg-amber-500 text-black text-center space-y-2">
-              <span className="font-black text-lg block">THÍ SINH {matchState.buzzer_winner_slot}</span>
-              <span className="text-xs font-mono font-bold block">Thời gian: {(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s</span>
-              <button
-                onClick={handleResetBuzzer}
-                className="w-full py-1.5 rounded-lg bg-black text-white font-bold text-xs cursor-pointer"
-              >
+        <p className="text-base font-bold text-white leading-relaxed">
+          {currentQuestion?.question_text}
+        </p>
+        <div className="p-3 bg-[#070a12] rounded-xl border border-emerald-500/40 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] uppercase font-bold text-emerald-400 block">ĐÁP ÁN ĐÚNG:</span>
+            <span className="text-base font-bold text-emerald-200">{currentQuestion?.correct_answer}</span>
+          </div>
+          {matchState.buzzer_winner_slot && (
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded bg-amber-500 text-black font-bold text-xs">
+                TS {matchState.buzzer_winner_slot} Giành quyền
+              </span>
+              <button onClick={handleResetBuzzer} className="text-xs text-slate-400 hover:text-white underline cursor-pointer">
                 Reset Chuông
               </button>
-            </div>
-          ) : (
-            <div className="text-center py-6 text-xs text-slate-500 font-medium italic">
-              Chưa có thí sinh bấm chuông
             </div>
           )}
         </div>
       </div>
 
-      {/* Giám Sát 4 Máy Thí Sinh */}
+      {/* Giám Sát Kết Quả Chấm Điểm 4 Thí Sinh */}
       <div className="space-y-3">
-        <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">
-          GIÁM SÁT 4 MÁY THÍ SINH
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          KẾT QUẢ 4 THÍ SINH (TỰ ĐỘNG CHẤM & CỘNG ĐIỂM)
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {matchState.players.map((player) => {
             const resp = matchState.current_responses[player.slot_number];
             return (
               <div
                 key={player.slot_number}
-                className={`bg-[#0b1329] border-2 ${
+                className={`bg-[#0d121f] border ${
                   resp?.is_correct === true
-                    ? "border-emerald-500 bg-emerald-950/20"
+                    ? "border-emerald-500/80 bg-emerald-950/20"
                     : resp?.is_correct === false
-                    ? "border-red-500 bg-red-950/20"
-                    : "border-blue-900/60"
-                } rounded-2xl p-4 space-y-3`}
+                    ? "border-red-500/80 bg-red-950/20"
+                    : "border-slate-800"
+                } rounded-xl p-4 space-y-3`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded bg-blue-600 text-white font-black text-xs">
-                    VỊ TRÍ {player.slot_number}
+                  <span className="font-bold text-xs text-white">
+                    {player.slot_number}. {player.name}
                   </span>
-                  <span className="font-mono text-base font-black text-amber-400">
+                  <span className="font-mono text-base font-bold text-amber-400">
                     {player.score} đ
                   </span>
                 </div>
 
-                <div className="font-bold text-sm text-white line-clamp-1">
-                  {player.name}
-                </div>
-
-                <div className="p-3 rounded-xl bg-[#060a14] border border-slate-800 min-h-[50px] flex flex-col justify-center">
-                  <span className="text-[10px] text-slate-500 uppercase block font-bold">Đáp án nộp:</span>
+                <div className="p-2.5 rounded-lg bg-[#070a12] border border-slate-800 min-h-[46px] flex flex-col justify-center">
+                  <span className="text-[10px] text-slate-500 uppercase block font-medium">Đáp án nộp:</span>
                   {resp ? (
                     <div className="flex items-center justify-between">
-                      <span className="font-black text-sm text-white uppercase line-clamp-1">{resp.answer_text}</span>
+                      <span className="font-bold text-sm text-white uppercase line-clamp-1">{resp.answer_text}</span>
                       <span className="text-[10px] font-mono text-slate-400">{(resp.response_time_ms / 1000).toFixed(2)}s</span>
                     </div>
                   ) : (
@@ -482,22 +434,7 @@ export default function AdminLivePage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => handleManualGrade(player.slot_number, true)}
-                    className="py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Đúng
-                  </button>
-                  <button
-                    onClick={() => handleManualGrade(player.slot_number, false)}
-                    className="py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <XCircle className="w-3.5 h-3.5" /> Sai
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
+                <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs text-slate-400">
                   <span>Chỉnh điểm:</span>
                   <div className="flex gap-1 font-mono">
                     <button onClick={() => handleScoreOverride(player.slot_number, 10)} className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-white cursor-pointer">+10</button>
