@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Sliders, Users, HelpCircle, Tv, LogOut, Trophy, Home, LayoutDashboard } from "lucide-react";
+import { Sliders, Users, HelpCircle, Tv, LogOut, Trophy, Home, LayoutDashboard, UserCheck } from "lucide-react";
+import { SUPER_ADMIN_EMAIL } from "@/lib/supabase";
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -40,24 +41,24 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 border-r border-blue-900/60 bg-[#060a14] flex flex-col justify-between shrink-0 h-screen sticky top-0 font-sans select-none">
+    <aside className="w-64 border-r border-slate-800 bg-[#070a12] flex flex-col justify-between shrink-0 h-screen sticky top-0 font-sans select-none">
       <div>
         {/* Brand Header */}
-        <div className="p-5 border-b border-blue-900/60 flex items-center justify-between">
+        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-black font-black shadow-md">
-              <Trophy className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-black font-bold shadow-sm">
+              <Trophy className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-black tracking-tight text-white uppercase">QUẢN TRỊ HỆ THỐNG</h2>
-              <p className="text-[10px] text-blue-400 font-bold tracking-wider">OLYMPIA ARENA</p>
+              <h2 className="text-sm font-bold tracking-tight text-white uppercase">QUẢN TRỊ HỆ THỐNG</h2>
+              <p className="text-[10px] text-slate-400 font-medium">olymquiz.vercel.app</p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="p-3 space-y-1.5">
-          <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <nav className="p-3 space-y-1">
+          <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
             CHỨC NĂNG CHÍNH
           </div>
 
@@ -68,10 +69,10 @@ export function AdminSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
                   isActive
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                    : "text-slate-400 hover:text-white hover:bg-blue-950/40"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-400 hover:text-white hover:bg-slate-900"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
@@ -87,14 +88,14 @@ export function AdminSidebar() {
             );
           })}
 
-          <div className="pt-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="pt-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
             TRÌNH CHIẾU & ĐIỀU HƯỚNG
           </div>
 
           <Link
             href="/display"
             target="_blank"
-            className="flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold text-slate-400 hover:text-amber-300 hover:bg-blue-950/40 transition-all"
+            className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-amber-400 hover:bg-slate-900 transition-colors"
           >
             <div className="flex items-center gap-2.5">
               <Tv className="w-4 h-4 text-amber-400" />
@@ -104,7 +105,7 @@ export function AdminSidebar() {
 
           <Link
             href="/"
-            className="flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-blue-950/40 transition-all"
+            className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-900 transition-colors"
           >
             <div className="flex items-center gap-2.5">
               <Home className="w-4 h-4" />
@@ -114,15 +115,27 @@ export function AdminSidebar() {
         </nav>
       </div>
 
-      {/* Logout */}
-      <div className="p-3 border-t border-blue-900/60">
+      {/* Admin Profile & Logout */}
+      <div className="p-3 border-t border-slate-800 space-y-2">
+        <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0">
+            <UserCheck className="w-3.5 h-3.5" />
+          </div>
+          <div className="overflow-hidden">
+            <span className="text-[10px] font-bold text-slate-500 uppercase block">QUẢN TRỊ VIÊN</span>
+            <span className="text-[11px] font-semibold text-slate-300 block truncate" title={SUPER_ADMIN_EMAIL}>
+              {SUPER_ADMIN_EMAIL}
+            </span>
+          </div>
+        </div>
+
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <LogOut className="w-4 h-4" />
-            <span>Đăng Xuất Quản Trị</span>
+            <span>Đăng Xuất</span>
           </div>
         </button>
       </div>
