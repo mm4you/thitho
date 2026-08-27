@@ -6,7 +6,7 @@ import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home, Star, Sparkles } from "lucide-react";
+import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home, Star } from "lucide-react";
 
 export default function DisplayPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
@@ -47,25 +47,26 @@ export default function DisplayPage() {
     return () => document.removeEventListener("fullscreenchange", handleFs);
   }, []);
 
+  // CHUẨN HÓA COUNTDOWN TIMER: ĐÚNG 1 NHỊP DUY NHẤT MỖI 1000MS
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (isTimerActive && timeLeft > 0) {
+    if (isTimerActive) {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
-          const next = prev - 1;
-          if (next > 0) sound.playTick();
-          else if (next === 0) {
+          if (prev <= 1) {
             sound.playTimeUp();
             setIsTimerActive(false);
+            return 0;
           }
-          return Math.max(0, next);
+          sound.playTick();
+          return prev - 1;
         });
       }, 1000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isTimerActive, timeLeft]);
+  }, [isTimerActive]);
 
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
@@ -79,6 +80,7 @@ export default function DisplayPage() {
         setTimeLimit(event.time_limit);
         setTimeLeft(event.time_limit);
         setIsTimerActive(true);
+        // Phat ngay nhip tick dau tien khi bat dau
         sound.playTick();
         setMatchState((prev) => ({
           ...prev,
@@ -104,7 +106,6 @@ export default function DisplayPage() {
         }));
       } else if (event.type === "LOCK_ANSWERS") {
         setIsTimerActive(false);
-        sound.playTimeUp();
         setMatchState((prev) => ({ ...prev, is_locked: true, is_timer_running: false }));
       } else if (event.type === "REVEAL_ANSWERS") {
         sound.playReveal();
@@ -162,6 +163,8 @@ export default function DisplayPage() {
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 }, colors: ["#fbbf24", "#f59e0b", "#ffffff"] });
           setTimeout(() => setStarOfHopeBanner(null), 4000);
         }
+      } else if (event.type === "SET_ACTIVE_PLAYER") {
+        setMatchState((prev) => ({ ...prev, active_player_slot: event.slot_number }));
       } else if (event.type === "OVERRIDE_SCORE") {
         setMatchState((prev) => ({
           ...prev,
@@ -209,10 +212,8 @@ export default function DisplayPage() {
 
   return (
     <div className="h-screen w-screen bg-[#070a12] text-white flex flex-col justify-between p-6 font-sans select-none overflow-hidden relative">
-      {/* Glow Sân Khấu */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-blue-600/15 via-amber-500/5 to-transparent blur-[140px] pointer-events-none" />
 
-      {/* POPUP HIỆU ỨNG NGÔI SAO HY VỌNG ĐỘNG TOÀN MÀN HÌNH */}
       {starOfHopeBanner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md animate-in zoom-in duration-300 pointer-events-none">
           <div className="text-center space-y-4 p-8 rounded-3xl bg-gradient-to-b from-amber-950/80 to-[#070a12] border-2 border-amber-400 shadow-2xl shadow-amber-500/40 max-w-xl mx-4">
@@ -234,7 +235,7 @@ export default function DisplayPage() {
         </div>
       )}
 
-      {/* Header Máy Chiếu Sân Khấu */}
+      {/* Header Máy Chiếu */}
       <header className="flex items-center justify-between z-10 border-b border-slate-800/80 pb-3">
         <div className="flex items-center gap-3">
           <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-amber-400 text-xs font-bold uppercase tracking-wider">
@@ -314,7 +315,6 @@ export default function DisplayPage() {
       ) : (
         /* MÀN HÌNH THI ĐẤU TRỰC TIẾP */
         <main className="flex-1 flex flex-col justify-between my-4 space-y-5 z-10">
-          {/* KHUNG CÂU HỎI & ĐỒNG HỒ ĐẾM NGƯỢC */}
           <div className="bg-[#0d121f] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-5 shadow-2xl relative">
             <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-3">
               <div className="flex items-center gap-2">
@@ -326,7 +326,6 @@ export default function DisplayPage() {
                 </span>
               </div>
 
-              {/* ĐỒNG HỒ ĐẾM NGƯỢC */}
               <div className="flex items-center gap-3">
                 {matchState.buzzer_winner_slot && (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 text-black font-black text-xs animate-bounce">
@@ -347,12 +346,10 @@ export default function DisplayPage() {
               </div>
             </div>
 
-            {/* NỘI DUNG CÂU HỎI */}
             <p className="text-2xl md:text-3xl font-extrabold text-white leading-relaxed text-center py-4">
               {currentQuestion?.question_text}
             </p>
 
-            {/* CÁC LỰA CHỌN TRẮC NGHIỆM A/B/C/D (NẾU CÓ) */}
             {currentQuestion?.options && currentQuestion.options.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                 {currentQuestion.options.map((opt, idx) => (
@@ -369,7 +366,6 @@ export default function DisplayPage() {
               </div>
             )}
 
-            {/* ĐÁP ÁN ĐÚNG KHI LẬT MỞ */}
             {matchState.is_revealed && (
               <div className="p-4 rounded-2xl bg-emerald-950/80 border-2 border-emerald-500 text-center animate-in zoom-in">
                 <span className="text-xs uppercase font-bold text-emerald-400 block mb-1">ĐÁP ÁN CHÍNH XÁC:</span>
@@ -378,18 +374,20 @@ export default function DisplayPage() {
             )}
           </div>
 
-          {/* 4 BỤC THÍ SINH SÂN KHẤU */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {matchState.players.map((player) => {
               const theme = slotThemes[player.slot_number - 1];
               const resp = matchState.current_responses[player.slot_number];
               const hasStar = matchState.star_of_hope_slot === player.slot_number;
+              const isActive = matchState.active_player_slot === player.slot_number;
 
               return (
                 <div
                   key={player.slot_number}
                   className={`bg-[#0d121f] border-2 ${
-                    hasStar
+                    isActive
+                      ? "border-amber-400 ring-4 ring-amber-400/20 scale-[1.02]"
+                      : hasStar
                       ? "border-amber-400 shadow-lg shadow-amber-500/20"
                       : resp?.is_correct === true
                       ? "border-emerald-500 bg-emerald-950/30"
@@ -398,11 +396,16 @@ export default function DisplayPage() {
                       : theme.border
                   } rounded-3xl p-5 space-y-3 relative overflow-hidden transition-all`}
                 >
-                  {/* Ngôi Sao Hy Vọng Badge */}
                   {hasStar && (
                     <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-black font-black text-[10px] shadow animate-pulse">
                       <Star className="w-3 h-3 fill-current" />
                       <span>x2 ĐIỂM</span>
+                    </div>
+                  )}
+
+                  {isActive && !hasStar && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400 text-black font-black text-[10px] shadow">
+                      <span>ĐANG THI</span>
                     </div>
                   )}
 
@@ -453,7 +456,6 @@ export default function DisplayPage() {
         </main>
       )}
 
-      {/* Footer Sạch Sẽ */}
       <footer className="w-full" />
     </div>
   );

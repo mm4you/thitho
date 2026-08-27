@@ -37,7 +37,7 @@ export default function AdminLivePage() {
 
   const [customTimeInput, setCustomTimeInput] = useState<string>("15");
   const [savedTimeAlert, setSavedTimeAlert] = useState<string>("");
-  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(true);
 
   const [isEditingCurrentQuestion, setIsEditingCurrentQuestion] = useState<boolean>(false);
   const [editQuestionText, setEditQuestionText] = useState<string>("");
@@ -146,12 +146,6 @@ export default function AdminLivePage() {
       interval = setInterval(() => {
         setMatchState((prev) => {
           const nextTime = prev.time_left - 1;
-          if (nextTime > 0) {
-            sound.playTick();
-          } else if (nextTime === 0) {
-            sound.playTimeUp();
-          }
-
           if (nextTime <= 0) {
             setTimeout(() => {
               executeAutoGrade(stateRef.current);
@@ -301,7 +295,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "CHANGE_QUESTION", round_index: roundIdx, question_index: questionIdx });
   };
 
-  // Chọn Thí Sinh thi Về Đích tùy ý (bất kỳ ai thi trước cũng được)
   const handleSelectActivePlayer = (slot: number) => {
     const nextSlot = matchState.active_player_slot === slot ? null : slot;
     const newState = { ...matchState, active_player_slot: nextSlot };
@@ -383,7 +376,6 @@ export default function AdminLivePage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto font-sans select-none">
-      {/* Modal Ban Giám Khảo Sửa Nhanh Câu Hỏi */}
       {isEditingCurrentQuestion && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-[#0d121f] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
@@ -451,10 +443,10 @@ export default function AdminLivePage() {
             onClick={toggleAudio}
             variant="outline"
             className="border-slate-800 text-slate-300 hover:text-white text-xs h-9 px-3 gap-1.5 cursor-pointer"
-            title="Bật / Tắt âm thanh"
+            title="Bật / Tắt âm thanh tại bàn Giám Khảo"
           >
-            {isAudioMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
-            <span>{isAudioMuted ? "Đã Tắt Âm" : "Bật Âm Thanh"}</span>
+            {isAudioMuted ? <VolumeX className="w-4 h-4 text-slate-500" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+            <span>{isAudioMuted ? "Âm Thanh MC: Đã Tắt" : "Âm Thanh MC: Đang Bật"}</span>
           </Button>
 
           <Button
