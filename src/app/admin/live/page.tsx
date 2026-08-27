@@ -144,7 +144,7 @@ export default function AdminLivePage() {
     if (matchState.is_timer_running && matchState.time_left > 0) {
       interval = setInterval(() => {
         setMatchState((prev) => {
-          const nextTime = prev.time_left - 1;
+          const nextTime = prev.time_left - 1; if (nextTime > 0) { sound.playTick(); } else if (nextTime === 0) { sound.playTimeUp(); }
           if (nextTime <= 0) {
             setTimeout(() => {
               executeAutoGrade(stateRef.current);

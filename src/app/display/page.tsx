@@ -52,7 +52,7 @@ export default function DisplayPage() {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
           const next = prev - 1;
-          if (next > 0 && next <= 5) sound.playTick();
+          if (next > 0) sound.playTick();
           else if (next === 0) {
             sound.playTimeUp();
             setIsTimerActive(false);
