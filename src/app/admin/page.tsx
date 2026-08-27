@@ -22,6 +22,7 @@ import {
   EyeOff,
   Save,
   Tv,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,11 +38,11 @@ function generateAlphanumericCode(length = 6, prefix = "GK-"): string {
 export default function SupremeAdminDashboardPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
   const [currentAdminPass, setCurrentAdminPass] = useState<string>("GK-4H46SH");
-  const [showAdminPass, setShowAdminPass] = useState<boolean>(false);
-  const [isEditingAdminPass, setIsEditingAdminPass] = useState<boolean>(false);
-  const [tempAdminPass, setTempAdminPass] = useState<string>("");
-  const [adminPassSavedAlert, setAdminPassSavedAlert] = useState<boolean>(false);
-  const [copiedAdminPass, setCopiedAdminPass] = useState<boolean>(false);
+  const [showAdminPass, setShowAdminPass] = useState<boolean>(true); // Mac dinh hien ro ma cho Admin de nhin
+  const [isCustomEditing, setIsCustomEditing] = useState<boolean>(false);
+  const [customPassInput, setCustomPassInput] = useState<string>("");
+  const [alertMsg, setAlertMsg] = useState<string>("");
+  const [copied, setCopied] = useState<boolean>(false);
 
   // Lay ma ban dau tu Server duy nhat mot lan khi mount
   useEffect(() => {
@@ -50,13 +51,11 @@ export default function SupremeAdminDashboardPage() {
       .then((data) => {
         if (data?.judge_code) {
           setCurrentAdminPass(data.judge_code);
-          setTempAdminPass(data.judge_code);
         }
       })
       .catch(() => {
         const local = getAdminPassword() || "GK-4H46SH";
         setCurrentAdminPass(local);
-        setTempAdminPass(local);
       });
   }, []);
 
@@ -78,51 +77,64 @@ export default function SupremeAdminDashboardPage() {
     return () => unsubscribe();
   }, []);
 
-  const handleGenerateRandomAdminPass = () => {
-    const newPass = generateAlphanumericCode(6, "GK-");
-    setTempAdminPass(newPass);
-    setIsEditingAdminPass(true);
-  };
+  // Luu ma vao toan bo he thong Server & Cloud
+  const applyAndPersistCode = async (newCode: string, autoCopy = false) => {
+    const formatted = newCode.trim().toUpperCase();
+    if (!formatted) return;
 
-  const handleSaveAdminPass = async () => {
-    if (!tempAdminPass.trim()) return;
-    const newCode = tempAdminPass.trim().toUpperCase();
+    setCurrentAdminPass(formatted);
+    setAdminPassword(formatted);
+    setIsCustomEditing(false);
 
-    setAdminPassword(newCode);
-    setCurrentAdminPass(newCode);
-    setIsEditingAdminPass(false);
-    setAdminPassSavedAlert(true);
+    if (autoCopy && typeof navigator !== "undefined") {
+      navigator.clipboard.writeText(formatted);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
 
     const newState: MatchState = {
       ...matchState,
-      admin_access_code: newCode,
+      admin_access_code: formatted,
     };
     setMatchState(newState);
-    syncMatchStateToCloud(newState);
+    saveMatchStateLocally(newState);
 
-    // Day len Server API de cap nhat duy nhat ma nay
     try {
       await fetch("/api/judge-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ judge_code: newCode, match_state: newState }),
+        body: JSON.stringify({ judge_code: formatted, match_state: newState }),
       });
     } catch {
       // Fallback
     }
 
-    sendGameEvent({ type: "UPDATE_JUDGE_ACCESS_CODE", code: newCode });
+    sendGameEvent({ type: "UPDATE_JUDGE_ACCESS_CODE", code: formatted });
     sendGameEvent({ type: "SYNC_STATE", state: newState });
     sendGameEvent({ type: "REVOKE_ADMIN_SESSIONS", new_code_timestamp: Date.now() });
 
-    setTimeout(() => setAdminPassSavedAlert(false), 3000);
+    setAlertMsg(`Đã kích hoạt mã duy nhất: ${formatted}${autoCopy ? " (Đã sao chép!)" : ""}`);
+    setTimeout(() => setAlertMsg(""), 3500);
   };
 
-  const handleCopyAdminPass = () => {
+  // 1-CLICK: Tao ma ngau nhien -> Luu Server -> Copy luon
+  const handleInstantGenerateAndSave = () => {
+    const newRandomCode = generateAlphanumericCode(6, "GK-");
+    applyAndPersistCode(newRandomCode, true);
+  };
+
+  // Luu ma tu tay go
+  const handleSaveCustomInput = () => {
+    if (customPassInput.trim()) {
+      applyAndPersistCode(customPassInput.trim(), true);
+    }
+  };
+
+  const handleCopyCode = () => {
     if (typeof navigator !== "undefined") {
       navigator.clipboard.writeText(currentAdminPass);
-      setCopiedAdminPass(true);
-      setTimeout(() => setCopiedAdminPass(false), 2000);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -155,35 +167,37 @@ export default function SupremeAdminDashboardPage() {
 
       {/* KHU VỰC CẤP & ĐỔI MÃ BẢO MẬT BAN GIÁM KHẢO */}
       <div className="bg-[#0d121f] border-2 border-amber-500/40 rounded-2xl p-6 space-y-4 shadow-xl">
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+        <div className="flex flex-wrap items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
           <div className="flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-amber-400" />
             <div>
-              <h2 className="text-sm font-bold uppercase text-white">MÃ BẢO MẬT TRUY CẬP DUY NHẤT CỦA BAN GIÁM KHẢO</h2>
-              <p className="text-xs text-slate-400">Khi đổi mã mới, toàn bộ mã cũ sẽ bị vô hiệu hóa ngay lập tức</p>
+              <h2 className="text-sm font-bold uppercase text-white">MÃ BẢO MẬT DUY NHẤT DÀNH CHO BAN GIÁM KHẢO</h2>
+              <p className="text-xs text-slate-400">Chỉ có mã này mới đăng nhập được. Toàn bộ mã cũ sẽ bị vô hiệu hóa ngay khi đổi mã.</p>
             </div>
           </div>
 
-          {adminPassSavedAlert && (
-            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1 bg-emerald-950/60 border border-emerald-500/40 px-3 py-1 rounded-lg animate-in fade-in">
-              <Check className="w-4 h-4" /> Đã lưu & kích hoạt mã mới duy nhất!
+          {alertMsg && (
+            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 bg-emerald-950/80 border border-emerald-500/60 px-3.5 py-1.5 rounded-lg animate-in fade-in">
+              <Check className="w-4 h-4" /> {alertMsg}
             </span>
           )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex-1 min-w-[280px] bg-[#070a12] border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-            {isEditingAdminPass ? (
+          <div className="flex-1 min-w-[280px] bg-[#070a12] border-2 border-slate-800 rounded-xl p-3 flex items-center justify-between">
+            {isCustomEditing ? (
               <input
                 type="text"
-                value={tempAdminPass}
-                onChange={(e) => setTempAdminPass(e.target.value.toUpperCase())}
-                placeholder="Nhập mã mới..."
-                className="bg-transparent text-sm font-mono font-bold text-amber-400 uppercase focus:outline-none w-full"
+                autoFocus
+                value={customPassInput}
+                onChange={(e) => setCustomPassInput(e.target.value.toUpperCase())}
+                placeholder="Nhập mã bạn muốn đặt..."
+                className="bg-transparent text-base font-mono font-black text-amber-400 uppercase focus:outline-none w-full"
               />
             ) : (
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-base font-black text-amber-400 tracking-wider">
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-500 font-bold uppercase">MÃ ĐANG DÙNG:</span>
+                <span className="font-mono text-lg font-black text-amber-400 tracking-wider">
                   {showAdminPass ? currentAdminPass : "••••••••••••"}
                 </span>
                 <button
@@ -197,23 +211,23 @@ export default function SupremeAdminDashboardPage() {
             )}
 
             <div className="flex items-center gap-1.5">
-              {isEditingAdminPass ? (
+              {isCustomEditing ? (
                 <>
-                  <Button size="sm" onClick={handleSaveAdminPass} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-8 px-3 rounded-lg font-bold">
-                    <Save className="w-3.5 h-3.5 mr-1" /> Lưu Mã
+                  <Button size="sm" onClick={handleSaveCustomInput} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-8 px-3 rounded-lg font-bold">
+                    <Save className="w-3.5 h-3.5 mr-1" /> Lưu Mã Này
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setIsEditingAdminPass(false)} className="text-slate-400 text-xs h-8 px-2">
+                  <Button size="sm" variant="ghost" onClick={() => setIsCustomEditing(false)} className="text-slate-400 text-xs h-8 px-2">
                     Hủy
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button size="sm" variant="outline" onClick={handleCopyAdminPass} className="border-slate-800 text-slate-300 hover:text-white text-xs h-8 px-2.5 rounded-lg">
-                    {copiedAdminPass ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span className="ml-1">{copiedAdminPass ? "Đã chép" : "Sao chép"}</span>
+                  <Button size="sm" variant="outline" onClick={handleCopyCode} className="border-slate-800 text-slate-300 hover:text-white text-xs h-8 px-2.5 rounded-lg">
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span className="ml-1">{copied ? "Đã chép" : "Sao chép"}</span>
                   </Button>
-                  <Button size="sm" onClick={() => { setTempAdminPass(currentAdminPass); setIsEditingAdminPass(true); }} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs h-8 px-3 rounded-lg">
-                    Sửa mã
+                  <Button size="sm" onClick={() => { setCustomPassInput(currentAdminPass); setIsCustomEditing(true); }} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs h-8 px-3 rounded-lg">
+                    Tự đặt mã
                   </Button>
                 </>
               )}
@@ -221,11 +235,11 @@ export default function SupremeAdminDashboardPage() {
           </div>
 
           <Button
-            onClick={handleGenerateRandomAdminPass}
-            className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-12 px-4 rounded-xl gap-2 cursor-pointer shadow-md"
+            onClick={handleInstantGenerateAndSave}
+            className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs h-12 px-5 rounded-xl gap-2 cursor-pointer shadow-lg shadow-amber-500/20"
           >
             <RefreshCw className="w-4 h-4" />
-            TẠO MÃ BẢO MẬT MỚI TỰ ĐỘNG
+            TẠO MÃ MỚI & SAO CHÉP NGAY (1-CHẠM)
           </Button>
         </div>
       </div>
