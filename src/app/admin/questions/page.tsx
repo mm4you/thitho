@@ -337,7 +337,7 @@ Câu 3: Chiến thắng Bạch Đằng đánh tan quân Nam Hán năm 938 do ai 
                 <span className="text-slate-200 font-semibold block">
                   Đánh dấu vòng bằng: <strong>[VÒNG 1: KHỞI ĐỘNG]</strong>, <strong>[VÒNG 2: VCNV]</strong>, <strong>[VÒNG 3: TĂNG TỐC]</strong>, <strong>[VÒNG 4: VỀ ĐÍCH]</strong>
                 </span>
-                <span className="text-slate-500 text-[11px]">Hỗ trợ trắc nghiệm A/B/C/D hoặc cú pháp 1 dòng <i>Câu hỏi | Đáp án | Giây | Điểm</i></span>
+                <div className="text-[11px] text-amber-300/90 font-medium pt-1">💡 Số lượng câu khuyến nghị: V1 (8-12 câu) • V2 (4 hàng ngang + 1 từ khóa) • V3 (4 câu tốc độ 10s, 20s, 30s, 40s) • V4 (8-12 câu chia cho 4 thí sinh)</div>
               </div>
               <button
                 onClick={handleDownloadSample}
