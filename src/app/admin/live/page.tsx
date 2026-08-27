@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { sound } from "@/lib/sounds";
@@ -20,23 +20,25 @@ import {
   ChevronRight,
   ChevronLeft,
   Sparkles,
-  Plus,
-  Minus,
-  Bell,
   Sliders,
   ExternalLink,
+  Settings,
+  Bell,
+  Clock,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function AdminLivePage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
 
-  // Sync state to local storage whenever it changes
   useEffect(() => {
     saveMatchStateLocally(matchState);
   }, [matchState]);
 
-  // Subscribe realtime
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
       if (event.type === "SUBMIT_ANSWER") {
@@ -71,7 +73,6 @@ export default function AdminLivePage() {
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
 
-  // Actions
   const handleStartTimer = () => {
     const timeLimit = currentQuestion?.time_limit || 15;
     const newState = {
@@ -112,7 +113,6 @@ export default function AdminLivePage() {
     const isTangToc = currentRound.round_type === "tang_toc";
     const correctAnswers = currentQuestion.correct_answer.toLowerCase().trim();
 
-    // Sắp xếp các thí sinh nộp đúng theo thời gian
     const submissions = Object.values(matchState.current_responses);
     const correctSubmissions = submissions
       .filter((sub) => {
@@ -236,285 +236,289 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "CHANGE_QUESTION", round_index: roundIdx, question_index: questionIdx });
   };
 
-  const handleTriggerSFX = (sfx: "correct" | "wrong" | "buzzer" | "victory") => {
-    sound.playCorrect();
-    sendGameEvent({ type: "PLAY_SFX", sfx });
-  };
-
   return (
-    <div className="min-h-screen bg-[#070d1e] text-slate-100 p-4 md:p-6 font-sans">
-      {/* HEADER */}
-      <header className="flex flex-wrap items-center justify-between border-b border-blue-900/50 pb-4 mb-6 gap-4">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-6 font-sans">
+      {/* Top Bar */}
+      <header className="flex flex-wrap items-center justify-between border-b border-zinc-800 pb-4 mb-6 gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg">
-            <Sliders className="w-6 h-6" />
+          <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-100">
+            <Sliders className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-              BẢNG ĐIỀU KHIỂN MC / GIÁM KHẢO
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                LIVE REALTIME
-              </span>
-            </h1>
-            <p className="text-xs text-slate-400">Trận đấu: {matchState.title}</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold tracking-tight text-zinc-100">
+                Bảng Điều Khiển MC & Ban Giám Khảo
+              </h1>
+              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px]">
+                Live Realtime
+              </Badge>
+            </div>
+            <p className="text-xs text-zinc-400">{matchState.title}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link
-            href="/display"
-            target="_blank"
-            className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-semibold text-xs flex items-center gap-2 hover:bg-amber-500/30"
-          >
-            Mở Màn Hình Máy Chiếu
-            <ExternalLink className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2">
+          <Link href="/display" target="_blank">
+            <Button variant="outline" size="sm" className="border-zinc-800 hover:bg-zinc-800 gap-1.5 text-xs text-zinc-300">
+              <ExternalLink className="w-3.5 h-3.5" /> Mở Máy Chiếu
+            </Button>
           </Link>
-          <Link
-            href="/admin"
-            className="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 font-semibold text-xs hover:bg-slate-700"
-          >
-            Ngân Hàng Câu Hỏi
+          <Link href="/admin">
+            <Button variant="outline" size="sm" className="border-zinc-800 hover:bg-zinc-800 gap-1.5 text-xs text-zinc-300">
+              <Settings className="w-3.5 h-3.5" /> Soạn Đề & Thể Lệ
+            </Button>
           </Link>
         </div>
       </header>
 
-      {/* TOP CONTROLS: Round & Question Navigation */}
-      <div className="glass-panel rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4 border border-blue-500/20">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-bold uppercase text-blue-400">Chọn Vòng:</span>
-          <select
-            value={matchState.current_round_index}
-            onChange={(e) => handleChangeQuestion(Number(e.target.value), 0)}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-semibold text-white focus:outline-none focus:border-blue-500"
-          >
-            {matchState.rounds.map((r, idx) => (
-              <option key={r.id} value={idx}>
-                {r.title}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Control Action Toolbar */}
+      <Card className="border-zinc-800 bg-zinc-900/60 mb-6">
+        <CardContent className="p-4 flex flex-wrap items-center justify-between gap-4">
+          {/* Round & Question Select */}
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={matchState.current_round_index}
+              onChange={(e) => handleChangeQuestion(Number(e.target.value), 0)}
+              className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs font-semibold text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            >
+              {matchState.rounds.map((r, idx) => (
+                <option key={r.id} value={idx}>
+                  {r.title}
+                </option>
+              ))}
+            </select>
 
-        <div className="flex items-center gap-2">
-          <button
-            disabled={matchState.current_question_index === 0}
-            onClick={() =>
-              handleChangeQuestion(matchState.current_round_index, matchState.current_question_index - 1)
-            }
-            className="p-2 rounded-lg bg-slate-800 border border-slate-700 disabled:opacity-40 hover:bg-slate-700 text-slate-300"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <span className="text-sm font-bold text-slate-200 px-3">
-            Câu {matchState.current_question_index + 1} / {currentRound?.questions.length || 1}
-          </span>
-          <button
-            disabled={matchState.current_question_index >= (currentRound?.questions.length || 1) - 1}
-            onClick={() =>
-              handleChangeQuestion(matchState.current_round_index, matchState.current_question_index + 1)
-            }
-            className="p-2 rounded-lg bg-slate-800 border border-slate-700 disabled:opacity-40 hover:bg-slate-700 text-slate-300"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Action Buttons: Start Timer, Lock, Reveal, Grade */}
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleStartTimer}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold text-sm flex items-center gap-2 shadow-lg hover:brightness-110"
-          >
-            <Play className="w-4 h-4 fill-white" />
-            Bắt Đầu Đếm Ngược ({currentQuestion?.time_limit || 15}s)
-          </button>
-          <button
-            onClick={handlePauseTimer}
-            className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 text-sm font-semibold flex items-center gap-1.5"
-          >
-            <Pause className="w-4 h-4" /> Tạm dừng
-          </button>
-          <button
-            onClick={handleLockAnswers}
-            className="px-4 py-2 rounded-xl bg-rose-600/30 border border-rose-500/50 text-rose-300 hover:bg-rose-600/40 text-sm font-bold flex items-center gap-2"
-          >
-            <Lock className="w-4 h-4" /> Khóa Máy
-          </button>
-          <button
-            onClick={handleRevealAnswers}
-            className="px-4 py-2 rounded-xl bg-amber-500/30 border border-amber-500/50 text-amber-300 hover:bg-amber-500/40 text-sm font-bold flex items-center gap-2"
-          >
-            <Eye className="w-4 h-4" /> Mở Đáp Án
-          </button>
-          <button
-            onClick={handleAutoGrade}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold flex items-center gap-2 shadow-lg"
-          >
-            <CheckCircle2 className="w-4 h-4" /> Chấm Tự Động
-          </button>
-        </div>
-      </div>
-
-      {/* CURRENT QUESTION CARD & MC ANSWER KEY */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2 glass-panel rounded-2xl p-6 border border-blue-500/30">
-          <div className="flex items-center justify-between mb-3">
-            <span className="px-3 py-1 rounded bg-blue-500/20 text-blue-300 text-xs font-bold">
-              LOẠI: {currentQuestion?.question_type.toUpperCase()} • {currentQuestion?.time_limit}S
-            </span>
-            <span className="text-xs font-mono text-slate-400">
-              Đúng: +{currentQuestion?.points_correct}đ | Sai: -{currentQuestion?.points_wrong}đ
-            </span>
-          </div>
-          <h2 className="text-xl font-bold text-slate-100 mb-4">{currentQuestion?.question_text}</h2>
-
-          {/* Đáp Án Chuẩn (Dành riêng cho MC đọc trước) */}
-          <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/50 text-emerald-200">
-            <div className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-1">
-              Đáp Án Chuẩn Của Ban Giám Khảo:
+            <div className="flex items-center gap-1 border border-zinc-800 rounded-md bg-zinc-950 p-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-zinc-400 hover:text-zinc-100"
+                disabled={matchState.current_question_index === 0}
+                onClick={() =>
+                  handleChangeQuestion(matchState.current_round_index, matchState.current_question_index - 1)
+                }
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-xs font-medium px-2 text-zinc-300">
+                Câu {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-zinc-400 hover:text-zinc-100"
+                disabled={matchState.current_question_index >= (currentRound?.questions.length || 1) - 1}
+                onClick={() =>
+                  handleChangeQuestion(matchState.current_round_index, matchState.current_question_index + 1)
+                }
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
             </div>
-            <div className="text-lg font-black text-white">{currentQuestion?.correct_answer}</div>
-            {currentQuestion?.explanation && (
-              <p className="text-xs text-slate-300 mt-2 italic">{currentQuestion.explanation}</p>
-            )}
           </div>
-        </div>
 
-        {/* BUZZER STATUS & QUICK SFX */}
-        <div className="glass-panel rounded-2xl p-6 border border-slate-700/60 flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={handleStartTimer}
+              className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold text-xs gap-1.5 h-8"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" /> Bắt Đầu ({currentQuestion?.time_limit}s)
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handlePauseTimer}
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs h-8 gap-1"
+            >
+              <Pause className="w-3.5 h-3.5" /> Dừng
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLockAnswers}
+              className="text-xs h-8 gap-1.5"
+            >
+              <Lock className="w-3.5 h-3.5" /> Khóa Máy
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRevealAnswers}
+              className="border-zinc-700 bg-zinc-950 text-zinc-200 hover:bg-zinc-800 text-xs h-8 gap-1.5"
+            >
+              <Eye className="w-3.5 h-3.5 text-amber-400" /> Mở Đáp Án
+            </Button>
+            <Button
+              onClick={handleAutoGrade}
+              className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold h-8 gap-1.5"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" /> Chấm Tự Động
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Main Grid: Current Question Preview & Buzzer Box */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <Card className="lg:col-span-2 border-zinc-800 bg-zinc-900/40">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-300 uppercase text-[10px]">
+                  {currentQuestion?.question_type}
+                </Badge>
+                <span className="text-xs text-zinc-500">
+                  Thời gian: {currentQuestion?.time_limit}s • Đúng: +{currentQuestion?.points_correct}đ | Sai: -{currentQuestion?.points_wrong}đ
+                </span>
+              </div>
+            </div>
+            <CardTitle className="text-base font-semibold text-zinc-100 pt-2">
+              {currentQuestion?.question_text}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg bg-zinc-950 border border-zinc-800 p-3.5">
+              <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider block mb-1">
+                Đáp Án Chuẩn Của Giám Khảo:
+              </span>
+              <p className="text-sm font-bold text-zinc-100">{currentQuestion?.correct_answer}</p>
+              {currentQuestion?.explanation && (
+                <p className="text-xs text-zinc-400 mt-1 italic">{currentQuestion.explanation}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Buzzer Box */}
+        <Card className="border-zinc-800 bg-zinc-900/40 flex flex-col justify-between">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
               <Bell className="w-4 h-4 text-amber-400" />
-              Trạng Thái Chuông
-            </h3>
+              Trạng Thái Bấm Chuông
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             {matchState.buzzer_winner_slot ? (
-              <div className="p-4 rounded-xl bg-amber-500/20 border border-amber-500/50 text-center animate-pulse">
-                <span className="text-2xl font-black text-amber-300 block">
-                  THÍ SINH {matchState.buzzer_winner_slot}
-                </span>
-                <span className="text-xs text-slate-300">
-                  Đã bấm lúc {(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s
-                </span>
-                <button
+              <div className="rounded-lg bg-zinc-950 border border-amber-500/40 p-4 text-center">
+                <Badge variant="outline" className="border-amber-500/40 text-amber-400 mb-1">
+                  Đã Giành Quyền
+                </Badge>
+                <div className="text-lg font-bold text-zinc-100">
+                  Thí sinh {matchState.buzzer_winner_slot}
+                </div>
+                <div className="text-xs font-mono text-zinc-500 mb-3">
+                  {(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={handleResetBuzzer}
-                  className="mt-3 px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 mx-auto block"
+                  className="border-zinc-800 hover:bg-zinc-800 text-xs h-7 gap-1"
                 >
-                  <RotateCcw className="w-3.5 h-3.5 inline mr-1" /> Reset Chuông
-                </button>
+                  <RotateCcw className="w-3 h-3" /> Reset Chuông
+                </Button>
               </div>
             ) : (
-              <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center text-slate-500 text-sm italic">
-                Chưa có ai bấm chuông
+              <div className="rounded-lg bg-zinc-950 border border-zinc-850 p-6 text-center text-xs text-zinc-500 italic">
+                Chưa có thí sinh nào bấm chuông
               </div>
             )}
-          </div>
-
-          <div className="mt-4 pt-4 border-t border-slate-800">
-            <span className="text-xs font-bold text-slate-400 block mb-2">Hiệu ứng kịch tính:</span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => handleTriggerSFX("victory")}
-                className="p-2 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center justify-center gap-1 hover:bg-amber-500/30"
-              >
-                <Sparkles className="w-3.5 h-3.5" /> Pháo hoa
-              </button>
-              <button
-                onClick={() => handleTriggerSFX("wrong")}
-                className="p-2 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 font-bold text-xs flex items-center justify-center gap-1 hover:bg-red-500/30"
-              >
-                <XCircle className="w-3.5 h-3.5" /> Tiếng Xịt
-              </button>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 4 CONTESTANTS LIVE TELEMETRY & MANUAL GRADING */}
-      <h3 className="text-base font-bold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
-        Giám Sát 4 Máy Thí Sinh & Chấm Điểm
-      </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {matchState.players.map((player) => {
-          const resp = matchState.current_responses[player.slot_number];
-          return (
-            <div
-              key={player.slot_number}
-              className={`glass-panel rounded-2xl p-5 border transition-all ${
-                resp?.is_correct === true
-                  ? "border-emerald-500/80 bg-emerald-950/20"
-                  : resp?.is_correct === false
-                  ? "border-red-500/80 bg-red-950/20"
-                  : "border-slate-700/60"
-              }`}
-            >
-              {/* Header Thí Sinh */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-sm font-black text-blue-300">
-                    {player.slot_number}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-slate-100 line-clamp-1">{player.name}</h4>
-                    <span className="text-[11px] text-slate-400">{player.school_name}</span>
-                  </div>
-                </div>
-                <span className="font-mono font-black text-lg text-amber-400">{player.score}đ</span>
-              </div>
+      {/* 4 Contestants Live Telemetry Cards */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          Giám Sát Trực Tiếp 4 Máy Thí Sinh
+        </h3>
 
-              {/* Câu Trả Lời Của Thí Sinh (Live Telemetry) */}
-              <div className="bg-slate-950/90 rounded-xl p-3 border border-slate-800 mb-4 min-h-[70px] flex flex-col justify-center">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">
-                  Đáp Án Thí Sinh Gửi:
-                </span>
-                {resp ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {matchState.players.map((player) => {
+            const resp = matchState.current_responses[player.slot_number];
+            return (
+              <Card
+                key={player.slot_number}
+                className={`border-zinc-800 bg-zinc-900/40 transition-all ${
+                  resp?.is_correct === true
+                    ? "border-emerald-500/60 bg-emerald-950/10"
+                    : resp?.is_correct === false
+                    ? "border-red-500/60 bg-red-950/10"
+                    : ""
+                }`}
+              >
+                <CardHeader className="p-4 pb-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-black text-base text-white uppercase">{resp.answer_text}</span>
-                    <span className="text-xs font-mono text-slate-400">
-                      {(resp.response_time_ms / 1000).toFixed(2)}s
+                    <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 font-mono text-xs">
+                      Vị trí {player.slot_number}
+                    </Badge>
+                    <span className="font-mono text-sm font-bold text-amber-400">
+                      {player.score} đ
                     </span>
                   </div>
-                ) : (
-                  <span className="text-xs text-slate-600 italic">Chưa có dữ liệu</span>
-                )}
-              </div>
+                  <CardTitle className="text-sm font-semibold text-zinc-200 line-clamp-1 pt-1">
+                    {player.name}
+                  </CardTitle>
+                </CardHeader>
 
-              {/* Nút Chấm Đúng / Sai Thủ Công */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <button
-                  onClick={() => handleManualGrade(player.slot_number, true)}
-                  className="py-1.5 rounded-lg bg-emerald-600/30 border border-emerald-500/50 hover:bg-emerald-600/50 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Đúng (+{currentQuestion?.points_correct}đ)
-                </button>
-                <button
-                  onClick={() => handleManualGrade(player.slot_number, false)}
-                  className="py-1.5 rounded-lg bg-red-600/30 border border-red-500/50 hover:bg-red-600/50 text-red-300 font-bold text-xs flex items-center justify-center gap-1"
-                >
-                  <XCircle className="w-3.5 h-3.5" /> Sai (-{currentQuestion?.points_wrong}đ)
-                </button>
-              </div>
+                <CardContent className="p-4 pt-2 space-y-3">
+                  <div className="rounded-md bg-zinc-950 border border-zinc-850 p-2.5 min-h-[56px] flex flex-col justify-center">
+                    <span className="text-[10px] text-zinc-500 uppercase block">Đáp án đã gửi:</span>
+                    {resp ? (
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-sm text-zinc-100 uppercase line-clamp-1">
+                          {resp.answer_text}
+                        </span>
+                        <span className="text-[11px] font-mono text-zinc-500">
+                          {(resp.response_time_ms / 1000).toFixed(2)}s
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-zinc-600 italic">Chưa nộp</span>
+                    )}
+                  </div>
 
-              {/* Cộng / Trừ Điểm Tay */}
-              <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
-                <span className="text-slate-400 font-medium">Chỉnh điểm:</span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleScoreOverride(player.slot_number, 10)}
-                    className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 font-bold"
-                  >
-                    +10
-                  </button>
-                  <button
-                    onClick={() => handleScoreOverride(player.slot_number, -10)}
-                    className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 font-bold"
-                  >
-                    -10
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                  {/* Manual Grading */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleManualGrade(player.slot_number, true)}
+                      className="border-emerald-800/40 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/30 text-xs h-7 gap-1"
+                    >
+                      <CheckCircle2 className="w-3 h-3" /> Đúng
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleManualGrade(player.slot_number, false)}
+                      className="border-red-800/40 bg-red-950/20 text-red-400 hover:bg-red-900/30 text-xs h-7 gap-1"
+                    >
+                      <XCircle className="w-3 h-3" /> Sai
+                    </Button>
+                  </div>
+
+                  {/* Score Adjustment */}
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-800/60 text-xs text-zinc-500">
+                    <span>Chỉnh điểm:</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleScoreOverride(player.slot_number, 10)}
+                        className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-[11px]"
+                      >
+                        +10
+                      </button>
+                      <button
+                        onClick={() => handleScoreOverride(player.slot_number, -10)}
+                        className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-[11px]"
+                      >
+                        -10
+                      </button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

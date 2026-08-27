@@ -1,129 +1,157 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { Tv, Sliders, User, ExternalLink, ShieldCheck, Zap, Sparkles } from "lucide-react";
+import { Tv, Sliders, User, ExternalLink, ShieldCheck, Sparkles, Trophy, ArrowRight } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   const players = [
-    { slot: 1, name: "Thí sinh 1 (Nguyễn Hoàng Nam)", color: "from-blue-600 to-cyan-500", glow: "hover:border-blue-400" },
-    { slot: 2, name: "Thí sinh 2 (Trần Thu Hà)", color: "from-purple-600 to-pink-500", glow: "hover:border-purple-400" },
-    { slot: 3, name: "Thí sinh 3 (Lê Minh Quân)", color: "from-emerald-600 to-teal-500", glow: "hover:border-emerald-400" },
-    { slot: 4, name: "Thí sinh 4 (Phạm Thảo Vy)", color: "from-amber-600 to-yellow-500", glow: "hover:border-amber-400" },
+    { slot: 1, name: "Thí sinh 1 (Nguyễn Hoàng Nam)", school: "THPT Chuyên Hà Nội - Amsterdam" },
+    { slot: 2, name: "Thí sinh 2 (Trần Thu Hà)", school: "THPT Chuyên Lê Hồng Phong" },
+    { slot: 3, name: "Thí sinh 3 (Lê Minh Quân)", school: "THPT Chuyên Quốc Học Huế" },
+    { slot: 4, name: "Thí sinh 4 (Phạm Thảo Vy)", school: "THPT Chuyên Phan Bội Châu" },
   ];
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
-      {/* Background Glow Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
-
-      {/* Header */}
-      <div className="text-center max-w-3xl mb-12 z-10">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-medium mb-4 backdrop-blur-md">
-          <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-          HỆ THỐNG GAMESHOW ĐẤU TRÍ TRỰC TIẾP
+    <main className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-between p-6 md:p-12 font-sans selection:bg-zinc-800">
+      {/* Top Header */}
+      <div className="w-full max-w-5xl flex items-center justify-between border-b border-zinc-800 pb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-100">
+            <Trophy className="w-5 h-5 text-amber-400" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight text-zinc-100">Đấu Trí Arena</h1>
+            <p className="text-xs text-zinc-400">Hệ thống thi đấu 4 người chơi trực tiếp</p>
+          </div>
         </div>
-        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-indigo-200 to-amber-300 bg-clip-text text-transparent mb-4">
-          ĐƯỜNG LÊN ĐỈNH TRI THỨC
-        </h1>
-        <p className="text-slate-400 text-lg md:text-xl">
-          Đồng bộ thời gian thực siêu tốc với Supabase Realtime • Bảng điều khiển MC • Màn hình Sân khấu • 4 Máy Thí sinh
-        </p>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="border-zinc-800 text-zinc-400 gap-1.5 py-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Supabase Realtime Active
+          </Badge>
+        </div>
       </div>
 
-      {/* Quick Launch Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl z-10 mb-12">
-        {/* 1. Màn hình Sân khấu (Projector Display) */}
-        <Link
-          href="/display"
-          target="_blank"
-          className="group relative glass-panel rounded-2xl p-8 transition-all duration-300 hover:scale-[1.02] hover:border-amber-400/50 hover:shadow-[0_0_35px_rgba(255,209,102,0.25)] flex flex-col justify-between"
-        >
-          <div>
-            <div className="w-14 h-14 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform">
-              <Tv className="w-7 h-7" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-100 group-hover:text-amber-300 transition-colors mb-2 flex items-center justify-between">
-              Màn Hình Máy Chiếu Sân Khấu
-              <ExternalLink className="w-5 h-5 text-slate-400 group-hover:text-amber-300" />
-            </h2>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Trình chiếu toàn màn hình cho khán đài: Đồng hồ đếm ngược, hiệu ứng lật mở đáp án kịch tính 4 thí sinh, nổ điểm số, âm thanh SFX và đồ họa sân khấu.
-            </p>
-          </div>
-          <div className="mt-6 pt-4 border-t border-slate-700/50 flex items-center text-xs font-semibold text-amber-400">
-            DÀNH CHO MÁY CHIẾU / MÀN HÌNH LED LỚN ➔
-          </div>
-        </Link>
-
-        {/* 2. Bảng điều khiển MC / Giám Khảo */}
-        <Link
-          href="/admin/live"
-          target="_blank"
-          className="group relative glass-panel rounded-2xl p-8 transition-all duration-300 hover:scale-[1.02] hover:border-blue-400/50 hover:shadow-[0_0_35px_rgba(58,134,255,0.25)] flex flex-col justify-between"
-        >
-          <div>
-            <div className="w-14 h-14 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
-              <Sliders className="w-7 h-7" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-100 group-hover:text-blue-300 transition-colors mb-2 flex items-center justify-between">
-              Bảng Điều Khiển MC / Giám Khảo
-              <ExternalLink className="w-5 h-5 text-slate-400 group-hover:text-blue-300" />
-            </h2>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Trung tâm điều phối: Bấm đếm ngược, khóa máy, xem trước câu trả lời thí sinh đang gõ theo thời gian thực, lật mở đáp án, duyệt điểm tự động hoặc thủ công.
-            </p>
-          </div>
-          <div className="mt-6 pt-4 border-t border-slate-700/50 flex items-center text-xs font-semibold text-blue-400">
-            DÀNH CHO MC / BAN TỔ CHỨC ➔
-          </div>
-        </Link>
-      </div>
-
-      {/* 4 Máy Thí Sinh */}
-      <div className="w-full max-w-5xl z-10">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-300 flex items-center gap-2">
-            <User className="w-5 h-5 text-indigo-400" />
-            Giao Diện 4 Máy Thí Sinh (Mở trên điện thoại / Laptop thí sinh)
-          </h3>
-          <Link href="/admin" className="text-sm text-slate-400 hover:text-slate-200 underline">
-            Quản lý ngân hàng câu hỏi
-          </Link>
+      {/* Main Hero & Quick Access */}
+      <div className="w-full max-w-5xl my-10 space-y-8">
+        <div className="space-y-2 text-center md:text-left">
+          <Badge variant="secondary" className="bg-zinc-900 border-zinc-800 text-zinc-300">
+            Format Olympia Standard
+          </Badge>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-50">
+            Trung Tâm Điều Phối Cuộc Thi
+          </h2>
+          <p className="text-zinc-400 text-sm md:text-base max-w-2xl">
+            Chọn màn hình tương ứng để trình chiếu lên máy chiếu sân khấu, mở bảng điều khiển MC hoặc mở giao diện cho từng máy thí sinh.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {players.map((p) => (
-            <Link
-              key={p.slot}
-              href={`/player/${p.slot}`}
-              target="_blank"
-              className={`glass-panel rounded-xl p-5 border border-slate-700/60 transition-all duration-300 hover:scale-105 ${p.glow} flex flex-col justify-between`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${p.color} flex items-center justify-center font-bold text-white shadow-lg`}>
-                  {p.slot}
-                </div>
-                <Zap className="w-4 h-4 text-slate-500 group-hover:text-yellow-400" />
+        {/* 2 Main Cards: Display & Admin Live */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900/80 transition-all flex flex-col justify-between group">
+            <CardHeader>
+              <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-200 mb-2">
+                <Tv className="w-5 h-5 text-amber-400" />
               </div>
-              <div>
-                <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Vị trí {p.slot}</div>
-                <div className="font-bold text-slate-100 text-base line-clamp-1">{p.name}</div>
+              <CardTitle className="text-xl text-zinc-100 flex items-center justify-between">
+                Màn Hình Sân Khấu / Máy Chiếu
+                <ExternalLink className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300" />
+              </CardTitle>
+              <CardDescription className="text-zinc-400">
+                Giao diện toàn màn hình cho khán giả: Đếm ngược, lật mở đáp án 4 thí sinh, nổ điểm và âm thanh SFX.
+              </CardDescription>
+            </CardHeader>
+            <CardFooter className="border-t border-zinc-800/60 pt-4">
+              <Link href="/display" target="_blank" className="w-full">
+                <Button className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold gap-2">
+                  Mở Màn Hình Chiếu <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </CardFooter>
+          </Card>
+
+          <Card className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900/80 transition-all flex flex-col justify-between group">
+            <CardHeader>
+              <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-200 mb-2">
+                <Sliders className="w-5 h-5 text-blue-400" />
               </div>
-              <div className="mt-4 pt-3 border-t border-slate-700/40 text-xs font-medium text-slate-400 flex items-center justify-between">
-                <span>Vào thi đấu</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </div>
+              <CardTitle className="text-xl text-zinc-100 flex items-center justify-between">
+                Bảng Điều Khiển MC & Giám Khảo
+                <ExternalLink className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300" />
+              </CardTitle>
+              <CardDescription className="text-zinc-400">
+                Điều phối trận đấu: Đếm ngược, khóa máy, giám sát câu trả lời thí sinh đang gõ, mở đáp án, duyệt điểm.
+              </CardDescription>
+            </CardHeader>
+            <CardFooter className="border-t border-zinc-800/60 pt-4 flex gap-2">
+              <Link href="/admin/live" className="flex-1">
+                <Button className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold gap-2">
+                  Vào Bảng MC <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+              <Link href="/admin">
+                <Button variant="outline" className="border-zinc-800 text-zinc-300 hover:bg-zinc-800">
+                  Soạn Đề
+                </Button>
+              </Link>
+            </CardFooter>
+          </Card>
+        </div>
+
+        {/* 4 Contestants Section */}
+        <div className="space-y-4 pt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              Giao Diện 4 Máy Thí Sinh (Mở trên điện thoại hoặc laptop)
+            </h3>
+            <Link href="/login" className="text-xs text-zinc-400 hover:text-zinc-200 underline">
+              Đăng nhập bằng mã PIN
             </Link>
-          ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {players.map((p) => (
+              <Card
+                key={p.slot}
+                className="border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900 hover:border-zinc-700 transition-all flex flex-col justify-between"
+              >
+                <CardHeader className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-300">
+                      Vị trí {p.slot}
+                    </Badge>
+                    <User className="w-4 h-4 text-zinc-500" />
+                  </div>
+                  <CardTitle className="text-sm font-semibold text-zinc-100 line-clamp-1">
+                    {p.name}
+                  </CardTitle>
+                  <CardDescription className="text-xs text-zinc-500 line-clamp-1">
+                    {p.school}
+                  </CardDescription>
+                </CardHeader>
+                <CardFooter className="p-4 pt-0">
+                  <Link href={`/player/${p.slot}`} target="_blank" className="w-full">
+                    <Button variant="secondary" size="sm" className="w-full bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200">
+                      Vào thi đấu
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Footer Info */}
-      <div className="mt-16 text-center text-xs text-slate-500 flex items-center gap-2">
-        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-        Sẵn sàng kết nối Supabase Realtime Engine • Độ trễ &lt; 50ms
-      </div>
+      {/* Footer */}
+      <footer className="w-full max-w-5xl border-t border-zinc-800/80 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 gap-2">
+        <p>Thi Thơ - Hệ thống Gameshow Đấu Trí Realtime</p>
+        <p className="flex items-center gap-1">
+          <ShieldCheck className="w-4 h-4 text-emerald-500" /> Bảo mật chuẩn OWASP Top 10 • Database O(1)
+        </p>
+      </footer>
     </main>
   );
 }

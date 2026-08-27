@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -14,9 +14,11 @@ import {
   Play,
   Clock,
   HelpCircle,
-  FileText,
   Upload,
 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function AdminSettingsPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
@@ -90,15 +92,14 @@ export default function AdminSettingsPage() {
     updateCurrentRound({ questions: updatedQuestions });
   };
 
-  // NẠP NHANH HÀNG LOẠT (BULK IMPORT PARSER)
   const handleBulkImport = () => {
     if (!bulkText.trim()) {
-      setBulkStatus("Vui lòng dán nội dung danh sách câu hỏi trước!");
+      setBulkStatus("Vui lòng dán nội dung câu hỏi trước!");
       return;
     }
 
     try {
-      const blocks = bulkText.split(/\n\s*\n/); // Tách từng câu bằng dòng trống
+      const blocks = bulkText.split(/\n\s*\n/);
       const parsedQuestions: Question[] = [];
 
       blocks.forEach((block, idx) => {
@@ -110,12 +111,10 @@ export default function AdminSettingsPage() {
         let correctAns = "";
         let timeLimit = 15;
         let points = 10;
-        let qType: QuestionType = "text_input";
 
         lines.slice(1).forEach((line) => {
           if (/^[A-D][.:]\s*/i.test(line)) {
             options.push(line);
-            qType = "multiple_choice";
           } else if (/^(đáp án|answer|da)[:]\s*/i.test(line)) {
             correctAns = line.replace(/^(đáp án|answer|da)[:]\s*/i, "");
           } else if (/^(thời gian|time)[:]\s*/i.test(line)) {
@@ -149,339 +148,252 @@ export default function AdminSettingsPage() {
         setBulkStatus(`✅ Đã nạp thành công ${parsedQuestions.length} câu hỏi vào ${currentRound.title}!`);
         setTimeout(() => setActiveTab("rounds"), 1200);
       } else {
-        setBulkStatus("❌ Không tìm thấy câu hỏi hợp lệ trong văn bản.");
+        setBulkStatus("❌ Không tìm thấy câu hỏi hợp lệ.");
       }
     } catch {
-      setBulkStatus("❌ Có lỗi xảy ra khi phân tích cú pháp. Vui lòng kiểm tra lại!");
+      setBulkStatus("❌ Lỗi phân tích cú pháp.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#070d1e] text-slate-100 p-4 md:p-8 font-sans max-w-6xl mx-auto">
-      {/* HEADER */}
-      <header className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 mb-6 gap-4">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-8 font-sans max-w-5xl mx-auto">
+      {/* Top Header */}
+      <header className="flex flex-wrap items-center justify-between border-b border-zinc-800 pb-4 mb-6 gap-4">
         <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
+          <Link href="/">
+            <Button variant="outline" size="icon" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-slate-100 flex items-center gap-2">
-              QUẢN TRỊ & SOẠN ĐỀ THI
+            <h1 className="text-xl font-bold tracking-tight text-zinc-100">
+              Quản Trị Đề Thi & Cấu Hình Vòng
             </h1>
-            <p className="text-xs text-slate-400">
-              Nạp câu hỏi nhanh • Cấu hình thời gian & thể lệ từng vòng • Đổi tên thí sinh
-            </p>
+            <p className="text-xs text-zinc-400">Soạn câu hỏi, điều chỉnh thời gian và chế độ chơi</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleResetScores}
-            className="px-3.5 py-2 rounded-xl bg-rose-600/20 border border-rose-500/40 text-rose-300 text-xs font-semibold hover:bg-rose-600/30"
+            className="border-zinc-800 text-zinc-400 hover:text-red-400 text-xs"
           >
             Reset Điểm
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={handleSave}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg"
+            className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold text-xs gap-1.5"
           >
-            <Save className="w-4 h-4" /> {savedSuccess ? "ĐÃ LƯU!" : "LƯU ĐỀ THI"}
-          </button>
-          <Link
-            href="/admin/live"
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg"
-          >
-            <Play className="w-4 h-4 fill-white" /> BẢNG MC
+            <Save className="w-3.5 h-3.5" /> {savedSuccess ? "Đã Lưu!" : "Lưu Thay Đổi"}
+          </Button>
+          <Link href="/admin/live">
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs gap-1.5">
+              <Play className="w-3.5 h-3.5 fill-current" /> Bảng MC
+            </Button>
           </Link>
         </div>
       </header>
 
-      {/* TABS */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <button
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-zinc-800/80 pb-3">
+        <Button
+          variant={activeTab === "rounds" ? "secondary" : "ghost"}
+          size="sm"
           onClick={() => setActiveTab("rounds")}
-          className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
-            activeTab === "rounds"
-              ? "bg-blue-600 text-white shadow-lg"
-              : "bg-slate-800/80 text-slate-400 hover:bg-slate-800"
-          }`}
+          className="text-xs gap-1.5"
         >
-          <Settings2 className="w-4 h-4" />
-          Soạn Đề Thủ Công
-        </button>
-        <button
+          <Settings2 className="w-3.5 h-3.5" /> Soạn Đề Thủ Công
+        </Button>
+        <Button
+          variant={activeTab === "bulk" ? "secondary" : "ghost"}
+          size="sm"
           onClick={() => setActiveTab("bulk")}
-          className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
-            activeTab === "bulk"
-              ? "bg-amber-600 text-white shadow-lg"
-              : "bg-slate-800/80 text-slate-400 hover:bg-slate-800"
-          }`}
+          className="text-xs gap-1.5"
         >
-          <Upload className="w-4 h-4" />
-          ⚡ Nạp Nhanh Hàng Loạt (Copy-Paste)
-        </button>
-        <button
+          <Upload className="w-3.5 h-3.5" /> Nạp Nhanh Hàng Loạt
+        </Button>
+        <Button
+          variant={activeTab === "players" ? "secondary" : "ghost"}
+          size="sm"
           onClick={() => setActiveTab("players")}
-          className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
-            activeTab === "players"
-              ? "bg-blue-600 text-white shadow-lg"
-              : "bg-slate-800/80 text-slate-400 hover:bg-slate-800"
-          }`}
+          className="text-xs gap-1.5"
         >
-          <Users className="w-4 h-4" />
-          Tài Khoản 4 Thí Sinh
-        </button>
+          <Users className="w-3.5 h-3.5" /> Danh Sách Thí Sinh
+        </Button>
       </div>
 
       {activeTab === "bulk" ? (
-        /* TAB BULK IMPORT */
-        <div className="glass-panel rounded-2xl p-6 border border-amber-500/30">
-          <h2 className="text-lg font-bold text-amber-300 mb-2 flex items-center gap-2">
-            <Upload className="w-5 h-5" />
-            Nạp Nhanh Hàng Loạt Câu Hỏi Cho: {currentRound.title}
-          </h2>
-          <p className="text-xs text-slate-400 mb-4">
-            Bạn chỉ cần copy danh sách câu hỏi dạng văn bản bên dưới và dán vào đây. Hệ thống tự động nhận diện câu hỏi, các phương án A/B/C/D và đáp án!
-          </p>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                Dán nội dung câu hỏi tại đây:
-              </label>
-              <textarea
-                rows={12}
-                value={bulkText}
-                onChange={(e) => setBulkText(e.target.value)}
-                placeholder={`Câu 1: Tác phẩm Bình Ngô đại cáo do ai sáng tác?
-A. Nguyễn Trãi
-B. Nguyễn Du
-C. Lê Lợi
-D. Trần Hưng Đạo
-Đáp án: A. Nguyễn Trãi
-Thời gian: 15
-
-Câu 2: Đỉnh núi cao nhất Việt Nam là đỉnh nào?
-Đáp án: Fansipan
-Thời gian: 20`}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 font-mono text-xs text-slate-200 focus:outline-none focus:border-amber-400"
-              />
-            </div>
-
-            <div className="bg-slate-950/70 rounded-xl p-4 border border-slate-800 flex flex-col justify-between">
-              <div>
-                <h4 className="text-xs font-bold text-amber-400 uppercase mb-2">Mẫu Định Dạng Hỗ Trợ:</h4>
-                <div className="text-[11px] text-slate-300 space-y-2 font-mono bg-slate-900 p-3 rounded-lg border border-slate-800">
-                  <p className="text-blue-300 font-bold"># Mẫu Trắc Nghiệm:</p>
-                  <p>Câu 1: Nội dung câu hỏi...</p>
-                  <p>A. Lựa chọn 1</p>
-                  <p>B. Lựa chọn 2</p>
-                  <p>C. Lựa chọn 3</p>
-                  <p>D. Lựa chọn 4</p>
-                  <p>Đáp án: A</p>
-                  <p className="text-emerald-300 font-bold mt-2"># Mẫu Tự Luận / Tăng Tốc:</p>
-                  <p>Câu 2: Hoa sen là quốc hoa nước nào?</p>
-                  <p>Đáp án: Việt Nam</p>
-                </div>
+        <Card className="border-zinc-800 bg-zinc-900/40">
+          <CardHeader>
+            <CardTitle className="text-base">Nạp Nhanh Câu Hỏi: {currentRound.title}</CardTitle>
+            <CardDescription className="text-xs">
+              Dán danh sách câu hỏi dạng văn bản vào ô dưới đây:
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <textarea
+              rows={10}
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+              placeholder={`Câu 1: Thủ đô của Việt Nam là gì?
+A. Hà Nội
+B. TP. Hồ Chí Minh
+C. Đà Nẵng
+D. Huế
+Đáp án: A. Hà Nội
+Thời gian: 15`}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 font-mono text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            />
+            {bulkStatus && (
+              <div className="text-xs font-semibold text-amber-400 bg-amber-950/30 p-2.5 rounded border border-amber-800/40">
+                {bulkStatus}
               </div>
-
-              {bulkStatus && (
-                <div className="p-3 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold mt-3">
-                  {bulkStatus}
-                </div>
-              )}
-
-              <button
-                onClick={handleBulkImport}
-                className="w-full mt-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
-              >
-                <Upload className="w-4 h-4" /> BẮT ĐẦU PHÂN TÍCH & NẠP VÀO VÒNG NÀY
-              </button>
-            </div>
-          </div>
-        </div>
+            )}
+            <Button onClick={handleBulkImport} className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold text-xs">
+              Bắt Đầu Phân Tích & Nạp Đề
+            </Button>
+          </CardContent>
+        </Card>
       ) : activeTab === "players" ? (
-        /* TAB PLAYERS */
-        <div className="glass-panel rounded-2xl p-6 border border-slate-800">
-          <h2 className="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-400" />
-            Tài Khoản & Mã PIN 4 Thí Sinh
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {matchState.players.map((p, idx) => (
-              <div key={p.slot_number} className="bg-slate-900/90 rounded-xl p-4 border border-slate-800">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-blue-400 uppercase">Thí sinh Vị trí {p.slot_number}</span>
-                  <span className="text-xs font-mono font-bold text-emerald-400">
-                    Mã PIN Đăng Nhập: {p.slot_number}{p.slot_number}{p.slot_number}{p.slot_number}
-                  </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {matchState.players.map((p, idx) => (
+            <Card key={p.slot_number} className="border-zinc-800 bg-zinc-900/40">
+              <CardHeader className="p-4 pb-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className="border-zinc-800 text-xs">Vị trí {p.slot_number}</Badge>
+                  <span className="text-xs font-mono text-zinc-400">PIN: {p.slot_number}{p.slot_number}{p.slot_number}{p.slot_number}</span>
                 </div>
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-[11px] text-slate-400 block mb-1">Họ và tên:</label>
-                    <input
-                      type="text"
-                      value={p.name}
-                      onChange={(e) => {
-                        const newPlayers = [...matchState.players];
-                        newPlayers[idx].name = e.target.value;
-                        setMatchState({ ...matchState, players: newPlayers });
-                      }}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] text-slate-400 block mb-1">Trường / Đơn vị:</label>
-                    <input
-                      type="text"
-                      value={p.school_name}
-                      onChange={(e) => {
-                        const newPlayers = [...matchState.players];
-                        newPlayers[idx].school_name = e.target.value;
-                        setMatchState({ ...matchState, players: newPlayers });
-                      }}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-2 space-y-2">
+                <div>
+                  <label className="text-[11px] text-zinc-400 block mb-1">Họ tên:</label>
+                  <input
+                    type="text"
+                    value={p.name}
+                    onChange={(e) => {
+                      const newPlayers = [...matchState.players];
+                      newPlayers[idx].name = e.target.value;
+                      setMatchState({ ...matchState, players: newPlayers });
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs font-semibold text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                  />
                 </div>
-              </div>
-            ))}
-          </div>
+                <div>
+                  <label className="text-[11px] text-zinc-400 block mb-1">Trường:</label>
+                  <input
+                    type="text"
+                    value={p.school_name}
+                    onChange={(e) => {
+                      const newPlayers = [...matchState.players];
+                      newPlayers[idx].school_name = e.target.value;
+                      setMatchState({ ...matchState, players: newPlayers });
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : (
-        /* TAB MANUAL ROUNDS & QUESTIONS */
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Vòng Thi</span>
-              </div>
-              <div className="space-y-2">
-                {matchState.rounds.map((round, idx) => (
-                  <button
-                    key={round.id}
-                    onClick={() => setSelectedRoundIdx(idx)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between ${
-                      selectedRoundIdx === idx
-                        ? "bg-blue-600 border-blue-400 text-white shadow-lg"
-                        : "bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800"
-                    }`}
-                  >
-                    <div>
-                      <div className="font-bold text-xs uppercase">{round.title}</div>
-                      <div className="text-[11px] opacity-75">{round.questions.length} câu hỏi</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-zinc-300">
+              Vòng Thi: {currentRound.title} ({currentRound.questions.length} câu hỏi)
+            </h3>
+            <Button size="sm" onClick={handleAddQuestion} className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 text-xs font-semibold gap-1">
+              <Plus className="w-3.5 h-3.5" /> Thêm Câu Hỏi
+            </Button>
           </div>
 
-          <div className="lg:col-span-3 space-y-6">
-            <div className="glass-panel rounded-2xl p-6 border border-slate-800">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-slate-200 flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-blue-400" />
-                  Danh Sách Câu Hỏi ({currentRound.questions.length} câu)
-                </h3>
-                <button
-                  onClick={handleAddQuestion}
-                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg"
-                >
-                  <Plus className="w-4 h-4" /> Thêm Câu Hỏi
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {currentRound.questions.map((q, qIdx) => (
-                  <div key={q.id} className="bg-slate-900/90 rounded-xl p-4 border border-slate-800 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                      <span className="text-xs font-black text-blue-400 uppercase">CÂU HỎI {qIdx + 1}</span>
-                      <div className="flex flex-wrap items-center gap-3 text-xs">
-                        <select
-                          value={q.question_type}
-                          onChange={(e) =>
-                            updateQuestion(qIdx, { question_type: e.target.value as QuestionType })
-                          }
-                          className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs font-semibold text-amber-300"
+          <div className="space-y-4">
+            {currentRound.questions.map((q, qIdx) => (
+              <Card key={q.id} className="border-zinc-800 bg-zinc-900/40">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
+                    <Badge variant="outline" className="border-zinc-800 text-[10px]">CÂU {qIdx + 1}</Badge>
+                    <div className="flex items-center gap-2 text-xs">
+                      <select
+                        value={q.question_type}
+                        onChange={(e) => updateQuestion(qIdx, { question_type: e.target.value as QuestionType })}
+                        className="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs font-medium text-zinc-200"
+                      >
+                        <option value="multiple_choice">Trắc Nghiệm</option>
+                        <option value="text_input">Tự Luận / Tăng Tốc</option>
+                        <option value="buzzer">Bấm Chuông</option>
+                      </select>
+                      <div className="flex items-center gap-1 text-zinc-400">
+                        <Clock className="w-3.5 h-3.5" />
+                        <input
+                          type="number"
+                          value={q.time_limit}
+                          onChange={(e) => updateQuestion(qIdx, { time_limit: Number(e.target.value) })}
+                          className="w-12 bg-zinc-950 border border-zinc-800 rounded px-1.5 py-0.5 text-center font-mono"
+                        />
+                        <span>s</span>
+                      </div>
+                      {currentRound.questions.length > 1 && (
+                        <button
+                          onClick={() => handleDeleteQuestion(qIdx)}
+                          className="p-1 text-zinc-500 hover:text-red-400"
                         >
-                          <option value="multiple_choice">Trắc Nghiệm (A, B, C, D)</option>
-                          <option value="text_input">Nhập Chữ / Tăng Tốc</option>
-                          <option value="buzzer">Bấm Chuông Giành Quyền</option>
-                        </select>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <input
-                            type="number"
-                            value={q.time_limit}
-                            onChange={(e) => updateQuestion(qIdx, { time_limit: Number(e.target.value) })}
-                            className="w-12 bg-slate-950 border border-slate-700 rounded px-1 text-center font-bold"
-                          />
-                          <span className="text-slate-500">s</span>
-                        </div>
-                        {currentRound.questions.length > 1 && (
-                          <button
-                            onClick={() => handleDeleteQuestion(qIdx)}
-                            className="p-1 rounded bg-slate-800 hover:bg-red-600/30 text-slate-400 hover:text-red-400"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <textarea
-                      rows={2}
-                      value={q.question_text}
-                      onChange={(e) => updateQuestion(qIdx, { question_text: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm font-semibold text-white focus:outline-none focus:border-blue-500"
-                    />
-
-                    {q.question_type === "multiple_choice" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {[0, 1, 2, 3].map((optIdx) => (
-                          <input
-                            key={optIdx}
-                            type="text"
-                            value={q.options?.[optIdx] || ""}
-                            onChange={(e) => {
-                              const newOpts = [...(q.options || ["A. ", "B. ", "C. ", "D. "])];
-                              newOpts[optIdx] = e.target.value;
-                              updateQuestion(qIdx, { options: newOpts });
-                            }}
-                            className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200"
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[11px] font-bold text-emerald-400 block mb-1">Đáp Án Đúng:</label>
-                        <input
-                          type="text"
-                          value={q.correct_answer}
-                          onChange={(e) => updateQuestion(qIdx, { correct_answer: e.target.value })}
-                          className="w-full bg-slate-950 border border-emerald-500/50 rounded-lg px-3 py-2 text-sm font-bold text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-slate-400 block mb-1">Giải Thích:</label>
-                        <input
-                          type="text"
-                          value={q.explanation || ""}
-                          onChange={(e) => updateQuestion(qIdx, { explanation: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300"
-                        />
-                      </div>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+
+                  <textarea
+                    rows={2}
+                    value={q.question_text}
+                    onChange={(e) => updateQuestion(qIdx, { question_text: e.target.value })}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-2.5 text-xs font-medium text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                  />
+
+                  {q.question_type === "multiple_choice" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[0, 1, 2, 3].map((optIdx) => (
+                        <input
+                          key={optIdx}
+                          type="text"
+                          value={q.options?.[optIdx] || ""}
+                          onChange={(e) => {
+                            const newOpts = [...(q.options || ["A. ", "B. ", "C. ", "D. "])];
+                            newOpts[optIdx] = e.target.value;
+                            updateQuestion(qIdx, { options: newOpts });
+                          }}
+                          className="bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs text-zinc-200"
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <label className="text-[10px] uppercase font-semibold text-emerald-400 block mb-1">Đáp Án Đúng:</label>
+                      <input
+                        type="text"
+                        value={q.correct_answer}
+                        onChange={(e) => updateQuestion(qIdx, { correct_answer: e.target.value })}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs font-semibold text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">Giải thích:</label>
+                      <input
+                        type="text"
+                        value={q.explanation || ""}
+                        onChange={(e) => updateQuestion(qIdx, { explanation: e.target.value })}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs text-zinc-300"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       )}

@@ -1,11 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useRef } from "react";
 import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Volume2, VolumeX, Maximize, Award, Sparkles, CheckCircle2, XCircle } from "lucide-react";
+import { Volume2, VolumeX, Maximize, Trophy, CheckCircle2, XCircle, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function DisplayPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
@@ -14,7 +17,6 @@ export default function DisplayPage() {
   const [timerRunning, setTimerRunning] = useState<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Subscribe realtime events
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
       if (event.type === "SYNC_STATE") {
@@ -129,7 +131,6 @@ export default function DisplayPage() {
     return () => unsubscribe();
   }, [soundEnabled]);
 
-  // Local Timer countdown loop
   useEffect(() => {
     if (timerRunning && timeLeft > 0) {
       timerRef.current = setTimeout(() => {
@@ -161,127 +162,106 @@ export default function DisplayPage() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#040814] text-slate-100 flex flex-col justify-between p-4 md:p-6 select-none relative overflow-hidden font-sans">
-      {/* Background Lighting Effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-blue-600/15 rounded-full blur-[160px] pointer-events-none" />
-      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-amber-600/15 rounded-full blur-[140px] pointer-events-none" />
-
-      {/* TOP BAR: Header, Round Title & Controls */}
-      <header className="relative z-10 flex items-center justify-between border-b border-blue-900/50 pb-3">
+    <div className="h-screen w-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between p-6 select-none relative overflow-hidden font-sans">
+      {/* Top Bar */}
+      <header className="relative z-10 flex items-center justify-between border-b border-zinc-800 pb-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20">
-            <Award className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-100">
+            <Trophy className="w-5 h-5 text-amber-400" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400">
+            <h1 className="text-xl font-bold tracking-tight text-zinc-100">
               {matchState.title}
             </h1>
-            <p className="text-xs uppercase tracking-widest text-blue-400 font-semibold">
-              {currentRound?.title} • CÂU HỎI {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-zinc-400">
+              <span className="font-semibold text-zinc-200">{currentRound?.title}</span>
+              <span>•</span>
+              <span>Câu hỏi {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}</span>
+            </div>
           </div>
         </div>
 
-        {/* Quick Toolbar */}
-        <div className="flex items-center gap-3">
-          <button
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`p-2.5 rounded-xl border transition-all ${
-              soundEnabled
-                ? "bg-blue-600/20 border-blue-500/50 text-blue-400"
-                : "bg-slate-800/40 border-slate-700 text-slate-500"
-            }`}
-            title="Bật/Tắt âm thanh"
+            className="border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100"
           >
-            {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-          </button>
-          <button
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
             onClick={toggleFullscreen}
-            className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-700 text-slate-300 hover:text-white transition-all"
-            title="Toàn màn hình"
+            className="border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100"
           >
-            <Maximize className="w-5 h-5" />
-          </button>
+            <Maximize className="w-4 h-4" />
+          </Button>
         </div>
       </header>
 
-      {/* CENTER: Main Question Arena & Countdown Timer */}
-      <main className="relative z-10 my-auto flex flex-col items-center justify-center max-w-6xl w-full mx-auto gap-6">
-        {/* Buzzer Alert Banner (nếu có người bấm chuông) */}
+      {/* Center Main Arena */}
+      <main className="relative z-10 my-auto flex flex-col items-center justify-center max-w-5xl w-full mx-auto gap-6">
+        {/* Buzzer Alert */}
         {matchState.buzzer_winner_slot && (
-          <div className="w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 p-1 rounded-2xl shadow-[0_0_50px_rgba(255,209,102,0.6)] animate-bounce">
-            <div className="bg-slate-950 py-3 px-6 rounded-xl flex items-center justify-center gap-4 text-center">
-              <Sparkles className="w-6 h-6 text-amber-400 animate-spin" />
-              <span className="text-xl md:text-2xl font-black text-amber-300 tracking-wide">
-                🔔 THÍ SINH {matchState.buzzer_winner_slot} (
-                {matchState.players.find((p) => p.slot_number === matchState.buzzer_winner_slot)?.name}) GIÀNH QUYỀN TRẢ LỜI!
-              </span>
-              <span className="text-sm font-mono text-slate-400">
-                ({(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s)
-              </span>
-            </div>
+          <div className="w-full bg-amber-500/10 border border-amber-500/40 rounded-xl p-4 text-center animate-bounce">
+            <span className="text-xl font-bold text-amber-400 flex items-center justify-center gap-2">
+              <Sparkles className="w-5 h-5 animate-spin" />
+              Thí sinh {matchState.buzzer_winner_slot} (
+              {matchState.players.find((p) => p.slot_number === matchState.buzzer_winner_slot)?.name}) Đã Giành Quyền Trả Lời!
+            </span>
           </div>
         )}
 
         {/* Question Card */}
-        <div className="w-full glass-panel rounded-3xl p-6 md:p-8 border border-blue-500/30 relative shadow-2xl flex flex-col md:flex-row gap-6 items-center">
-          {/* Circular Countdown Clock */}
+        <Card className="w-full border-zinc-800 bg-zinc-900/60 shadow-2xl p-6 md:p-8 flex flex-col md:flex-row gap-8 items-center">
+          {/* Radial Timer */}
           <div className="relative flex-shrink-0 flex items-center justify-center">
-            <svg className="w-28 h-28 md:w-36 md:h-36 transform -rotate-90">
-              <circle
-                cx="50%"
-                cy="50%"
-                r="42%"
-                className="stroke-blue-950/80 fill-none"
-                strokeWidth="10"
-              />
+            <svg className="w-28 h-28 md:w-32 md:h-32 transform -rotate-90">
+              <circle cx="50%" cy="50%" r="42%" className="stroke-zinc-800 fill-none" strokeWidth="8" />
               <circle
                 cx="50%"
                 cy="50%"
                 r="42%"
                 className={`fill-none transition-all duration-1000 ${
-                  timeLeft <= 5 ? "stroke-red-500" : "stroke-amber-400"
+                  timeLeft <= 5 ? "stroke-red-500" : "stroke-zinc-100"
                 }`}
-                strokeWidth="10"
+                strokeWidth="8"
                 strokeDasharray="264"
                 strokeDashoffset={264 - (264 * timeLeft) / (currentQuestion?.time_limit || 15)}
                 strokeLinecap="round"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span
-                className={`text-3xl md:text-5xl font-black font-mono tracking-tight ${
-                  timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-amber-300"
-                }`}
-              >
+              <span className={`text-3xl md:text-4xl font-bold font-mono ${timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-zinc-100"}`}>
                 {timeLeft}
               </span>
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">GIÂY</span>
+              <span className="text-[10px] uppercase font-semibold text-zinc-500 tracking-wider">GIÂY</span>
             </div>
           </div>
 
-          {/* Question Text & Media */}
-          <div className="flex-1 text-left">
-            <div className="inline-block px-3 py-1 rounded-md bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wider mb-2 border border-blue-500/40">
+          {/* Question Text */}
+          <div className="flex-1 space-y-4">
+            <Badge variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-400 font-mono text-xs">
               +{currentQuestion?.points_correct} ĐIỂM
-            </div>
-            <h2 className="text-xl md:text-3xl font-extrabold text-slate-100 leading-snug tracking-wide">
-              {currentQuestion?.question_text || "Đang chuẩn bị câu hỏi..."}
+            </Badge>
+            <h2 className="text-xl md:text-2xl font-bold text-zinc-100 leading-snug tracking-tight">
+              {currentQuestion?.question_text}
             </h2>
 
-            {/* Options List (nếu là trắc nghiệm) */}
+            {/* Multiple Choice Options */}
             {currentQuestion?.question_type === "multiple_choice" && currentQuestion.options && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                 {currentQuestion.options.map((opt, i) => {
                   const isCorrect = matchState.is_revealed && opt.startsWith(currentQuestion.correct_answer[0]);
                   return (
                     <div
                       key={i}
-                      className={`p-3.5 rounded-xl text-base md:text-lg font-semibold transition-all border ${
+                      className={`p-3.5 rounded-lg text-sm font-medium border transition-all ${
                         isCorrect
-                          ? "bg-emerald-500/30 border-emerald-400 text-emerald-200 glow-green"
-                          : "bg-slate-900/60 border-slate-700/80 text-slate-300"
+                          ? "bg-emerald-950/40 border-emerald-500 text-emerald-300"
+                          : "bg-zinc-950 border-zinc-800 text-zinc-300"
                       }`}
                     >
                       {opt}
@@ -291,20 +271,18 @@ export default function DisplayPage() {
               </div>
             )}
 
-            {/* Correct Answer Reveal Banner */}
+            {/* Non Multiple Choice Answer Reveal */}
             {matchState.is_revealed && currentQuestion?.question_type !== "multiple_choice" && (
-              <div className="mt-4 p-3 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <span className="font-bold">ĐÁP ÁN CHUẨN:</span>
-                <span className="text-lg font-black uppercase text-white tracking-wider">
-                  {currentQuestion?.correct_answer}
-                </span>
+              <div className="p-3.5 rounded-lg bg-emerald-950/40 border border-emerald-500/50 text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-semibold uppercase">ĐÁP ÁN:</span>
+                <span className="text-sm font-bold text-zinc-100">{currentQuestion?.correct_answer}</span>
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
-        {/* 4 Contestants Live Answer Flip Cards */}
+        {/* 4 Contestants Flip Cards */}
         <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {matchState.players.map((player) => {
             const resp = matchState.current_responses[player.slot_number];
@@ -314,88 +292,83 @@ export default function DisplayPage() {
             const isCorrect = resp?.is_correct;
 
             return (
-              <div
+              <Card
                 key={player.slot_number}
-                className={`glass-panel rounded-2xl p-4 border transition-all duration-500 flex flex-col justify-between ${
+                className={`border-zinc-800 bg-zinc-900/40 transition-all ${
                   isScored && resp
                     ? isCorrect
-                      ? "border-emerald-400/80 bg-emerald-950/40 glow-green"
-                      : "border-red-500/80 bg-red-950/40 glow-red"
+                      ? "border-emerald-500/80 bg-emerald-950/20"
+                      : "border-red-500/80 bg-red-950/20"
                     : matchState.buzzer_winner_slot === player.slot_number
-                    ? "border-amber-400 bg-amber-950/50 glow-gold"
+                    ? "border-amber-400 bg-amber-950/20"
                     : hasSubmitted
-                    ? "border-blue-400/60 bg-blue-950/30"
-                    : "border-slate-800 bg-slate-900/40"
+                    ? "border-zinc-700 bg-zinc-900/80"
+                    : ""
                 }`}
               >
-                {/* Header Thí Sinh */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-xs font-black text-blue-300">
+                <CardHeader className="p-4 pb-2">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="outline" className="border-zinc-800 bg-zinc-950 text-zinc-300 text-xs">
                       {player.slot_number}
-                    </div>
-                    <span className="font-bold text-sm text-slate-200 line-clamp-1">{player.name}</span>
+                    </Badge>
+                    {resp && (
+                      <span className="text-[11px] font-mono text-zinc-500">
+                        {(resp.response_time_ms / 1000).toFixed(2)}s
+                      </span>
+                    )}
                   </div>
-                  {resp && (
-                    <span className="text-[11px] font-mono text-slate-400">
-                      {(resp.response_time_ms / 1000).toFixed(2)}s
-                    </span>
-                  )}
-                </div>
+                  <CardTitle className="text-sm font-semibold text-zinc-200 line-clamp-1 pt-1">
+                    {player.name}
+                  </CardTitle>
+                </CardHeader>
 
-                {/* Khung Hiển Thị Đáp Án (Flip Card) */}
-                <div className="my-2 h-20 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col items-center justify-center p-2 text-center relative overflow-hidden">
-                  {!hasSubmitted ? (
-                    <span className="text-xs text-slate-500 italic animate-pulse">Đang suy nghĩ...</span>
-                  ) : !isRevealed ? (
-                    <div className="flex items-center gap-2 text-blue-400 font-bold text-sm">
-                      <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-ping" />
-                      ĐÃ GỬI ĐÁP ÁN (ĐÃ KHÓA)
-                    </div>
-                  ) : (
-                    <div className="animate-flip w-full flex flex-col items-center justify-center">
-                      <span className="text-lg md:text-xl font-black text-white uppercase tracking-wider line-clamp-2">
+                <CardContent className="p-4 pt-2">
+                  <div className="h-16 rounded-md bg-zinc-950 border border-zinc-800 flex items-center justify-center p-2 text-center relative overflow-hidden">
+                    {!hasSubmitted ? (
+                      <span className="text-xs text-zinc-600 italic">Đang suy nghĩ...</span>
+                    ) : !isRevealed ? (
+                      <span className="text-xs font-semibold text-zinc-400">ĐÃ GỬI (ĐÃ KHÓA)</span>
+                    ) : (
+                      <span className="text-base font-bold text-zinc-100 uppercase line-clamp-2">
                         {resp.answer_text}
                       </span>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Icon Đúng / Sai khi đã chấm điểm */}
-                  {isScored && resp && (
-                    <div className="absolute top-1 right-1">
-                      {isCorrect ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-red-500" />
-                      )}
-                    </div>
-                  )}
-                </div>
+                    {isScored && resp && (
+                      <div className="absolute top-1.5 right-1.5">
+                        {isCorrect ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Footer: Điểm Thưởng / Kết quả */}
-                <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-800">
-                  <span className="text-slate-400">Tổng điểm:</span>
-                  <span className="font-mono font-black text-base text-amber-300">{player.score} đ</span>
-                </div>
-              </div>
+                  <div className="flex items-center justify-between text-xs pt-3 mt-2 border-t border-zinc-800/60">
+                    <span className="text-zinc-500">Tổng điểm:</span>
+                    <span className="font-mono font-bold text-sm text-amber-400">{player.score} đ</span>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
       </main>
 
-      {/* BOTTOM SCOREBOARD: 4 Cột Điểm Đổi Hạng Hoành Tráng */}
-      <footer className="relative z-10 pt-2">
-        <div className="grid grid-cols-4 gap-3 max-w-6xl mx-auto">
+      {/* Bottom Scoreboard */}
+      <footer className="relative z-10 border-t border-zinc-800 pt-4">
+        <div className="grid grid-cols-4 gap-4 max-w-5xl mx-auto">
           {matchState.players.map((p, idx) => (
             <div
               key={p.slot_number}
-              className="bg-slate-900/80 border border-blue-900/60 rounded-xl p-2.5 flex items-center justify-between shadow-lg"
+              className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3 flex items-center justify-between"
             >
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-500">#{idx + 1}</span>
-                <span className="text-xs md:text-sm font-semibold text-slate-200 line-clamp-1">{p.name}</span>
+                <span className="text-xs font-mono text-zinc-500">#{idx + 1}</span>
+                <span className="text-xs font-medium text-zinc-300 line-clamp-1">{p.name}</span>
               </div>
-              <span className="font-mono text-lg md:text-xl font-black text-amber-400">{p.score}</span>
+              <span className="font-mono text-base font-bold text-amber-400">{p.score}</span>
             </div>
           ))}
         </div>

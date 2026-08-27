@@ -1,6 +1,7 @@
-﻿import type { Config } from "tailwindcss";
+import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: ["class"],
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,37 +10,41 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        olympia: {
-          dark: "#0B132B",
-          navy: "#1C2541",
-          blue: "#3A86FF",
-          gold: "#FFD166",
-          green: "#06D6A0",
-          red: "#EF476F",
-          purple: "#7209B7"
-        }
-      },
-      animation: {
-        'pulse-glow': 'pulseGlow 2s infinite ease-in-out',
-        'flip': 'flip 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-        'float': 'float 3s ease-in-out infinite',
-      },
-      keyframes: {
-        pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 15px rgba(58, 134, 255, 0.4), inset 0 0 15px rgba(58, 134, 255, 0.2)' },
-          '50%': { boxShadow: '0 0 30px rgba(58, 134, 255, 0.8), inset 0 0 25px rgba(58, 134, 255, 0.5)' },
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
-        flip: {
-          '0%': { transform: 'rotateX(90deg)', opacity: '0' },
-          '100%': { transform: 'rotateX(0deg)', opacity: '1' },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-6px)' },
-        }
-      }
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
     },
   },
   plugins: [],
