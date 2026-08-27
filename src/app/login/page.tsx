@@ -1,10 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Lock, User, ShieldCheck, ArrowRight, KeyRound, Eye, EyeOff } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Lock, User, ShieldCheck, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function LoginForm() {
@@ -23,7 +22,6 @@ function LoginForm() {
     setErrorMsg("");
 
     if (role === "admin") {
-      // Mật khẩu bảo mật cho Quản Trị Viên / MC
       const savedAdminPass = typeof window !== "undefined" ? localStorage.getItem("custom_admin_password") : null;
       const validAdminPass = savedAdminPass || "Admin@Olympia2026!";
 
@@ -33,10 +31,9 @@ function LoginForm() {
         }
         router.push(redirectPath);
       } else {
-        setErrorMsg("Mật khẩu Quản trị viên không chính xác! Vui lòng kiểm tra lại.");
+        setErrorMsg("Mật khẩu Quản trị viên không chính xác!");
       }
     } else {
-      // Thí sinh đăng nhập theo mã PIN
       if (typeof window !== "undefined") {
         localStorage.setItem("auth_player_slot", String(playerSlot));
       }
@@ -45,126 +42,124 @@ function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md border-zinc-800 bg-zinc-900/70 shadow-2xl">
-      <CardHeader className="text-center pb-4">
-        <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700 mx-auto flex items-center justify-center text-zinc-100 mb-2 shadow-inner">
-          <KeyRound className="w-6 h-6 text-amber-400" />
+    <div className="w-full max-w-md bg-[#0b1329] border-2 border-blue-900/80 rounded-2xl p-6 shadow-2xl space-y-5">
+      <div className="text-center space-y-1">
+        <div className="w-12 h-12 rounded-xl bg-blue-600 mx-auto flex items-center justify-center text-white mb-3 shadow-lg">
+          <Lock className="w-6 h-6" />
         </div>
-        <CardTitle className="text-xl">Cổng Đăng Nhập Quản Trị & MC</CardTitle>
-        <CardDescription className="text-xs text-zinc-400">
-          Đăng nhập để điều khiển trận đấu và quản lý đề thi
-        </CardDescription>
-      </CardHeader>
+        <h2 className="text-2xl font-black text-white tracking-wide uppercase">
+          ĐĂNG NHẬP HỆ THỐNG
+        </h2>
+        <p className="text-xs text-slate-400 font-medium">
+          Cổng kết nối Ban Giám Khảo & Thí Sinh
+        </p>
+      </div>
 
-      <CardContent className="space-y-4">
-        {/* Role Toggle */}
-        <div className="grid grid-cols-2 gap-1 p-1 bg-zinc-950 rounded-lg border border-zinc-800">
-          <button
-            type="button"
-            onClick={() => {
-              setRole("admin");
-              setErrorMsg("");
-            }}
-            className={`py-2 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-              role === "admin" ? "bg-zinc-800 text-zinc-100 shadow" : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" /> Quản Trị / MC
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setRole("player");
-              setErrorMsg("");
-            }}
-            className={`py-2 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-              role === "player" ? "bg-zinc-800 text-zinc-100 shadow" : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            <User className="w-3.5 h-3.5" /> Thí Sinh
-          </button>
-        </div>
+      {/* Role Toggle */}
+      <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#060a14] rounded-xl border border-blue-950">
+        <button
+          type="button"
+          onClick={() => {
+            setRole("admin");
+            setErrorMsg("");
+          }}
+          className={`py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            role === "admin" ? "bg-blue-600 text-white shadow" : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" /> Quản Trị / MC
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setRole("player");
+            setErrorMsg("");
+          }}
+          className={`py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            role === "player" ? "bg-blue-600 text-white shadow" : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <User className="w-4 h-4" /> Máy Thí Sinh
+        </button>
+      </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          {role === "admin" ? (
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-zinc-300">
-                  Mật Khẩu Quản Trị Viên:
-                </label>
-              </div>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu quản trị..."
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md pl-3 pr-10 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 font-mono"
-                />
+      <form onSubmit={handleLogin} className="space-y-4">
+        {role === "admin" ? (
+          <div>
+            <label className="text-xs font-bold text-slate-300 block mb-1.5">
+              MẬT KHẨU QUẢN TRỊ:
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Nhập mật khẩu quản trị..."
+                className="w-full bg-[#060a14] border border-blue-900 rounded-xl pl-4 pr-10 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <label className="text-xs font-bold text-slate-300 block mb-1.5">
+              CHỌN VỊ TRÍ MÁY THI ĐẤU:
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {[1, 2, 3, 4].map((slot) => (
                 <button
+                  key={slot}
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  onClick={() => setPlayerSlot(slot)}
+                  className={`h-12 rounded-xl font-black text-sm transition-all border-2 ${
+                    playerSlot === slot
+                      ? "bg-blue-600 border-blue-400 text-white shadow-lg"
+                      : "bg-[#060a14] border-blue-950 text-slate-400 hover:border-blue-800"
+                  }`}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  MÁY {slot}
                 </button>
-              </div>
-              <p className="text-[11px] text-zinc-500 mt-1.5">
-                Mật khẩu mặc định: <span className="font-mono text-zinc-300">Admin@Olympia2026!</span>
-              </p>
+              ))}
             </div>
-          ) : (
-            <div className="space-y-3">
-              <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
-                Chọn Vị Trí Máy Thí Sinh:
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                {[1, 2, 3, 4].map((slot) => (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => setPlayerSlot(slot)}
-                    className={`h-11 rounded-lg font-bold text-sm transition-all border ${
-                      playerSlot === slot
-                        ? "bg-zinc-100 border-zinc-100 text-zinc-950 shadow"
-                        : "bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700"
-                    }`}
-                  >
-                    TS {slot}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
+        )}
 
-          {errorMsg && (
-            <p className="text-xs font-medium text-red-400 bg-red-950/30 p-2.5 rounded border border-red-800/40">
-              {errorMsg}
-            </p>
-          )}
+        {errorMsg && (
+          <p className="text-xs font-bold text-red-400 bg-red-950/40 p-3 rounded-xl border border-red-800/60 text-center">
+            {errorMsg}
+          </p>
+        )}
 
-          <Button type="submit" className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-bold text-xs h-10 gap-1.5">
-            Xác Nhận & Đăng Nhập <ArrowRight className="w-4 h-4" />
-          </Button>
-        </form>
-      </CardContent>
+        <Button
+          type="submit"
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs h-12 rounded-xl uppercase tracking-wider"
+        >
+          Xác Nhận & Đăng Nhập
+        </Button>
+      </form>
 
-      <CardFooter className="border-t border-zinc-800/80 pt-4 flex justify-between text-xs text-zinc-500">
-        <Link href="/" className="hover:text-zinc-300">
-          Trang Chủ
+      <div className="pt-3 border-t border-blue-900/60 flex justify-between text-xs text-slate-400 font-medium">
+        <Link href="/" className="hover:text-white">
+          ← Về Trang Chủ
         </Link>
-        <Link href="/display" target="_blank" className="hover:text-zinc-300">
-          Màn Hình Máy Chiếu ➔
+        <Link href="/display" target="_blank" className="hover:text-blue-300">
+          Mở Màn Hình Máy Chiếu →
         </Link>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4 font-sans">
-      <Suspense fallback={<div className="text-xs text-zinc-500">Đang tải...</div>}>
+    <div className="min-h-screen bg-[#060a14] text-white flex items-center justify-center p-4 font-sans selection:bg-blue-600">
+      <Suspense fallback={<div className="text-xs text-slate-500">Đang tải...</div>}>
         <LoginForm />
       </Suspense>
     </div>

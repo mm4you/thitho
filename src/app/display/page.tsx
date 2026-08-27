@@ -1,47 +1,33 @@
 ﻿"use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import {
-  Trophy,
-  Zap,
-  CheckCircle2,
-  XCircle,
-  HelpCircle,
-  QrCode,
-  Clock,
-  Sparkles,
-  Users,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Trophy, Zap, Check, X } from "lucide-react";
 
 export default function DisplayPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
   const [timeLeft, setTimeLeft] = useState<number>(15);
   const [isTimerActive, setIsTimerActive] = useState<boolean>(false);
   const [timeLimit, setTimeLimit] = useState<number>(15);
-  const [originUrl, setOriginUrl] = useState<string>("");
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setOriginUrl(window.location.origin);
-    }
-  }, []);
+  const slotThemes = [
+    { name: "ĐỎ", border: "border-red-500", bg: "bg-red-950/40", text: "text-red-400", badge: "bg-red-600" },
+    { name: "XANH", border: "border-blue-500", bg: "bg-blue-950/40", text: "text-blue-400", badge: "bg-blue-600" },
+    { name: "VÀNG", border: "border-amber-500", bg: "bg-amber-950/40", text: "text-amber-400", badge: "bg-amber-600" },
+    { name: "LỤC", border: "border-emerald-500", bg: "bg-emerald-950/40", text: "text-emerald-400", badge: "bg-emerald-600" },
+  ];
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-
     if (isTimerActive && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
           const next = prev - 1;
-          if (next > 0 && next <= 5) {
-            sound.playTick();
-          } else if (next === 0) {
+          if (next > 0 && next <= 5) sound.playTick();
+          else if (next === 0) {
             sound.playTimeUp();
             setIsTimerActive(false);
           }
@@ -49,7 +35,6 @@ export default function DisplayPage() {
         });
       }, 1000);
     }
-
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -104,7 +89,7 @@ export default function DisplayPage() {
 
         if (hasCorrect) {
           sound.playCorrect();
-          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+          confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
         } else {
           sound.playWrong();
         }
@@ -129,13 +114,6 @@ export default function DisplayPage() {
         });
       } else if (event.type === "RESET_BUZZER") {
         setMatchState((prev) => ({ ...prev, buzzer_winner_slot: null, buzzer_winner_time_ms: null }));
-      } else if (event.type === "OVERRIDE_SCORE") {
-        setMatchState((prev) => ({
-          ...prev,
-          players: prev.players.map((p) =>
-            p.slot_number === event.slot_number ? { ...p, score: p.score + event.delta } : p
-          ),
-        }));
       } else if (event.type === "UPDATE_PLAYER_INFO") {
         setMatchState((prev) => ({
           ...prev,
@@ -173,190 +151,155 @@ export default function DisplayPage() {
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
 
-  // -------------------------------------------------------------
-  // 1. GIAO DIỆN CHỜ SÂN KHẤU (STANDBY LOBBY STAGE)
-  // -------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // 1. MÀN HÌNH CHỜ SÂN KHẤU (STANDBY STAGE)
+  // ------------------------------------------------------------------
   if (matchState.is_standby) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between p-8 md:p-12 font-sans selection:bg-zinc-800 relative overflow-hidden select-none">
-        {/* Background Ambient Glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
-
-        {/* Top Header */}
-        <header className="flex items-center justify-between border-b border-zinc-800/80 pb-6 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-700 flex items-center justify-center text-zinc-100 shadow-lg">
-              <Trophy className="w-6 h-6 text-amber-400" />
+      <div className="min-h-screen bg-[#060a14] text-white flex flex-col justify-between p-8 md:p-12 font-sans select-none relative overflow-hidden">
+        {/* Stage Header */}
+        <div className="flex items-center justify-between border-b-2 border-blue-900/60 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <Trophy className="w-8 h-8 text-black" />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-zinc-100">
+              <h1 className="text-3xl font-black tracking-wide uppercase text-white">
                 ĐẤU TRÍ ARENA
               </h1>
-              <p className="text-xs text-zinc-400 font-medium tracking-wide">
-                HỘI THI TRÍ TUỆ TRỰC TIẾP
+              <p className="text-sm font-semibold tracking-wider text-blue-300">
+                CHUNG KẾT TRỰC TIẾP
               </p>
             </div>
           </div>
+          <div className="px-5 py-2 rounded-full bg-blue-900/40 border border-blue-500/30 text-blue-300 font-bold text-sm tracking-wider uppercase">
+            {currentRound?.title || "VÒNG 1: KHỞI ĐỘNG"}
+          </div>
+        </div>
 
-          <Badge variant="outline" className="border-amber-500/40 text-amber-400 bg-amber-500/10 text-xs px-3 py-1 font-semibold">
-            Sẵn Sàng Bắt Đầu
-          </Badge>
-        </header>
-
-        {/* Main Stage: 4 Contestants Intro */}
-        <main className="my-auto py-8 relative z-10 space-y-8">
-          <div className="text-center space-y-2">
-            <Badge variant="secondary" className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs px-3 py-1">
-              CHÀO ĐÓN 4 THÍ SINH
-            </Badge>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-zinc-50">
-              {matchState.title || "Vòng Chung Kết Tranh Tài"}
+        {/* 4 Contestants Podiums */}
+        <div className="my-auto py-8">
+          <div className="text-center mb-10 space-y-2">
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white uppercase">
+              BẢNG ĐIỂM 4 THÍ SINH
             </h2>
-            <p className="text-sm text-zinc-400 max-w-lg mx-auto">
-              Chuẩn bị bước vào phần thi đấu trí tuệ đỉnh cao
+            <p className="text-base font-medium text-slate-400">
+              Các thí sinh sẵn sàng bước vào phần thi tiếp theo
             </p>
           </div>
 
-          {/* 4 Contestants Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {matchState.players.map((player) => (
-              <Card
-                key={player.slot_number}
-                className="border-zinc-800 bg-zinc-900/60 backdrop-blur-md shadow-2xl overflow-hidden hover:border-zinc-700 transition-all text-center p-5 space-y-4 relative group"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-zinc-800 border-2 border-zinc-700 mx-auto flex items-center justify-center font-black text-2xl text-zinc-100 shadow-inner">
-                  {player.slot_number}
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            {matchState.players.map((player, idx) => {
+              const theme = slotThemes[idx] || slotThemes[0];
+              return (
+                <div
+                  key={player.slot_number}
+                  className={`border-2 ${theme.border} ${theme.bg} rounded-2xl p-6 text-center shadow-2xl flex flex-col justify-between transform transition-all`}
+                >
+                  <div className="space-y-3">
+                    <div className={`w-12 h-12 rounded-xl ${theme.badge} mx-auto flex items-center justify-center font-black text-xl text-white shadow-md`}>
+                      {player.slot_number}
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-white line-clamp-1">
+                        {player.name}
+                      </h3>
+                      <p className="text-sm font-medium text-slate-300 line-clamp-1 mt-0.5">
+                        {player.school_name || "Thí sinh"}
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="space-y-1">
-                  <Badge variant="outline" className="border-zinc-700 bg-zinc-950 text-[10px] text-zinc-400 font-mono">
-                    VỊ TRÍ {player.slot_number}
-                  </Badge>
-                  <h3 className="text-xl font-bold text-zinc-100 line-clamp-1">
-                    {player.name}
-                  </h3>
-                  <p className="text-xs text-zinc-400 line-clamp-1">
-                    {player.school_name || "Đại diện trường"}
-                  </p>
+                  <div className="mt-8 pt-5 border-t border-white/10">
+                    <span className="text-xs uppercase font-bold tracking-widest text-slate-400 block mb-1">
+                      ĐIỂM SỐ
+                    </span>
+                    <span className="font-mono text-5xl font-black text-amber-400 tracking-tight">
+                      {player.score}
+                    </span>
+                  </div>
                 </div>
-
-                <div className="pt-3 border-t border-zinc-800">
-                  <span className="text-[10px] uppercase font-semibold text-zinc-500 block">
-                    ĐIỂM SỐ HIỆN TẠI
-                  </span>
-                  <span className="font-mono text-3xl font-black text-amber-400">
-                    {player.score}
-                  </span>
-                </div>
-              </Card>
-            ))}
+              );
+            })}
           </div>
-        </main>
+        </div>
 
-        {/* Footer info */}
-        <footer className="border-t border-zinc-800/80 pt-6 flex items-center justify-between text-xs text-zinc-500 relative z-10">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-zinc-400" />
-            <span>4 Thí sinh đã sẵn sàng tại vị trí</span>
-          </div>
-          <div>MC đang điều phối • Sẵn sàng chuyển vào câu hỏi</div>
-        </footer>
+        {/* Footer */}
+        <div className="border-t-2 border-blue-900/60 pt-6 flex items-center justify-between text-sm font-semibold text-slate-400">
+          <span>HỆ THỐNG THI ĐẤU OLYMPIA TRỰC TIẾP</span>
+          <span className="text-amber-400">MC ĐANG ĐIỀU PHỐI TRẬN ĐẤU</span>
+        </div>
       </div>
     );
   }
 
-  // -------------------------------------------------------------
-  // 2. GIAO DIỆN THI ĐẤU (IN-GAME STAGE SCREEN)
-  // -------------------------------------------------------------
-  const timerProgress = timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 0;
+  // ------------------------------------------------------------------
+  // 2. MÀN HÌNH THI ĐẤU (IN-GAME STAGE)
+  // ------------------------------------------------------------------
+  const timerPercent = timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between p-6 md:p-10 font-sans selection:bg-zinc-800 relative overflow-hidden select-none">
+    <div className="min-h-screen bg-[#060a14] text-white flex flex-col justify-between p-8 font-sans select-none relative overflow-hidden">
       {/* Top Bar */}
-      <header className="flex items-center justify-between border-b border-zinc-800 pb-4">
+      <div className="flex items-center justify-between border-b-2 border-blue-900/60 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-100">
-            <Trophy className="w-5 h-5 text-amber-400" />
+          <div className="px-4 py-1.5 rounded-lg bg-blue-600 font-black text-sm uppercase">
+            {currentRound?.title}
           </div>
-          <div>
-            <h1 className="text-base font-bold tracking-tight text-zinc-100">
-              {currentRound?.title}
-            </h1>
-            <p className="text-xs text-zinc-400">
-              Câu {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
-            </p>
-          </div>
+          <span className="text-xl font-bold text-slate-200">
+            Câu số {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
+          </span>
         </div>
 
-        {/* Buzzer Alert */}
-        {matchState.buzzer_winner_slot ? (
-          <div className="flex items-center gap-2 bg-amber-500/20 border border-amber-500/40 text-amber-300 px-4 py-2 rounded-xl animate-bounce">
+        {matchState.buzzer_winner_slot && (
+          <div className="px-6 py-2 rounded-xl bg-amber-500 text-black font-black text-base flex items-center gap-2 animate-bounce">
             <Zap className="w-5 h-5 fill-current" />
-            <span className="font-bold text-sm">
-              THÍ SINH {matchState.buzzer_winner_slot} GIÀNH QUYỀN TRẢ LỜI! ({(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s)
-            </span>
+            THÍ SINH {matchState.buzzer_winner_slot} GIÀNH QUYỀN TRẢ LỜI! ({(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s)
           </div>
-        ) : (
-          <Badge variant="outline" className="border-zinc-800 bg-zinc-900 text-zinc-400 text-xs px-3 py-1 font-mono">
-            {currentQuestion?.question_type === "buzzer" ? "VÒNG BẤM CHUÔNG" : "VÒNG NHẬP ĐÁP ÁN"}
-          </Badge>
         )}
-      </header>
+      </div>
 
-      {/* Main Question & Timer Center */}
-      <main className="my-auto py-6 space-y-6 max-w-5xl mx-auto w-full">
-        {/* Timer Radial & Counter */}
-        <div className="flex flex-col items-center justify-center">
+      {/* Main Question & Center Timer */}
+      <div className="my-auto py-6 max-w-6xl mx-auto w-full space-y-6">
+        {/* Big Timer */}
+        <div className="flex justify-center">
           <div className="relative w-28 h-28 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" className="stroke-slate-800" strokeWidth="8" fill="transparent" />
               <circle
                 cx="50"
                 cy="50"
                 r="42"
-                className="stroke-zinc-800"
-                strokeWidth="8"
-                fill="transparent"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="42"
-                className={`transition-all duration-1000 ease-linear ${
-                  timeLeft <= 5 ? "stroke-red-500" : "stroke-amber-400"
-                }`}
+                className={`transition-all duration-1000 ease-linear ${timeLeft <= 5 ? "stroke-red-500" : "stroke-amber-400"}`}
                 strokeWidth="8"
                 strokeDasharray={264}
-                strokeDashoffset={264 - (264 * timerProgress) / 100}
+                strokeDashoffset={264 - (264 * timerPercent) / 100}
                 strokeLinecap="round"
                 fill="transparent"
               />
             </svg>
-            <span
-              className={`absolute font-mono text-4xl font-black ${
-                timeLeft <= 5 ? "text-red-400 animate-ping" : "text-zinc-100"
-              }`}
-            >
+            <span className={`absolute font-mono text-4xl font-black ${timeLeft <= 5 ? "text-red-400 animate-ping" : "text-white"}`}>
               {timeLeft}
             </span>
           </div>
         </div>
 
-        {/* Question Text Box */}
-        <Card className="border-zinc-800 bg-zinc-900/60 shadow-2xl p-6 md:p-8 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-50 leading-relaxed">
+        {/* Big Question Card */}
+        <div className="bg-[#0b1329] border-2 border-blue-800/80 rounded-3xl p-8 md:p-12 text-center shadow-2xl space-y-6">
+          <h2 className="text-3xl md:text-4xl font-black text-white leading-relaxed tracking-wide">
             {currentQuestion?.question_text}
           </h2>
 
-          {/* Multiple choice options */}
+          {/* Options */}
           {currentQuestion?.options && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 text-left">
               {currentQuestion.options.map((opt, i) => (
                 <div
                   key={i}
-                  className={`p-3.5 rounded-xl border text-left text-sm font-semibold transition-all ${
+                  className={`p-4 rounded-xl border-2 font-bold text-lg transition-all ${
                     matchState.is_revealed && opt.startsWith(currentQuestion.correct_answer[0])
-                      ? "bg-emerald-950/60 border-emerald-500 text-emerald-300 ring-2 ring-emerald-500/50"
-                      : "bg-zinc-950/60 border-zinc-800 text-zinc-300"
+                      ? "bg-emerald-950/80 border-emerald-400 text-emerald-300 ring-4 ring-emerald-500/40"
+                      : "bg-[#070c1a] border-blue-900/80 text-slate-200"
                   }`}
                 >
                   {opt}
@@ -365,76 +308,72 @@ export default function DisplayPage() {
             </div>
           )}
 
-          {/* Reveal Correct Answer */}
+          {/* Reveal Answer */}
           {matchState.is_revealed && (
-            <div className="mt-6 p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-center animate-in fade-in">
-              <span className="text-xs uppercase font-semibold text-emerald-400 block mb-1">
+            <div className="p-5 rounded-2xl bg-emerald-950/80 border-2 border-emerald-400 text-center animate-in fade-in">
+              <span className="text-xs uppercase font-bold text-emerald-400 block mb-1">
                 ĐÁP ÁN CHÍNH XÁC:
               </span>
-              <span className="text-xl font-black text-emerald-300">
+              <span className="text-2xl md:text-3xl font-black text-emerald-200">
                 {currentQuestion?.correct_answer}
               </span>
-              {currentQuestion?.explanation && (
-                <p className="text-xs text-zinc-400 mt-1 italic">{currentQuestion.explanation}</p>
-              )}
             </div>
           )}
-        </Card>
-      </main>
+        </div>
+      </div>
 
-      {/* 4 Contestants Flip Answer Cards */}
-      <footer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {matchState.players.map((player) => {
+      {/* 4 Contestants Podiums at Bottom */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {matchState.players.map((player, idx) => {
+          const theme = slotThemes[idx] || slotThemes[0];
           const resp = matchState.current_responses[player.slot_number];
           const isRevealed = matchState.is_revealed;
           const isCorrect = resp?.is_correct === true;
           const isWrong = resp?.is_correct === false;
 
           return (
-            <Card
+            <div
               key={player.slot_number}
-              className={`border-zinc-800 bg-zinc-900/60 transition-all ${
+              className={`border-2 ${
                 isRevealed && isCorrect
-                  ? "border-emerald-500 bg-emerald-950/20 ring-2 ring-emerald-500/40"
+                  ? "border-emerald-400 bg-emerald-950/60 ring-4 ring-emerald-500/40"
                   : isRevealed && isWrong
-                  ? "border-red-500/50 bg-red-950/20"
-                  : ""
-              }`}
+                  ? "border-red-500 bg-red-950/60"
+                  : theme.border + " " + theme.bg
+              } rounded-2xl p-4 transition-all flex flex-col justify-between`}
             >
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-300 line-clamp-1">
-                    {player.slot_number}. {player.name}
-                  </span>
-                  <span className="font-mono text-sm font-bold text-amber-400">
-                    {player.score} đ
-                  </span>
-                </div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-bold text-sm text-white line-clamp-1">
+                  {player.slot_number}. {player.name}
+                </span>
+                <span className="font-mono text-lg font-black text-amber-400">
+                  {player.score} đ
+                </span>
+              </div>
 
-                <div className="h-14 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center px-3 text-center">
-                  {!isRevealed ? (
-                    resp ? (
-                      <Badge variant="outline" className="border-zinc-700 text-zinc-400 bg-zinc-900 text-xs">
-                        ĐÃ NỘP ({(resp.response_time_ms / 1000).toFixed(2)}s)
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-zinc-600 italic">Đang chờ nộp...</span>
-                    )
+              <div className="h-16 rounded-xl bg-[#040711] border border-white/10 flex items-center justify-center px-4 text-center">
+                {!isRevealed ? (
+                  resp ? (
+                    <span className="px-3 py-1 rounded bg-blue-600 text-white font-bold text-xs">
+                      ĐÃ NỘP ({(resp.response_time_ms / 1000).toFixed(2)}s)
+                    </span>
                   ) : (
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-sm font-black uppercase text-zinc-100 line-clamp-1">
-                        {resp ? resp.answer_text : "(Không nộp)"}
-                      </span>
-                      {isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 ml-1" />}
-                      {isWrong && <XCircle className="w-4 h-4 text-red-400 shrink-0 ml-1" />}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    <span className="text-xs font-semibold text-slate-500">Đang chờ nộp...</span>
+                  )
+                ) : (
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-black text-base uppercase text-white line-clamp-1">
+                      {resp ? resp.answer_text : "(Trống)"}
+                    </span>
+                    {isCorrect && <Check className="w-6 h-6 text-emerald-400 shrink-0 ml-1 stroke-[3]" />}
+                    {isWrong && <X className="w-6 h-6 text-red-400 shrink-0 ml-1 stroke-[3]" />}
+                  </div>
+                )}
+              </div>
+            </div>
           );
         })}
-      </footer>
+      </div>
     </div>
   );
 }
