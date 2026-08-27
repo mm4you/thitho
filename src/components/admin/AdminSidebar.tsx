@@ -1,9 +1,8 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Sliders, Users, HelpCircle, Tv, LogOut, Trophy, Home } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Sliders, Users, HelpCircle, Tv, LogOut, Trophy, Home, LayoutDashboard } from "lucide-react";
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -11,18 +10,23 @@ export function AdminSidebar() {
 
   const navItems = [
     {
-      title: "Dieu Khien Tran Dau",
-      href: "/admin/live",
-      icon: Sliders,
-      badge: "5 Buoc",
+      title: "Tổng Quan Hệ Thống",
+      href: "/admin",
+      icon: LayoutDashboard,
     },
     {
-      title: "Ket Noi 4 Thi Sinh",
+      title: "Điều Khiển Trận Đấu",
+      href: "/admin/live",
+      icon: Sliders,
+      badge: "5 Bước",
+    },
+    {
+      title: "Mã MC & 4 Thí Sinh",
       href: "/admin/players",
       icon: Users,
     },
     {
-      title: "Ngan Hang Cau Hoi",
+      title: "Ngân Hàng Câu Hỏi",
       href: "/admin/questions",
       icon: HelpCircle,
     },
@@ -45,7 +49,7 @@ export function AdminSidebar() {
               <Trophy className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-black tracking-tight text-white uppercase">QUAN TRI MC</h2>
+              <h2 className="text-sm font-black tracking-tight text-white uppercase">QUẢN TRỊ HỆ THỐNG</h2>
               <p className="text-[10px] text-blue-400 font-bold tracking-wider">OLYMPIA ARENA</p>
             </div>
           </div>
@@ -54,7 +58,7 @@ export function AdminSidebar() {
         {/* Navigation */}
         <nav className="p-3 space-y-1.5">
           <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            CHUC NANG CHINH
+            CHỨC NĂNG CHÍNH
           </div>
 
           {navItems.map((item) => {
@@ -84,7 +88,7 @@ export function AdminSidebar() {
           })}
 
           <div className="pt-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            TRINH CHIEU & DIEU HUONG
+            TRÌNH CHIẾU & ĐIỀU HƯỚNG
           </div>
 
           <Link
@@ -94,7 +98,7 @@ export function AdminSidebar() {
           >
             <div className="flex items-center gap-2.5">
               <Tv className="w-4 h-4 text-amber-400" />
-              <span>Mo Man Hinh May Chieu</span>
+              <span>Mở Màn Hình Máy Chiếu</span>
             </div>
           </Link>
 
@@ -104,7 +108,7 @@ export function AdminSidebar() {
           >
             <div className="flex items-center gap-2.5">
               <Home className="w-4 h-4" />
-              <span>Ve Trang Chu</span>
+              <span>Về Trang Chủ</span>
             </div>
           </Link>
         </nav>
@@ -114,11 +118,11 @@ export function AdminSidebar() {
       <div className="p-3 border-t border-blue-900/60">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors"
+          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <LogOut className="w-4 h-4" />
-            <span>Dang Xuat Quan Tri</span>
+            <span>Đăng Xuất Quản Trị</span>
           </div>
         </button>
       </div>
