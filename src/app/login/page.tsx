@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Lock, Eye, EyeOff, ArrowRight, Mail, ShieldCheck, KeyRound } from "lucide-react";
+import { Lock, Eye, EyeOff, ArrowRight, Mail, ShieldCheck, KeyRound, Loader2 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { getAdminPassword, SUPER_ADMIN_EMAIL, loadSavedMatchState, subscribeToGameChannel } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
@@ -21,19 +21,35 @@ function LoginForm() {
   const [adminPassword, setAdminPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [serverJudgeCode, setServerJudgeCode] = useState<string>("GK-OLYMPIA-2026");
 
+  // Load ma tu Server khi vao trang
   useEffect(() => {
+    fetch("/api/judge-code")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.judge_code) {
+          setServerJudgeCode(data.judge_code);
+        }
+      })
+      .catch(() => {});
+
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
       if (event.type === "SYNC_STATE") {
         setMatchState(event.state);
+        if (event.state.admin_access_code) {
+          setServerJudgeCode(event.state.admin_access_code);
+        }
       } else if (event.type === "UPDATE_JUDGE_ACCESS_CODE") {
+        setServerJudgeCode(event.code);
         setMatchState((prev) => ({ ...prev, admin_access_code: event.code }));
       }
     });
     return () => unsubscribe();
   }, []);
 
-  const handleGkLogin = (e: React.FormEvent) => {
+  const handleGkLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
@@ -43,26 +59,43 @@ function LoginForm() {
       return;
     }
 
-    const currentValidCode = (matchState.admin_access_code || getAdminPassword() || "GK-OLYMPIA-2026").trim().toUpperCase();
-    const localCode = getAdminPassword().trim().toUpperCase();
+    setIsVerifying(true);
 
-    // Kiểm tra chính xác mã Admin đã cấp hoặc mã master của hệ thống
-    const isValid =
-      entered === currentValidCode ||
-      entered === localCode ||
-      entered === "GK-OLYMPIA-2026" ||
-      entered === "MC-OLYMPIA-2026" ||
-      entered === "OLYMQUIZ@KHANG2026!" ||
-      entered === "ADMIN123" ||
-      entered === "9999";
-
-    if (isValid) {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("admin_auth_token", "GK_AUTHENTICATED_" + Date.now());
+    try {
+      // Fetch ma moi nhat tu Server
+      let latestServerCode = serverJudgeCode;
+      try {
+        const res = await fetch("/api/judge-code");
+        const data = await res.json();
+        if (data?.judge_code) {
+          latestServerCode = data.judge_code;
+        }
+      } catch {
+        // Network fallback
       }
-      router.push(redirectPath || "/admin/live");
-    } else {
-      setErrorMsg("Mã Giám Khảo không chính xác! Vui lòng liên hệ Quản trị viên để nhận mã truy cập.");
+
+      const validLocalCode = (matchState.admin_access_code || getAdminPassword() || "GK-OLYMPIA-2026").trim().toUpperCase();
+      const validServerCode = latestServerCode.trim().toUpperCase();
+
+      const isValid =
+        entered === validServerCode ||
+        entered === validLocalCode ||
+        entered === "GK-OLYMPIA-2026" ||
+        entered === "MC-OLYMPIA-2026" ||
+        entered === "OLYMQUIZ@KHANG2026!" ||
+        entered === "ADMIN123" ||
+        entered === "9999";
+
+      if (isValid) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("admin_auth_token", "GK_AUTHENTICATED_" + Date.now());
+        }
+        router.push(redirectPath || "/admin/live");
+      } else {
+        setErrorMsg("Mã Giám Khảo không chính xác! Vui lòng liên hệ Quản trị viên để nhận mã truy cập.");
+      }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -77,6 +110,7 @@ function LoginForm() {
     const isPassValid =
       (enteredEmail === SUPER_ADMIN_EMAIL.toLowerCase() || enteredEmail === "admin") &&
       (entered === validPass ||
+        entered === serverJudgeCode ||
         entered === matchState.admin_access_code ||
         entered === "OlymQuiz@Khang2026!" ||
         entered === "admin123" ||
@@ -154,10 +188,11 @@ function LoginForm() {
               <input
                 type="text"
                 required
+                disabled={isVerifying}
                 value={gkCode}
                 onChange={(e) => setGkCode(e.target.value.toUpperCase())}
                 placeholder="Nhập mã do Admin cấp (VD: GK-XXXXXX)"
-                className="w-full bg-[#070a12] border border-slate-800 focus:border-blue-500 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono uppercase placeholder:text-slate-600 focus:outline-none"
+                className="w-full bg-[#070a12] border border-slate-800 focus:border-blue-500 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono uppercase placeholder:text-slate-600 focus:outline-none disabled:opacity-50"
               />
             </div>
           </div>
@@ -170,9 +205,18 @@ function LoginForm() {
 
           <Button
             type="submit"
+            disabled={isVerifying}
             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-11 uppercase tracking-wider rounded-xl cursor-pointer shadow-lg shadow-blue-600/20"
           >
-            VÀO BÀN ĐIỀU HÀNH TRẬN ĐẤU <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            {isVerifying ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Đang kiểm tra mã...
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                VÀO BÀN ĐIỀU HÀNH TRẬN ĐẤU <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            )}
           </Button>
         </form>
       ) : (

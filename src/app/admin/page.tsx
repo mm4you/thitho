@@ -52,9 +52,18 @@ export default function SupremeAdminDashboardPage() {
   const [adminPassSavedAlert, setAdminPassSavedAlert] = useState<boolean>(false);
   const [copiedAdminPass, setCopiedAdminPass] = useState<boolean>(false);
 
-  const [lastPing, setLastPing] = useState<number>(Date.now());
-
   useEffect(() => {
+    // Lay ma tu Server API
+    fetch("/api/judge-code")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.judge_code) {
+          setCurrentAdminPass(data.judge_code);
+          setTempAdminPass(data.judge_code);
+        }
+      })
+      .catch(() => {});
+
     if (typeof window !== "undefined") {
       const pass = matchState.admin_access_code || getAdminPassword() || "GK-OLYMPIA-2026";
       setCurrentAdminPass(pass);
@@ -64,7 +73,6 @@ export default function SupremeAdminDashboardPage() {
 
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
-      setLastPing(Date.now());
       if (event.type === "UPDATE_PLAYER_INFO") {
         setMatchState((prev) => ({
           ...prev,
@@ -80,6 +88,9 @@ export default function SupremeAdminDashboardPage() {
           setCurrentAdminPass(event.state.admin_access_code);
           setTempAdminPass(event.state.admin_access_code);
         }
+      } else if (event.type === "UPDATE_JUDGE_ACCESS_CODE") {
+        setCurrentAdminPass(event.code);
+        setTempAdminPass(event.code);
       }
     });
     return () => unsubscribe();
@@ -91,7 +102,7 @@ export default function SupremeAdminDashboardPage() {
     setIsEditingAdminPass(true);
   };
 
-  const handleSaveAdminPass = () => {
+  const handleSaveAdminPass = async () => {
     if (!tempAdminPass.trim()) return;
     const newCode = tempAdminPass.trim().toUpperCase();
 
@@ -107,6 +118,18 @@ export default function SupremeAdminDashboardPage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
 
+    // Day len Server API de moi may khac dong bo ngay lap tuc
+    try {
+      await fetch("/api/judge-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ judge_code: newCode, match_state: newState }),
+      });
+    } catch {
+      // Fallback
+    }
+
+    sendGameEvent({ type: "UPDATE_JUDGE_ACCESS_CODE", code: newCode });
     sendGameEvent({ type: "SYNC_STATE", state: newState });
     sendGameEvent({ type: "REVOKE_ADMIN_SESSIONS", new_code_timestamp: Date.now() });
 
