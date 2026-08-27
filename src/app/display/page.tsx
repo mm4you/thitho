@@ -6,7 +6,13 @@ import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home, Star } from "lucide-react";
+import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home, Star, HelpCircle } from "lucide-react";
+
+// Ham dem so chu cai chuan Olympia (Bo qua toan bo khoang trang)
+function countLettersOnly(str: string): number {
+  if (!str) return 0;
+  return str.replace(/\s+/g, "").length;
+}
 
 export default function DisplayPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
@@ -47,7 +53,7 @@ export default function DisplayPage() {
     return () => document.removeEventListener("fullscreenchange", handleFs);
   }, []);
 
-  // CHUẨN HÓA COUNTDOWN TIMER: ĐÚNG 1 NHỊP DUY NHẤT MỖI 1000MS
+  // COUNTDOWN TIMER CHUẨN XÁC ĐÚNG 1 NHỊP DUY NHẤT
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerActive) {
@@ -80,7 +86,6 @@ export default function DisplayPage() {
         setTimeLimit(event.time_limit);
         setTimeLeft(event.time_limit);
         setIsTimerActive(true);
-        // Phat ngay nhip tick dau tien khi bat dau
         sound.playTick();
         setMatchState((prev) => ({
           ...prev,
@@ -210,6 +215,12 @@ export default function DisplayPage() {
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
   const sortedPlayers = [...matchState.players].sort((a, b) => b.score - a.score);
 
+  const isVCNV = currentRound?.round_type === "vchv";
+  const vcnvQuestions = isVCNV ? currentRound.questions : [];
+  const obstacleQuestion = isVCNV ? vcnvQuestions[vcnvQuestions.length - 1] : null;
+  const obstacleAnswerClean = obstacleQuestion ? obstacleQuestion.correct_answer.replace(/\s+/g, "") : "";
+  const obstacleLettersCount = countLettersOnly(obstacleQuestion?.correct_answer || "");
+
   return (
     <div className="h-screen w-screen bg-[#070a12] text-white flex flex-col justify-between p-6 font-sans select-none overflow-hidden relative">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-blue-600/15 via-amber-500/5 to-transparent blur-[140px] pointer-events-none" />
@@ -315,11 +326,76 @@ export default function DisplayPage() {
       ) : (
         /* MÀN HÌNH THI ĐẤU TRỰC TIẾP */
         <main className="flex-1 flex flex-col justify-between my-4 space-y-5 z-10">
+          {/* BẢNG Ô CHỮ CHƯỚNG NGẠI VẬT ĐẶC THÙ CHO VÒNG 2 */}
+          {isVCNV && (
+            <div className="bg-[#0d121f] border-2 border-blue-500/40 rounded-3xl p-5 space-y-4 shadow-2xl">
+              <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-xs font-black uppercase">
+                    TỪ KHÓA CHƯỚNG NGẠI VẬT: {obstacleLettersCount} CHỮ CÁI
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">(Không tính khoảng trắng)</span>
+                </div>
+                <span className="text-xs font-bold text-emerald-400">
+                  {matchState.current_question_index === vcnvQuestions.length - 1 ? "Đang mở Từ Khóa Chính (+40đ)" : `Đang thi Hàng Ngang số ${matchState.current_question_index + 1}`}
+                </span>
+              </div>
+
+              {/* HÀNG Ô VUÔNG BÍ MẬT CỦA TỪ KHÓA TRUNG TÂM */}
+              <div className="flex flex-wrap items-center justify-center gap-2 py-2">
+                {Array.from({ length: obstacleLettersCount }).map((_, idx) => {
+                  const isObstacleRevealed = matchState.current_question_index === vcnvQuestions.length - 1 && matchState.is_revealed;
+                  const letter = obstacleAnswerClean[idx] || "";
+                  return (
+                    <div
+                      key={idx}
+                      className={`w-11 h-12 rounded-xl flex items-center justify-center font-black text-xl font-mono shadow-lg transition-all ${
+                        isObstacleRevealed
+                          ? "bg-emerald-500 text-black border-2 border-emerald-300 scale-105"
+                          : "bg-[#070a12] border-2 border-blue-500/60 text-blue-400"
+                      }`}
+                    >
+                      {isObstacleRevealed ? letter : "?"}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 4 HÀNG NGANG GỢI Ý */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2">
+                {vcnvQuestions.slice(0, vcnvQuestions.length - 1).map((q, idx) => {
+                  const lettersCount = countLettersOnly(q.correct_answer);
+                  const isCurrent = matchState.current_question_index === idx;
+                  const isRevealed = isCurrent && matchState.is_revealed;
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-2xl border text-center transition-all ${
+                        isRevealed
+                          ? "bg-emerald-950/60 border-emerald-500 text-emerald-300"
+                          : isCurrent
+                          ? "bg-blue-950/60 border-blue-500 text-white ring-2 ring-blue-500/30"
+                          : "bg-[#070a12] border-slate-800 text-slate-400"
+                      }`}
+                    >
+                      <span className="text-[10px] font-black uppercase block tracking-wider">HÀNG NGANG {idx + 1}</span>
+                      <span className="text-xs font-bold font-mono text-amber-400">{lettersCount} chữ cái</span>
+                      {isRevealed && (
+                        <span className="text-sm font-black uppercase text-white block mt-1 line-clamp-1">{q.correct_answer}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* KHUNG CÂU HỎI & ĐỒNG HỒ ĐẾM NGƯỢC */}
           <div className="bg-[#0d121f] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-5 shadow-2xl relative">
             <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-3">
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-full bg-blue-600/20 border border-blue-500/40 text-blue-300 text-xs font-bold uppercase">
-                  CÂU HỎI {matchState.current_question_index + 1}
+                  {isVCNV ? (matchState.current_question_index === vcnvQuestions.length - 1 ? "TỪ KHÓA CHÍNH" : `HÀNG NGANG ${matchState.current_question_index + 1} (${countLettersOnly(currentQuestion?.correct_answer)} CHỮ CÁI)`) : `CÂU HỎI ${matchState.current_question_index + 1}`}
                 </span>
                 <span className="text-xs text-slate-400 font-medium">
                   +{currentQuestion?.points_correct}đ đúng / -{currentQuestion?.points_wrong}đ sai
@@ -368,12 +444,13 @@ export default function DisplayPage() {
 
             {matchState.is_revealed && (
               <div className="p-4 rounded-2xl bg-emerald-950/80 border-2 border-emerald-500 text-center animate-in zoom-in">
-                <span className="text-xs uppercase font-bold text-emerald-400 block mb-1">ĐÁP ÁN CHÍNH XÁC:</span>
+                <span className="text-xs uppercase font-bold text-emerald-400 block mb-1">ĐÁP ÁN CHÍNH XÁC ({countLettersOnly(currentQuestion?.correct_answer)} CHỮ CÁI):</span>
                 <span className="text-2xl font-black text-white">{currentQuestion?.correct_answer}</span>
               </div>
             )}
           </div>
 
+          {/* 4 BỤC THÍ SINH SÂN KHẤU */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {matchState.players.map((player) => {
               const theme = slotThemes[player.slot_number - 1];
