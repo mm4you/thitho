@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { loadSavedMatchState, saveMatchStateLocally, sendGameEvent } from "@/lib/supabase";
-import { MatchState, Round, Question, QuestionType, RoundType } from "@/types/game";
+import { MatchState, Round, Question, QuestionType } from "@/types/game";
 import {
   ArrowLeft,
   Save,
@@ -13,18 +13,19 @@ import {
   Settings2,
   Play,
   Clock,
-  Award,
-  Sparkles,
   HelpCircle,
+  FileText,
+  Upload,
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<"rounds" | "players">("rounds");
+  const [activeTab, setActiveTab] = useState<"rounds" | "players" | "bulk">("rounds");
   const [selectedRoundIdx, setSelectedRoundIdx] = useState<number>(0);
+  const [bulkText, setBulkText] = useState<string>("");
+  const [bulkStatus, setBulkStatus] = useState<string>("");
 
-  // Lưu cấu hình
   const handleSave = () => {
     saveMatchStateLocally(matchState);
     sendGameEvent({ type: "SYNC_STATE", state: matchState });
@@ -32,7 +33,6 @@ export default function AdminSettingsPage() {
     setTimeout(() => setSavedSuccess(false), 2000);
   };
 
-  // Reset Điểm
   const handleResetScores = () => {
     if (confirm("Bạn có chắc muốn đặt lại điểm 4 thí sinh về 0?")) {
       const updated = {
@@ -50,49 +50,6 @@ export default function AdminSettingsPage() {
     }
   };
 
-  // Thêm Vòng Thi Mới
-  const handleAddRound = () => {
-    const newRoundIndex = matchState.rounds.length;
-    const newRound: Round = {
-      id: `round_${Date.now()}`,
-      title: `VÒNG ${newRoundIndex + 1}: VÒNG MỚI`,
-      round_type: "custom",
-      order_index: newRoundIndex,
-      description: "Tùy chỉnh thể lệ và thời gian theo yêu cầu",
-      questions: [
-        {
-          id: `q_${Date.now()}_1`,
-          order_index: 0,
-          question_text: "Nội dung câu hỏi số 1...",
-          question_type: "multiple_choice",
-          options: ["A. Phương án 1", "B. Phương án 2", "C. Phương án 3", "D. Phương án 4"],
-          correct_answer: "A. Phương án 1",
-          time_limit: 15,
-          points_correct: 10,
-          points_wrong: 0,
-        },
-      ],
-    };
-
-    const updatedRounds = [...matchState.rounds, newRound];
-    setMatchState({ ...matchState, rounds: updatedRounds });
-    setSelectedRoundIdx(updatedRounds.length - 1);
-  };
-
-  // Xóa Vòng Thi
-  const handleDeleteRound = (index: number) => {
-    if (matchState.rounds.length <= 1) {
-      alert("Cần giữ lại ít nhất 1 vòng thi!");
-      return;
-    }
-    if (confirm("Bạn có chắc muốn xóa vòng thi này?")) {
-      const updatedRounds = matchState.rounds.filter((_, i) => i !== index);
-      setMatchState({ ...matchState, rounds: updatedRounds });
-      setSelectedRoundIdx(Math.max(0, index - 1));
-    }
-  };
-
-  // Cập nhật thông tin vòng hiện tại
   const currentRound = matchState.rounds[selectedRoundIdx] || matchState.rounds[0];
 
   const updateCurrentRound = (fields: Partial<Round>) => {
@@ -101,7 +58,6 @@ export default function AdminSettingsPage() {
     setMatchState({ ...matchState, rounds: updatedRounds });
   };
 
-  // Thêm Câu Hỏi Mới vào Vòng Hiện Tại
   const handleAddQuestion = () => {
     const newQ: Question = {
       id: `q_${Date.now()}`,
@@ -119,7 +75,6 @@ export default function AdminSettingsPage() {
     updateCurrentRound({ questions: updatedQuestions });
   };
 
-  // Xóa Câu Hỏi
   const handleDeleteQuestion = (qIndex: number) => {
     if (currentRound.questions.length <= 1) {
       alert("Mỗi vòng cần có ít nhất 1 câu hỏi!");
@@ -129,16 +84,81 @@ export default function AdminSettingsPage() {
     updateCurrentRound({ questions: updatedQuestions });
   };
 
-  // Sửa Câu Hỏi
   const updateQuestion = (qIndex: number, fields: Partial<Question>) => {
     const updatedQuestions = [...currentRound.questions];
     updatedQuestions[qIndex] = { ...updatedQuestions[qIndex], ...fields };
     updateCurrentRound({ questions: updatedQuestions });
   };
 
+  // NẠP NHANH HÀNG LOẠT (BULK IMPORT PARSER)
+  const handleBulkImport = () => {
+    if (!bulkText.trim()) {
+      setBulkStatus("Vui lòng dán nội dung danh sách câu hỏi trước!");
+      return;
+    }
+
+    try {
+      const blocks = bulkText.split(/\n\s*\n/); // Tách từng câu bằng dòng trống
+      const parsedQuestions: Question[] = [];
+
+      blocks.forEach((block, idx) => {
+        const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+        if (lines.length === 0) return;
+
+        let qText = lines[0].replace(/^(câu\s*\d+[:.]?|question\s*\d+[:.]?)\s*/i, "");
+        const options: string[] = [];
+        let correctAns = "";
+        let timeLimit = 15;
+        let points = 10;
+        let qType: QuestionType = "text_input";
+
+        lines.slice(1).forEach((line) => {
+          if (/^[A-D][.:]\s*/i.test(line)) {
+            options.push(line);
+            qType = "multiple_choice";
+          } else if (/^(đáp án|answer|da)[:]\s*/i.test(line)) {
+            correctAns = line.replace(/^(đáp án|answer|da)[:]\s*/i, "");
+          } else if (/^(thời gian|time)[:]\s*/i.test(line)) {
+            const t = parseInt(line.replace(/^(thời gian|time)[:]\s*/i, ""));
+            if (!isNaN(t)) timeLimit = t;
+          } else if (/^(điểm|point|points)[:]\s*/i.test(line)) {
+            const p = parseInt(line.replace(/^(điểm|point|points)[:]\s*/i, ""));
+            if (!isNaN(p)) points = p;
+          }
+        });
+
+        if (options.length === 0 && !correctAns && lines.length >= 2) {
+          correctAns = lines[1];
+        }
+
+        parsedQuestions.push({
+          id: `q_bulk_${Date.now()}_${idx}`,
+          order_index: idx,
+          question_text: qText,
+          question_type: options.length >= 2 ? "multiple_choice" : "text_input",
+          options: options.length >= 2 ? options : undefined,
+          correct_answer: correctAns || options[0] || "Đang cập nhật",
+          time_limit: timeLimit,
+          points_correct: points,
+          points_wrong: 0,
+        });
+      });
+
+      if (parsedQuestions.length > 0) {
+        updateCurrentRound({ questions: parsedQuestions });
+        setBulkStatus(`✅ Đã nạp thành công ${parsedQuestions.length} câu hỏi vào ${currentRound.title}!`);
+        setTimeout(() => setActiveTab("rounds"), 1200);
+      } else {
+        setBulkStatus("❌ Không tìm thấy câu hỏi hợp lệ trong văn bản.");
+      }
+    } catch {
+      setBulkStatus("❌ Có lỗi xảy ra khi phân tích cú pháp. Vui lòng kiểm tra lại!");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#070d1e] text-slate-100 p-4 md:p-8 font-sans max-w-6xl mx-auto">
-      {/* TOP HEADER */}
+      {/* HEADER */}
       <header className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 mb-6 gap-4">
         <div className="flex items-center gap-3">
           <Link
@@ -149,10 +169,10 @@ export default function AdminSettingsPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-black text-slate-100 flex items-center gap-2">
-              CẤU HÌNH TRẬN ĐẤU & CHẾ ĐỘ CHƠI
+              QUẢN TRỊ & SOẠN ĐỀ THI
             </h1>
             <p className="text-xs text-slate-400">
-              Thiết lập thời gian, điểm số, chế độ chơi (Trắc nghiệm, Tăng tốc, Bấm chuông) cho từng vòng
+              Nạp câu hỏi nhanh • Cấu hình thời gian & thể lệ từng vòng • Đổi tên thí sinh
             </p>
           </div>
         </div>
@@ -162,62 +182,142 @@ export default function AdminSettingsPage() {
             onClick={handleResetScores}
             className="px-3.5 py-2 rounded-xl bg-rose-600/20 border border-rose-500/40 text-rose-300 text-xs font-semibold hover:bg-rose-600/30"
           >
-            Reset Điểm Về 0
+            Reset Điểm
           </button>
           <button
             onClick={handleSave}
             className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg"
           >
-            <Save className="w-4 h-4" /> {savedSuccess ? "ĐÃ LƯU!" : "LƯU CẤU HÌNH"}
+            <Save className="w-4 h-4" /> {savedSuccess ? "ĐÃ LƯU!" : "LƯU ĐỀ THI"}
           </button>
           <Link
             href="/admin/live"
             className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg"
           >
-            <Play className="w-4 h-4 fill-white" /> VÀO BẢNG ĐIỀU KHIỂN MC
+            <Play className="w-4 h-4 fill-white" /> BẢNG MC
           </Link>
         </div>
       </header>
 
-      {/* NAVIGATION TABS */}
-      <div className="flex gap-3 mb-6">
+      {/* TABS */}
+      <div className="flex flex-wrap gap-3 mb-6">
         <button
           onClick={() => setActiveTab("rounds")}
           className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
             activeTab === "rounds"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+              ? "bg-blue-600 text-white shadow-lg"
               : "bg-slate-800/80 text-slate-400 hover:bg-slate-800"
           }`}
         >
           <Settings2 className="w-4 h-4" />
-          Cấu Hình Vòng Thi & Câu Hỏi
+          Soạn Đề Thủ Công
+        </button>
+        <button
+          onClick={() => setActiveTab("bulk")}
+          className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
+            activeTab === "bulk"
+              ? "bg-amber-600 text-white shadow-lg"
+              : "bg-slate-800/80 text-slate-400 hover:bg-slate-800"
+          }`}
+        >
+          <Upload className="w-4 h-4" />
+          ⚡ Nạp Nhanh Hàng Loạt (Copy-Paste)
         </button>
         <button
           onClick={() => setActiveTab("players")}
           className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
             activeTab === "players"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+              ? "bg-blue-600 text-white shadow-lg"
               : "bg-slate-800/80 text-slate-400 hover:bg-slate-800"
           }`}
         >
           <Users className="w-4 h-4" />
-          Cấu Hình 4 Thí Sinh
+          Tài Khoản 4 Thí Sinh
         </button>
       </div>
 
-      {activeTab === "players" ? (
-        /* TAB 1: CẤU HÌNH 4 THÍ SINH */
+      {activeTab === "bulk" ? (
+        /* TAB BULK IMPORT */
+        <div className="glass-panel rounded-2xl p-6 border border-amber-500/30">
+          <h2 className="text-lg font-bold text-amber-300 mb-2 flex items-center gap-2">
+            <Upload className="w-5 h-5" />
+            Nạp Nhanh Hàng Loạt Câu Hỏi Cho: {currentRound.title}
+          </h2>
+          <p className="text-xs text-slate-400 mb-4">
+            Bạn chỉ cần copy danh sách câu hỏi dạng văn bản bên dưới và dán vào đây. Hệ thống tự động nhận diện câu hỏi, các phương án A/B/C/D và đáp án!
+          </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                Dán nội dung câu hỏi tại đây:
+              </label>
+              <textarea
+                rows={12}
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                placeholder={`Câu 1: Tác phẩm Bình Ngô đại cáo do ai sáng tác?
+A. Nguyễn Trãi
+B. Nguyễn Du
+C. Lê Lợi
+D. Trần Hưng Đạo
+Đáp án: A. Nguyễn Trãi
+Thời gian: 15
+
+Câu 2: Đỉnh núi cao nhất Việt Nam là đỉnh nào?
+Đáp án: Fansipan
+Thời gian: 20`}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 font-mono text-xs text-slate-200 focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <div className="bg-slate-950/70 rounded-xl p-4 border border-slate-800 flex flex-col justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-amber-400 uppercase mb-2">Mẫu Định Dạng Hỗ Trợ:</h4>
+                <div className="text-[11px] text-slate-300 space-y-2 font-mono bg-slate-900 p-3 rounded-lg border border-slate-800">
+                  <p className="text-blue-300 font-bold"># Mẫu Trắc Nghiệm:</p>
+                  <p>Câu 1: Nội dung câu hỏi...</p>
+                  <p>A. Lựa chọn 1</p>
+                  <p>B. Lựa chọn 2</p>
+                  <p>C. Lựa chọn 3</p>
+                  <p>D. Lựa chọn 4</p>
+                  <p>Đáp án: A</p>
+                  <p className="text-emerald-300 font-bold mt-2"># Mẫu Tự Luận / Tăng Tốc:</p>
+                  <p>Câu 2: Hoa sen là quốc hoa nước nào?</p>
+                  <p>Đáp án: Việt Nam</p>
+                </div>
+              </div>
+
+              {bulkStatus && (
+                <div className="p-3 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold mt-3">
+                  {bulkStatus}
+                </div>
+              )}
+
+              <button
+                onClick={handleBulkImport}
+                className="w-full mt-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
+              >
+                <Upload className="w-4 h-4" /> BẮT ĐẦU PHÂN TÍCH & NẠP VÀO VÒNG NÀY
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : activeTab === "players" ? (
+        /* TAB PLAYERS */
         <div className="glass-panel rounded-2xl p-6 border border-slate-800">
           <h2 className="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
             <Users className="w-5 h-5 text-blue-400" />
-            Thông Tin 4 Thí Sinh Thi Đấu
+            Tài Khoản & Mã PIN 4 Thí Sinh
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {matchState.players.map((p, idx) => (
               <div key={p.slot_number} className="bg-slate-900/90 rounded-xl p-4 border border-slate-800">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-blue-400 uppercase">Thí sinh Vị trí {p.slot_number}</span>
-                  <span className="text-xs font-mono font-bold text-amber-400">Điểm hiện tại: {p.score}đ</span>
+                  <span className="text-xs font-mono font-bold text-emerald-400">
+                    Mã PIN Đăng Nhập: {p.slot_number}{p.slot_number}{p.slot_number}{p.slot_number}
+                  </span>
                 </div>
                 <div className="space-y-2">
                   <div>
@@ -234,7 +334,7 @@ export default function AdminSettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-slate-400 block mb-1">Trường / Đơn vị đại diện:</label>
+                    <label className="text-[11px] text-slate-400 block mb-1">Trường / Đơn vị:</label>
                     <input
                       type="text"
                       value={p.school_name}
@@ -252,21 +352,13 @@ export default function AdminSettingsPage() {
           </div>
         </div>
       ) : (
-        /* TAB 2: CẤU HÌNH VÒNG THI & CHẾ ĐỘ CHƠI */
+        /* TAB MANUAL ROUNDS & QUESTIONS */
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* CỘT TRÁI: DANH SÁCH CÁC VÒNG THI */}
           <div className="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Các Vòng Thi</span>
-                <button
-                  onClick={handleAddRound}
-                  className="px-2.5 py-1 rounded-lg bg-blue-600/30 border border-blue-500/50 text-blue-300 text-xs font-bold hover:bg-blue-600/50 flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Thêm Vòng
-                </button>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Vòng Thi</span>
               </div>
-
               <div className="space-y-2">
                 {matchState.rounds.map((round, idx) => (
                   <button
@@ -286,50 +378,9 @@ export default function AdminSettingsPage() {
                 ))}
               </div>
             </div>
-
-            {matchState.rounds.length > 1 && (
-              <button
-                onClick={() => handleDeleteRound(selectedRoundIdx)}
-                className="mt-6 w-full py-2 rounded-xl bg-red-600/20 border border-red-500/40 text-red-400 text-xs font-bold hover:bg-red-600/30 flex items-center justify-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Xóa Vòng Này
-              </button>
-            )}
           </div>
 
-          {/* CỘT PHẢI: CHI TIẾT CẤU HÌNH VÒNG & CÂU HỎI */}
           <div className="lg:col-span-3 space-y-6">
-            {/* THIẾT LẬP VÒNG THI */}
-            <div className="glass-panel rounded-2xl p-6 border border-slate-800">
-              <h3 className="text-base font-bold text-amber-300 uppercase tracking-wide mb-4 flex items-center gap-2">
-                <Settings2 className="w-4 h-4" />
-                Cài Đặt Vòng: {currentRound.title}
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-400 block mb-1">Tên Hiển Thị Vòng:</label>
-                  <input
-                    type="text"
-                    value={currentRound.title}
-                    onChange={(e) => updateCurrentRound({ title: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-400 block mb-1">Mô Tả / Thể Lệ Vòng:</label>
-                  <input
-                    type="text"
-                    value={currentRound.description || ""}
-                    onChange={(e) => updateCurrentRound({ description: e.target.value })}
-                    placeholder="Mô tả thể lệ..."
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* DANH SÁCH CÂU HỎI TRONG VÒNG */}
             <div className="glass-panel rounded-2xl p-6 border border-slate-800">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold text-slate-200 flex items-center gap-2">
@@ -347,72 +398,34 @@ export default function AdminSettingsPage() {
               <div className="space-y-4">
                 {currentRound.questions.map((q, qIdx) => (
                   <div key={q.id} className="bg-slate-900/90 rounded-xl p-4 border border-slate-800 space-y-3">
-                    {/* Header Câu Hỏi & Setting Thời Gian / Điểm */}
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
                       <span className="text-xs font-black text-blue-400 uppercase">CÂU HỎI {qIdx + 1}</span>
-
                       <div className="flex flex-wrap items-center gap-3 text-xs">
-                        {/* Chế độ chơi */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-slate-400 font-medium">Chế độ:</span>
-                          <select
-                            value={q.question_type}
-                            onChange={(e) =>
-                              updateQuestion(qIdx, { question_type: e.target.value as QuestionType })
-                            }
-                            className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs font-semibold text-amber-300"
-                          >
-                            <option value="multiple_choice">Trắc Nghiệm (A, B, C, D)</option>
-                            <option value="text_input">Nhập Chữ / Tăng Tốc</option>
-                            <option value="buzzer">Bấm Chuông Giành Quyền</option>
-                          </select>
-                        </div>
-
-                        {/* Thời gian */}
-                        <div className="flex items-center gap-1.5">
+                        <select
+                          value={q.question_type}
+                          onChange={(e) =>
+                            updateQuestion(qIdx, { question_type: e.target.value as QuestionType })
+                          }
+                          className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs font-semibold text-amber-300"
+                        >
+                          <option value="multiple_choice">Trắc Nghiệm (A, B, C, D)</option>
+                          <option value="text_input">Nhập Chữ / Tăng Tốc</option>
+                          <option value="buzzer">Bấm Chuông Giành Quyền</option>
+                        </select>
+                        <div className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="text-slate-400 font-medium">Thời gian:</span>
                           <input
                             type="number"
-                            min="5"
-                            max="120"
                             value={q.time_limit}
                             onChange={(e) => updateQuestion(qIdx, { time_limit: Number(e.target.value) })}
-                            className="w-14 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-center font-bold text-white"
+                            className="w-12 bg-slate-950 border border-slate-700 rounded px-1 text-center font-bold"
                           />
-                          <span className="text-slate-500">giây</span>
+                          <span className="text-slate-500">s</span>
                         </div>
-
-                        {/* Điểm đúng */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-emerald-400 font-medium">+Đúng:</span>
-                          <input
-                            type="number"
-                            value={q.points_correct}
-                            onChange={(e) => updateQuestion(qIdx, { points_correct: Number(e.target.value) })}
-                            className="w-12 bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-center font-bold text-emerald-300"
-                          />
-                          <span className="text-slate-500">đ</span>
-                        </div>
-
-                        {/* Điểm trừ */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-rose-400 font-medium">-Sai:</span>
-                          <input
-                            type="number"
-                            value={q.points_wrong}
-                            onChange={(e) => updateQuestion(qIdx, { points_wrong: Number(e.target.value) })}
-                            className="w-12 bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-center font-bold text-rose-300"
-                          />
-                          <span className="text-slate-500">đ</span>
-                        </div>
-
-                        {/* Nút Xóa câu */}
                         {currentRound.questions.length > 1 && (
                           <button
                             onClick={() => handleDeleteQuestion(qIdx)}
                             className="p-1 rounded bg-slate-800 hover:bg-red-600/30 text-slate-400 hover:text-red-400"
-                            title="Xóa câu hỏi này"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -420,62 +433,48 @@ export default function AdminSettingsPage() {
                       </div>
                     </div>
 
-                    {/* Nội dung câu hỏi */}
-                    <div>
-                      <label className="text-[11px] text-slate-400 block mb-1">Nội dung câu hỏi:</label>
-                      <textarea
-                        rows={2}
-                        value={q.question_text}
-                        onChange={(e) => updateQuestion(qIdx, { question_text: e.target.value })}
-                        placeholder="Nhập câu hỏi..."
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm font-semibold text-white focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
+                    <textarea
+                      rows={2}
+                      value={q.question_text}
+                      onChange={(e) => updateQuestion(qIdx, { question_text: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm font-semibold text-white focus:outline-none focus:border-blue-500"
+                    />
 
-                    {/* Tùy chọn nếu là Trắc Nghiệm */}
                     {q.question_type === "multiple_choice" && (
-                      <div>
-                        <label className="text-[11px] text-slate-400 block mb-1">4 Phương Án A, B, C, D:</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {[0, 1, 2, 3].map((optIdx) => (
-                            <input
-                              key={optIdx}
-                              type="text"
-                              value={q.options?.[optIdx] || ""}
-                              onChange={(e) => {
-                                const newOpts = [...(q.options || ["A. ", "B. ", "C. ", "D. "])];
-                                newOpts[optIdx] = e.target.value;
-                                updateQuestion(qIdx, { options: newOpts });
-                              }}
-                              className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                            />
-                          ))}
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {[0, 1, 2, 3].map((optIdx) => (
+                          <input
+                            key={optIdx}
+                            type="text"
+                            value={q.options?.[optIdx] || ""}
+                            onChange={(e) => {
+                              const newOpts = [...(q.options || ["A. ", "B. ", "C. ", "D. "])];
+                              newOpts[optIdx] = e.target.value;
+                              updateQuestion(qIdx, { options: newOpts });
+                            }}
+                            className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200"
+                          />
+                        ))}
                       </div>
                     )}
 
-                    {/* Đáp án chuẩn */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] font-bold text-emerald-400 block mb-1">
-                          Đáp Án Đúng Chuẩn (Hệ Thống Tự So Sánh):
-                        </label>
+                        <label className="text-[11px] font-bold text-emerald-400 block mb-1">Đáp Án Đúng:</label>
                         <input
                           type="text"
                           value={q.correct_answer}
                           onChange={(e) => updateQuestion(qIdx, { correct_answer: e.target.value })}
-                          placeholder="Ví dụ: C. Quân Minh hoặc HOA SEN"
-                          className="w-full bg-slate-950 border border-emerald-500/50 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-400"
+                          className="w-full bg-slate-950 border border-emerald-500/50 rounded-lg px-3 py-2 text-sm font-bold text-white"
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] text-slate-400 block mb-1">Giải Thích (MC đọc khi công bố):</label>
+                        <label className="text-[11px] text-slate-400 block mb-1">Giải Thích:</label>
                         <input
                           type="text"
                           value={q.explanation || ""}
                           onChange={(e) => updateQuestion(qIdx, { explanation: e.target.value })}
-                          placeholder="Giải thích thêm..."
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300"
                         />
                       </div>
                     </div>
