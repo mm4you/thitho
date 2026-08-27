@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { loadSavedMatchState, saveMatchStateLocally, sendGameEvent, syncMatchStateToCloud } from "@/lib/supabase";
 import { MatchState, Round, Question } from "@/types/game";
-import { parseRawTextQuestions } from "@/lib/importQuestions";
+import { parseRawTextQuestions, parseFullMatchExam, ParsedFullExamResult } from "@/lib/importQuestions";
 import {
   HelpCircle,
   Plus,
@@ -15,7 +15,8 @@ import {
   Download,
   X,
   FileDown,
-  Cloud,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,11 +25,10 @@ export default function QuestionsManagePage() {
   const [activeRoundIdx, setActiveRoundIdx] = useState<number>(0);
   const [savedAlert, setSavedAlert] = useState<boolean>(false);
 
-  // Import Modal State
+  // Modal Import 1 File Toan Bo 4 Vong Thi
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [importText, setImportText] = useState<string>("");
-  const [previewQuestions, setPreviewQuestions] = useState<Question[]>([]);
-  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [fullExamResult, setFullExamResult] = useState<ParsedFullExamResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentRound = matchState.rounds[activeRoundIdx] || matchState.rounds[0];
@@ -117,13 +117,11 @@ export default function QuestionsManagePage() {
   const handleParseText = (text: string) => {
     setImportText(text);
     if (!text.trim()) {
-      setPreviewQuestions([]);
-      setImportErrors([]);
+      setFullExamResult(null);
       return;
     }
-    const res = parseRawTextQuestions(text, defaultTimeForRound);
-    setPreviewQuestions(res.questions);
-    setImportErrors(res.errors);
+    const res = parseFullMatchExam(text);
+    setFullExamResult(res);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,27 +137,46 @@ export default function QuestionsManagePage() {
   };
 
   const handleDownloadSample = () => {
-    const sampleText = `Câu 1: Thủ đô của Việt Nam là gì?
+    const sampleText = `[VÒNG 1: KHỞI ĐỘNG]
+Câu 1: Thủ đô của Việt Nam là thành phố nào?
 A. Hà Nội
 B. Đà Nẵng
 C. TP. Hồ Chí Minh
-D. Hải Phòng
+D. Cần Thơ
 Đáp án: A
 Thời gian: 15
 Điểm: 10
 
-Câu 2: Năm nào diễn ra Cách mạng Tháng Tám thành công?
-Đáp án: 1945
-Thời gian: 20
-Điểm: 20
+Câu 2: Kim loại nào dẫn điện tốt nhất trong các kim loại sau?
+A. Vàng
+B. Bạc
+C. Đồng
+D. Nhôm
+Đáp án: B
+Thời gian: 15
+Điểm: 10
 
-Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
+[VÒNG 2: VƯỢT CHƯỚNG NGẠI VẬT]
+Hàng ngang số 1: Quốc gia nào có diện tích lớn nhất thế giới? | NGA | 15 | 10
+Hàng ngang số 2: Đại dương nào lớn nhất hành tinh? | THÁI BÌNH DƯƠNG | 15 | 10
+Hàng ngang số 3: Nguyên tố hóa học nào có ký hiệu là Fe? | SẮT | 15 | 10
+Từ khóa chướng ngại vật: ĐỊA LÝ THẾ GIỚI | ĐỊA LÝ THẾ GIỚI | 15 | 40
+
+[VÒNG 3: TĂNG TỐC]
+Sắp xếp các chữ cái sau thành từ có nghĩa: O L Y M P I A | OLYMPIA | 10 | 40
+Hình ảnh gợi nhớ đến chiến dịch lịch sử nào năm 1954? | ĐIỆN BIÊN PHỦ | 20 | 40
+Tìm số tiếp theo trong dãy số: 2, 4, 8, 16, ... | 32 | 30 | 40
+Tỉnh nào có diện tích lớn nhất Việt Nam? | NGHỆ AN | 40 | 40
+
+[VÒNG 4: VỀ ĐÍCH]
+Câu hỏi gói 20 điểm: Nhà thơ nào được mệnh danh là Thi Tiên? | LÝ BẠCH | 20 | 20
+Câu hỏi gói 30 điểm: Ai là người đầu tiên bay vào vũ trụ năm 1961? | YURI GAGARIN | 30 | 30`;
 
     const blob = new Blob([sampleText], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "de_thi_mau_olymquiz.txt";
+    link.download = "de_thi_toan_bo_4_vong_olymquiz.txt";
     link.click();
   };
 
@@ -173,17 +190,15 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
     link.click();
   };
 
-  const handleApplyImport = (mode: "replace" | "append") => {
-    if (previewQuestions.length === 0) return;
+  const handleApplyFullExam = () => {
+    if (!fullExamResult || fullExamResult.rounds.length === 0) return;
 
     const updatedRounds = matchState.rounds.map((r, rIdx) => {
-      if (rIdx === activeRoundIdx) {
-        const newQuestions = mode === "replace"
-          ? previewQuestions
-          : [...r.questions, ...previewQuestions];
+      const matchParsed = fullExamResult.rounds.find((p) => p.roundIndex === rIdx);
+      if (matchParsed && matchParsed.questions.length > 0) {
         return {
           ...r,
-          questions: newQuestions.map((q, idx) => ({ ...q, order_index: idx })),
+          questions: matchParsed.questions.map((q, idx) => ({ ...q, order_index: idx })),
         };
       }
       return r;
@@ -195,53 +210,61 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
 
     setIsImportModalOpen(false);
     setImportText("");
-    setPreviewQuestions([]);
+    setFullExamResult(null);
     setSavedAlert(true);
-    setTimeout(() => setSavedAlert(false), 2500);
+    setTimeout(() => setSavedAlert(false), 3000);
   };
 
   const defaultTimeForRound = currentRound?.questions[0]?.time_limit || 15;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-sans select-none">
-      {/* MODAL IMPORT ĐỀ THI THÔNG MINH */}
+      {/* MODAL IMPORT 1 FILE CHO TOÀN BỘ 4 VÒNG THI */}
       {isImportModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-[#0d121f] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col justify-between">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <FileText className="w-5 h-5 text-emerald-400" />
-                <h2 className="text-base font-bold uppercase text-white">
-                  IMPORT ĐỀ THI CHO VÒNG: {currentRound.title}
-                </h2>
+          <div className="w-full max-w-3xl bg-[#0d121f] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl space-y-5 max-h-[90vh] flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base md:text-lg font-bold uppercase text-white">
+                    IMPORT 1 FILE CHO TOÀN BỘ 4 VÒNG THI
+                  </h2>
+                  <p className="text-xs text-slate-400 font-medium">Tự động nhận diện và phân bổ câu hỏi vào 4 vòng trong 1 lần dán</p>
+                </div>
               </div>
-              <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
+              <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="bg-[#070a12] p-3.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span className="text-slate-300">
-                Định dạng hỗ trợ: <strong>Câu 1:... A. B. C. D. Đáp án:...</strong> hoặc cú pháp <strong>Câu hỏi | Đáp án | Giây | Điểm</strong>
-              </span>
+            <div className="bg-[#070a12] p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <span className="text-slate-200 font-semibold block">
+                  Đánh dấu vòng bằng: <strong>[VÒNG 1: KHỞI ĐỘNG]</strong>, <strong>[VÒNG 2: VCNV]</strong>, <strong>[VÒNG 3: TĂNG TỐC]</strong>, <strong>[VÒNG 4: VỀ ĐÍCH]</strong>
+                </span>
+                <span className="text-slate-500 text-[11px]">Hỗ trợ trắc nghiệm A/B/C/D hoặc cú pháp 1 dòng <i>Câu hỏi | Đáp án | Giây | Điểm</i></span>
+              </div>
               <button
                 onClick={handleDownloadSample}
-                className="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 cursor-pointer"
+                className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
               >
-                <Download className="w-3.5 h-3.5" /> Tải File Mẫu
+                <Download className="w-4 h-4" /> Tải File Đề Mẫu 4 Vòng (.txt)
               </button>
             </div>
 
-            <div className="space-y-2 flex-1 overflow-y-auto">
+            <div className="space-y-3 flex-1 overflow-y-auto pr-1">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-400 uppercase">
-                  DÁN NỘI DUNG ĐỀ THI HOẶC CHỌN FILE TỪ MÁY:
+                  DÁN NỘI DUNG ĐỀ THI 4 VÒNG HOẶC TẢI LÊN FILE TỪ MÁY:
                 </label>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 cursor-pointer"
                 >
-                  <Upload className="w-3.5 h-3.5" /> Tải Lên File (.txt, .csv, .json)
+                  <Upload className="w-3.5 h-3.5" /> Chọn File Từ Máy (.txt, .docx, .json)
                 </button>
                 <input
                   ref={fileInputRef}
@@ -253,23 +276,27 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
               </div>
 
               <textarea
-                rows={7}
+                rows={8}
                 value={importText}
                 onChange={(e) => handleParseText(e.target.value)}
-                placeholder="Dán câu hỏi vào đây... Ví dụ:&#10;Câu 1: Thủ đô của Việt Nam là gì?&#10;A. Hà Nội&#10;B. Đà Nẵng&#10;Đáp án: A&#10;Thời gian: 15&#10;&#10;Câu 2: Năm diễn ra CMT8? | 1945 | 20 | 20"
-                className="w-full bg-[#070a12] border border-slate-800 rounded-xl p-3 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
+                placeholder="Dán toàn bộ đề thi vào đây...&#10;&#10;[VÒNG 1: KHỞI ĐỘNG]&#10;Câu 1: Thủ đô của Việt Nam là gì?&#10;A. Hà Nội&#10;B. Đà Nẵng&#10;Đáp án: A&#10;&#10;[VÒNG 2: VƯỢT CHƯỚNG NGẠI VẬT]&#10;Hàng ngang 1 | NGA | 15 | 10&#10;&#10;[VÒNG 3: TĂNG TỐC]&#10;Sắp xếp chữ cái | OLYMPIA | 10 | 40&#10;&#10;[VÒNG 4: VỀ ĐÍCH]&#10;Câu 20 điểm | LÝ BẠCH | 20 | 20"
+                className="w-full bg-[#070a12] border border-slate-800 rounded-2xl p-4 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
               />
 
-              {previewQuestions.length > 0 && (
-                <div className="bg-emerald-950/40 border border-emerald-500/60 p-3 rounded-xl">
-                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 mb-2">
-                    <Check className="w-4 h-4" /> Đã nhận diện thành công {previewQuestions.length} câu hỏi:
-                  </span>
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto text-xs text-slate-300 pr-1">
-                    {previewQuestions.map((q, idx) => (
-                      <div key={idx} className="bg-[#070a12] p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-                        <span className="font-bold line-clamp-1 flex-1 mr-2">{idx + 1}. {q.question_text}</span>
-                        <span className="text-emerald-400 font-mono font-bold shrink-0">{q.correct_answer} ({q.time_limit}s)</span>
+              {/* Preview Phân Bổ 4 Vòng */}
+              {fullExamResult && fullExamResult.totalQuestions > 0 && (
+                <div className="bg-emerald-950/30 border border-emerald-500/50 p-4 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4" /> ĐÃ NHẬN DIỆN THÀNH CÔNG {fullExamResult.totalQuestions} CÂU HỎI TRONG 4 VÒNG:
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    {fullExamResult.rounds.map((r) => (
+                      <div key={r.roundIndex} className="bg-[#070a12] p-2.5 rounded-xl border border-slate-800">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">{r.roundTitle}:</span>
+                        <span className="font-mono text-base font-black text-amber-400">{r.questions.length} câu</span>
                       </div>
                     ))}
                   </div>
@@ -277,7 +304,7 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
               <Button
                 variant="ghost"
                 onClick={() => setIsImportModalOpen(false)}
@@ -286,18 +313,11 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
                 Hủy
               </Button>
               <Button
-                disabled={previewQuestions.length === 0}
-                onClick={() => handleApplyImport("append")}
-                className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs h-10 px-4 rounded-xl cursor-pointer"
+                disabled={!fullExamResult || fullExamResult.totalQuestions === 0}
+                onClick={handleApplyFullExam}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-11 px-6 rounded-xl cursor-pointer shadow-lg shadow-emerald-600/20"
               >
-                + Thêm Vào Cuối ({previewQuestions.length} Câu)
-              </Button>
-              <Button
-                disabled={previewQuestions.length === 0}
-                onClick={() => handleApplyImport("replace")}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 px-5 rounded-xl cursor-pointer shadow"
-              >
-                Thay Thế Toàn Bộ ({previewQuestions.length} Câu)
+                <Check className="w-4 h-4 mr-1.5" /> Nạp Vào Toàn Bộ 4 Vòng Thi ({fullExamResult?.totalQuestions || 0} Câu)
               </Button>
             </div>
           </div>
@@ -312,15 +332,15 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
             NGÂN HÀNG CÂU HỎI & CẤU HÌNH ĐỀ THI
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Tự động đồng bộ lên Cloud Database • Cho phép import và xuất file đề thi
+            Tự động đồng bộ lên Cloud Database • Import 1 file duy nhất cho cả 4 vòng thi
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Button
             variant="outline"
             onClick={handleExportFullExam}
-            className="border-slate-700 text-slate-300 hover:text-white text-xs h-9 px-3.5 gap-1.5 rounded-xl cursor-pointer"
+            className="border-slate-700 text-slate-300 hover:text-white text-xs h-10 px-3.5 gap-1.5 rounded-xl cursor-pointer"
             title="Tải toàn bộ bộ đề hiện tại về máy tính dưới dạng file JSON"
           >
             <FileDown className="w-4 h-4 text-amber-400" /> Xuất File Đề Thi
@@ -328,14 +348,14 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
 
           <Button
             onClick={() => setIsImportModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 gap-1.5 rounded-xl cursor-pointer shadow"
+            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs h-10 px-4 gap-2 rounded-xl cursor-pointer shadow-lg shadow-emerald-600/20"
           >
-            <Upload className="w-4 h-4" /> Import Đề Thi / Dán Nhanh
+            <Layers className="w-4 h-4" /> Import 1 File Cho Cả 4 Vòng
           </Button>
 
           {savedAlert && (
-            <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-3 py-1.5 rounded-lg border border-emerald-500/60 flex items-center gap-1 animate-in fade-in">
-              <Check className="w-3.5 h-3.5" /> Đã đồng bộ Cloud thành công!
+            <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-3 py-2 rounded-xl border border-emerald-500/60 flex items-center gap-1 animate-in fade-in">
+              <Check className="w-4 h-4" /> Đã đồng bộ Cloud thành công!
             </span>
           )}
         </div>
