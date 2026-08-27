@@ -13,6 +13,7 @@ export const initialMatchState: MatchState = {
   is_scored: false,
   buzzer_winner_slot: null,
   buzzer_winner_time_ms: null, star_of_hope_slot: null, active_player_slot: null,
+  admin_access_code: "GK-OLYMPIA-2026",
   players: [
     { slot_number: 1, name: "Thí sinh 1", school_name: "THPT Chuyên Hà Nội", score: 0, pin_code: "1111" },
     { slot_number: 2, name: "Thí sinh 2", school_name: "THPT Chuyên Lam Sơn", score: 0, pin_code: "2222" },

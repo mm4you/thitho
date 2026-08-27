@@ -54,6 +54,7 @@ export interface MatchState {
   buzzer_winner_time_ms: number | null;
   star_of_hope_slot: number | null;
   active_player_slot: number | null;
+  admin_access_code?: string;
   players: PlayerState[];
   rounds: Round[];
   current_responses: Record<number, PlayerResponse>;
