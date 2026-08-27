@@ -17,8 +17,7 @@ import {
   Bell,
   Star,
   Sparkles,
-  LogOut,
-  HelpCircle,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -56,9 +55,10 @@ export default function PlayerSlotPage() {
     currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
 
   const roundType = currentRound?.round_type || "khoi_dong";
-  const hasMyStar = matchState.star_of_hope_slot === slotNumber;
+  const isVeDich = roundType === "ve_dich";
+  const isMyTurnInVeDich = isVeDich && matchState.active_player_slot === slotNumber;
+  const hasMyStar = isVeDich && matchState.star_of_hope_slot === slotNumber;
 
-  // Xac thuc ma PIN bao mat cua may
   useEffect(() => {
     if (typeof window !== "undefined") {
       const authSlot = localStorage.getItem("authenticated_slot");
@@ -107,6 +107,8 @@ export default function PlayerSlotPage() {
         setMatchState((prev) => ({ ...prev, buzzer_winner_slot: null }));
       } else if (event.type === "TOGGLE_STAR_OF_HOPE") {
         setMatchState((prev) => ({ ...prev, star_of_hope_slot: event.slot_number }));
+      } else if (event.type === "SET_ACTIVE_PLAYER") {
+        setMatchState((prev) => ({ ...prev, active_player_slot: event.slot_number }));
       } else if (event.type === "CHANGE_QUESTION") {
         setHasSubmitted(false);
         setInputText("");
@@ -158,6 +160,7 @@ export default function PlayerSlotPage() {
   };
 
   const handleToggleMyStar = () => {
+    if (!isVeDich) return;
     const nextStar = hasMyStar ? null : slotNumber;
     sendGameEvent({
       type: "TOGGLE_STAR_OF_HOPE",
@@ -197,17 +200,36 @@ export default function PlayerSlotPage() {
         </div>
       </header>
 
-      {/* KHU VỰC THI ĐẤU THEO CHẾ ĐỘ VÒNG CHƠI (ADAPTIVE MODE) */}
+      {/* KHU VỰC THI ĐẤU THEO CHẾ ĐỘ VÒNG CHƠI */}
       <main className="w-full max-w-4xl mx-auto my-auto py-4 space-y-5">
-        {/* THANH THÔNG TIN CHẾ ĐỘ VÒNG CHƠI */}
-        <div className="flex items-center justify-between bg-[#0d121f] border border-slate-800 px-4 py-2.5 rounded-xl text-xs">
-          <span className="text-slate-400 font-bold uppercase">
-            {currentRound?.title} • Câu {matchState.current_question_index + 1}
-          </span>
-          <span className="text-amber-400 font-mono font-bold">
-            {matchState.is_timer_running ? `Đang thi đấu: ${matchState.time_left}s` : "Chờ bắt đầu"}
-          </span>
-        </div>
+        {/* VÒNG VỀ ĐÍCH: THÔNG BÁO TIÊU ĐIỂM LƯỢT THI */}
+        {isVeDich && (
+          <div className={`p-4 rounded-2xl border text-center transition-all ${
+            isMyTurnInVeDich
+              ? "bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 border-amber-400 shadow-lg shadow-amber-500/20"
+              : matchState.active_player_slot
+              ? "bg-[#0d121f] border-slate-800 text-slate-400"
+              : "bg-[#0d121f] border-slate-800 text-slate-400"
+          }`}>
+            {isMyTurnInVeDich ? (
+              <div className="space-y-1">
+                <span className="text-sm font-black uppercase text-amber-300 flex items-center justify-center gap-1.5 animate-bounce">
+                  <UserCheck className="w-5 h-5" /> BẠN ĐANG LÀ THÍ SINH THI CHÍNH TRÊN SÂN KHẤU!
+                </span>
+                <p className="text-xs text-amber-200/80">Bạn có quyền đặt Ngôi Sao Hy Vọng và trực tiếp đưa ra câu trả lời.</p>
+              </div>
+            ) : matchState.active_player_slot ? (
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-slate-300 uppercase">
+                  Đang là lượt thi của: <strong>Thí sinh {matchState.active_player_slot}</strong>
+                </span>
+                <p className="text-[11px] text-amber-400">🔔 Sẵn sàng bấm chuông cướp điểm nếu thí sinh chính trả lời sai!</p>
+              </div>
+            ) : (
+              <span className="text-xs text-slate-400 font-medium">Vòng Về Đích: Đang chờ Ban Giám Khảo gọi thí sinh lên thi</span>
+            )}
+          </div>
+        )}
 
         {/* NỘI DUNG CÂU HỎI */}
         <div className="bg-[#0d121f] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-4 shadow-xl text-center">
@@ -215,8 +237,8 @@ export default function PlayerSlotPage() {
             {currentQuestion?.question_text || "Đang chờ Ban Giám Khảo bắt đầu câu hỏi..."}
           </p>
 
-          {/* CHẾ ĐỘ VÒNG 4 (VỀ ĐÍCH): NÚT ĐẶT NGÔI SAO HY VỌNG */}
-          {roundType === "ve_dich" && !matchState.is_timer_running && (
+          {/* CHỈ VÒNG 4 MỚI CÓ NÚT ĐẶT NGÔI SAO HY VỌNG */}
+          {isVeDich && !matchState.is_timer_running && (
             <div className="pt-2">
               <button
                 onClick={handleToggleMyStar}
@@ -227,15 +249,14 @@ export default function PlayerSlotPage() {
                 }`}
               >
                 <Star className={`w-4 h-4 ${hasMyStar ? "fill-current" : ""}`} />
-                <span>{hasMyStar ? "ĐÃ ĐẶT NGÔI SAO HY VỌNG (x2 ĐIỂM)" : "ĐẶT NGÔI SAO HY VỌNG CHO CÂU NÀY"}</span>
+                <span>{hasMyStar ? "ĐÃ ĐẶT NGÔI SAO HY VỌNG (x2 ĐIỂM)" : "ĐẶT NGÔI SAO HY VỌNG (VÒNG VỀ ĐÍCH)"}</span>
               </button>
             </div>
           )}
         </div>
 
-        {/* KHU VỰC ĐIỀU KHIỂN & LÀM BÀI CỦA THÍ SINH */}
+        {/* KHU VỰC LÀM BÀI CỦA THÍ SINH */}
         <div className="space-y-4">
-          {/* 1. NẾU LÀ CÂU HỎI TRẮC NGHIỆM A/B/C/D (VÒNG 1 KHỞI ĐỘNG) */}
           {currentQuestion?.options && currentQuestion.options.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {currentQuestion.options.map((opt, idx) => {
@@ -261,7 +282,6 @@ export default function PlayerSlotPage() {
               })}
             </div>
           ) : (
-            /* 2. NẾU LÀ CÂU HỎI TỰ LUẬN / TĂNG TỐC (VÒNG 2 & VÒNG 3 TĂNG TỐC & VÒNG 4) */
             <div className="bg-[#0d121f] border border-slate-800 rounded-3xl p-5 md:p-6 space-y-4 shadow-xl">
               <div className="flex gap-2">
                 <input
@@ -300,7 +320,7 @@ export default function PlayerSlotPage() {
             </div>
           )}
 
-          {/* 3. NÚT BẤM CHUÔNG GIÀNH QUYỀN / CƯỚP ĐIỂM (DÙNG CHO VÒNG 2 & VÒNG 4) */}
+          {/* NÚT BẤM CHUÔNG GIÀNH QUYỀN / CƯỚP ĐIỂM (DÙNG CHO VÒNG 2 & VÒNG 4) */}
           <div className="pt-2">
             <button
               onClick={handlePressBuzzer}
@@ -319,6 +339,8 @@ export default function PlayerSlotPage() {
                   ? "BẠN ĐÃ GIÀNH ĐƯỢC QUYỀN TRẢ LỜI!"
                   : isBuzzerLocked
                   ? `TS ${matchState.buzzer_winner_slot} ĐÃ BẤM TRƯỚC`
+                  : isVeDich
+                  ? "BẤM CHUÔNG GIÀNH QUYỀN CƯỚP ĐIỂM (VÒNG VỀ ĐÍCH)"
                   : "BẤM CHUÔNG GIÀNH QUYỀN TRẢ LỜI"}
               </span>
             </button>

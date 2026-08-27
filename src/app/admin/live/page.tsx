@@ -49,6 +49,7 @@ export default function AdminLivePage() {
 
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
+  const isVeDichRound = currentRound?.round_type === "ve_dich";
 
   useEffect(() => {
     if (currentQuestion?.time_limit) {
@@ -81,7 +82,7 @@ export default function AdminLivePage() {
 
     currentState.players.forEach((p) => {
       const resp = currentState.current_responses[p.slot_number];
-      const hasStar = currentState.star_of_hope_slot === p.slot_number;
+      const hasStar = isVeDichRound && currentState.star_of_hope_slot === p.slot_number;
 
       if (!resp) {
         const penalty = hasStar ? Math.floor(question.points_correct / 2) : 0;
@@ -304,6 +305,7 @@ export default function AdminLivePage() {
   };
 
   const handleToggleStar = (slot: number) => {
+    if (!isVeDichRound) return;
     const newStarSlot = matchState.star_of_hope_slot === slot ? null : slot;
     const newState = { ...matchState, star_of_hope_slot: newStarSlot };
     setMatchState(newState);
@@ -372,7 +374,6 @@ export default function AdminLivePage() {
   };
 
   const activeTimeLimit = Number(customTimeInput) || 15;
-  const isVeDichRound = currentRound?.round_type === "ve_dich";
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto font-sans select-none">
@@ -434,7 +435,7 @@ export default function AdminLivePage() {
             BÀN ĐIỀU HÀNH TRẬN ĐẤU (BAN GIÁM KHẢO)
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Tự động chấm điểm 100% • Chọn thí sinh thi Về Đích linh hoạt • Ngôi Sao Hy Vọng x2 điểm đúng & -50% điểm sai
+            Tự động chấm điểm 100% • Tùy chọn thứ tự thí sinh thi Về Đích linh hoạt
           </p>
         </div>
 
@@ -470,7 +471,7 @@ export default function AdminLivePage() {
             <span className="text-xs font-bold uppercase text-amber-400 flex items-center gap-1.5">
               <UserCheck className="w-4 h-4" /> CHỌN THÍ SINH BƯỚC LÊN THI VỀ ĐÍCH (THỨ TỰ TÙY CHỌN):
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">Bấm vào tên để mở lượt thi riêng của thí sinh đó</span>
+            <span className="text-[11px] text-slate-400 font-medium">Bấm vào tên để phát tiêu điểm Spotlight trên máy chiếu</span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
@@ -489,7 +490,7 @@ export default function AdminLivePage() {
                 >
                   <div className="flex items-center gap-1.5 truncate">
                     <span>{p.slot_number}. {p.name}</span>
-                    {hasStar && <Star className="w-3 h-3 fill-current text-amber-400 shrink-0" />}
+                    {hasStar && <Star className="w-3.5 h-3.5 fill-current text-amber-400 shrink-0" />}
                   </div>
                   {isActive ? (
                     <span className="text-[9px] bg-black text-amber-300 px-1.5 py-0.5 rounded font-black tracking-wider">ĐANG THI</span>
@@ -698,11 +699,11 @@ export default function AdminLivePage() {
         </div>
       </div>
 
-      {/* BẢNG CỘNG / TRỪ ĐIỂM (TỰ ĐỘNG ĐỔI THÀNH GÓI ĐIỂM NGÔI SAO HY VỌNG KHI BẬT) */}
+      {/* BẢNG CỘNG / TRỪ ĐIỂM (NGÔI SAO HY VỌNG CHỈ HIỂN THỊ Ở VÒNG 4) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-            <span>BẢNG CỘNG / TRỪ ĐIỂM THỦ CÔNG & NGÔI SAO HY VỌNG</span>
+            <span>BẢNG CỘNG / TRỪ ĐIỂM THỦ CÔNG {isVeDichRound ? "& NGÔI SAO HY VỌNG" : ""}</span>
           </h3>
           <span className="text-[11px] text-slate-500">Giám khảo bấm trực tiếp các nút để cộng/trừ điểm</span>
         </div>
@@ -710,8 +711,8 @@ export default function AdminLivePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {matchState.players.map((player) => {
             const resp = matchState.current_responses[player.slot_number];
-            const hasStar = matchState.star_of_hope_slot === player.slot_number;
-            const isActive = matchState.active_player_slot === player.slot_number;
+            const hasStar = isVeDichRound && matchState.star_of_hope_slot === player.slot_number;
+            const isActive = isVeDichRound && matchState.active_player_slot === player.slot_number;
 
             return (
               <div
@@ -740,18 +741,20 @@ export default function AdminLivePage() {
                   </span>
                 </div>
 
-                {/* Nút Bật / Tắt Ngôi Sao Hy Vọng */}
-                <button
-                  onClick={() => handleToggleStar(player.slot_number)}
-                  className={`w-full py-2 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    hasStar
-                      ? "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-black shadow-md shadow-amber-500/30 scale-[1.02] animate-pulse"
-                      : "bg-[#070a12] border border-slate-800 text-slate-400 hover:text-amber-400 hover:border-amber-500/50"
-                  }`}
-                >
-                  <Star className={`w-4 h-4 ${hasStar ? "fill-current" : ""}`} />
-                  <span>{hasStar ? "⭐ ĐANG BẬT SAO (ĐÚNG x2 / SAI -50%)" : "Bật Ngôi Sao Hy Vọng"}</span>
-                </button>
+                {/* Nút Bật / Tắt Ngôi Sao Hy Vọng - CHỈ HIỂN THỊ Ở VÒNG 4 */}
+                {isVeDichRound && (
+                  <button
+                    onClick={() => handleToggleStar(player.slot_number)}
+                    className={`w-full py-2 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      hasStar
+                        ? "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-black shadow-md shadow-amber-500/30 scale-[1.02] animate-pulse"
+                        : "bg-[#070a12] border border-slate-800 text-slate-400 hover:text-amber-400 hover:border-amber-500/50"
+                    }`}
+                  >
+                    <Star className={`w-4 h-4 ${hasStar ? "fill-current" : ""}`} />
+                    <span>{hasStar ? "⭐ ĐANG BẬT SAO (ĐÚNG x2 / SAI -50%)" : "Bật Ngôi Sao Hy Vọng"}</span>
+                  </button>
+                )}
 
                 <div className="p-2.5 rounded-lg bg-[#070a12] border border-slate-800 min-h-[46px] flex flex-col justify-center">
                   <span className="text-[10px] text-slate-500 uppercase block font-medium">Đáp án nộp:</span>

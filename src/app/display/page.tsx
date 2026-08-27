@@ -6,9 +6,8 @@ import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home, Star, HelpCircle } from "lucide-react";
+import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home, Star, UserCheck } from "lucide-react";
 
-// Ham dem so chu cai chuan Olympia (Bo qua toan bo khoang trang)
 function countLettersOnly(str: string): number {
   if (!str) return 0;
   return str.replace(/\s+/g, "").length;
@@ -53,7 +52,6 @@ export default function DisplayPage() {
     return () => document.removeEventListener("fullscreenchange", handleFs);
   }, []);
 
-  // COUNTDOWN TIMER CHUẨN XÁC ĐÚNG 1 NHỊP DUY NHẤT
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerActive) {
@@ -170,6 +168,9 @@ export default function DisplayPage() {
         }
       } else if (event.type === "SET_ACTIVE_PLAYER") {
         setMatchState((prev) => ({ ...prev, active_player_slot: event.slot_number }));
+        if (event.slot_number) {
+          sound.playReveal();
+        }
       } else if (event.type === "OVERRIDE_SCORE") {
         setMatchState((prev) => ({
           ...prev,
@@ -216,31 +217,38 @@ export default function DisplayPage() {
   const sortedPlayers = [...matchState.players].sort((a, b) => b.score - a.score);
 
   const isVCNV = currentRound?.round_type === "vchv";
+  const isVeDich = currentRound?.round_type === "ve_dich";
   const vcnvQuestions = isVCNV ? currentRound.questions : [];
   const obstacleQuestion = isVCNV ? vcnvQuestions[vcnvQuestions.length - 1] : null;
   const obstacleAnswerClean = obstacleQuestion ? obstacleQuestion.correct_answer.replace(/\s+/g, "") : "";
   const obstacleLettersCount = countLettersOnly(obstacleQuestion?.correct_answer || "");
 
+  const activePlayer = matchState.players.find((p) => p.slot_number === matchState.active_player_slot);
+  const basePoints = currentQuestion?.points_correct || 20;
+  const hasAnyStar = isVeDich && matchState.star_of_hope_slot !== null;
+
   return (
     <div className="h-screen w-screen bg-[#070a12] text-white flex flex-col justify-between p-6 font-sans select-none overflow-hidden relative">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-blue-600/15 via-amber-500/5 to-transparent blur-[140px] pointer-events-none" />
 
+      {/* POPUP BÙNG NỔ NGÔI SAO HY VỌNG */}
       {starOfHopeBanner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md animate-in zoom-in duration-300 pointer-events-none">
-          <div className="text-center space-y-4 p-8 rounded-3xl bg-gradient-to-b from-amber-950/80 to-[#070a12] border-2 border-amber-400 shadow-2xl shadow-amber-500/40 max-w-xl mx-4">
+          <div className="text-center space-y-4 p-8 rounded-3xl bg-gradient-to-b from-amber-950/90 to-[#070a12] border-2 border-amber-400 shadow-2xl shadow-amber-500/50 max-w-xl mx-4">
             <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-black shadow-lg animate-bounce">
               <Star className="w-14 h-14 fill-current" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               <h2 className="text-3xl md:text-4xl font-black uppercase text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 tracking-wider">
                 NGÔI SAO HY VỌNG!
               </h2>
-              <p className="text-lg font-bold text-white uppercase">
-                {starOfHopeBanner.name} (VỊ TRÍ {starOfHopeBanner.slot})
+              <p className="text-xl font-black text-white uppercase">
+                {starOfHopeBanner.name} (BỤC SỐ {starOfHopeBanner.slot})
               </p>
-              <p className="text-xs text-amber-300 font-medium">
-                ⭐ Nhân đôi số điểm nếu trả lời đúng • Bị trừ 50% số điểm nếu trả lời sai
-              </p>
+              <div className="p-3 rounded-xl bg-black/60 border border-amber-500/40 text-xs text-amber-200 font-bold space-y-1">
+                <div>✨ TRẢ LỜI ĐÚNG: <span className="text-emerald-400 font-black">+{basePoints * 2} ĐIỂM (x2)</span></div>
+                <div>⚠️ TRẢ LỜI SAI: <span className="text-rose-400 font-black">-{Math.floor(basePoints / 2)} ĐIỂM (-50%)</span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -325,8 +333,38 @@ export default function DisplayPage() {
         </main>
       ) : (
         /* MÀN HÌNH THI ĐẤU TRỰC TIẾP */
-        <main className="flex-1 flex flex-col justify-between my-4 space-y-5 z-10">
-          {/* BẢNG Ô CHỮ CHƯỚNG NGẠI VẬT ĐẶC THÙ CHO VÒNG 2 */}
+        <main className="flex-1 flex flex-col justify-between my-4 space-y-4 z-10">
+          {/* BANNER SPOTLIGHT LƯỢT THI VÒNG VỀ ĐÍCH CỦA THÍ SINH */}
+          {isVeDich && activePlayer && (
+            <div className="bg-gradient-to-r from-amber-500/25 via-yellow-500/35 to-amber-500/25 border-2 border-amber-400 rounded-2xl p-3 text-center shadow-lg shadow-amber-500/30 animate-in fade-in flex flex-wrap items-center justify-between px-6 gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-9 h-9 rounded-xl bg-amber-500 text-black font-black flex items-center justify-center text-sm shadow">
+                  {activePlayer.slot_number}
+                </span>
+                <div>
+                  <span className="text-sm font-black uppercase text-amber-300 tracking-wider block text-left">
+                    LƯỢT THI VỀ ĐÍCH: {activePlayer.name}
+                  </span>
+                  <span className="text-[11px] text-slate-300 text-left block">
+                    {activePlayer.school_name || "Thí sinh"} • Điểm hiện tại: {activePlayer.score}đ
+                  </span>
+                </div>
+              </div>
+
+              {hasAnyStar ? (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500 text-black font-black text-xs shadow animate-pulse">
+                  <Star className="w-4 h-4 fill-current" />
+                  <span>ĐANG ĐẶT SAO: ĐÚNG +{basePoints * 2}đ / SAI -{Math.floor(basePoints / 2)}đ</span>
+                </div>
+              ) : (
+                <span className="text-xs font-bold text-amber-200">
+                  ⭐ 3 thí sinh còn lại sẵn sàng cướp điểm (+{basePoints}đ / -{Math.floor(basePoints / 2)}đ)
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* BẢNG Ô CHỮ VÒNG 2 */}
           {isVCNV && (
             <div className="bg-[#0d121f] border-2 border-blue-500/40 rounded-3xl p-5 space-y-4 shadow-2xl">
               <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
@@ -341,7 +379,6 @@ export default function DisplayPage() {
                 </span>
               </div>
 
-              {/* HÀNG Ô VUÔNG BÍ MẬT CỦA TỪ KHÓA TRUNG TÂM */}
               <div className="flex flex-wrap items-center justify-center gap-2 py-2">
                 {Array.from({ length: obstacleLettersCount }).map((_, idx) => {
                   const isObstacleRevealed = matchState.current_question_index === vcnvQuestions.length - 1 && matchState.is_revealed;
@@ -361,7 +398,6 @@ export default function DisplayPage() {
                 })}
               </div>
 
-              {/* 4 HÀNG NGANG GỢI Ý */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2">
                 {vcnvQuestions.slice(0, vcnvQuestions.length - 1).map((q, idx) => {
                   const lettersCount = countLettersOnly(q.correct_answer);
@@ -398,7 +434,11 @@ export default function DisplayPage() {
                   {isVCNV ? (matchState.current_question_index === vcnvQuestions.length - 1 ? "TỪ KHÓA CHÍNH" : `HÀNG NGANG ${matchState.current_question_index + 1} (${countLettersOnly(currentQuestion?.correct_answer)} CHỮ CÁI)`) : `CÂU HỎI ${matchState.current_question_index + 1}`}
                 </span>
                 <span className="text-xs text-slate-400 font-medium">
-                  +{currentQuestion?.points_correct}đ đúng / -{currentQuestion?.points_wrong}đ sai
+                  {hasAnyStar ? (
+                    <span className="text-amber-400 font-bold">⭐ Đang đặt sao: +{basePoints * 2}đ đúng / -{Math.floor(basePoints / 2)}đ sai</span>
+                  ) : (
+                    <span>+{currentQuestion?.points_correct}đ đúng / -{currentQuestion?.points_wrong}đ sai</span>
+                  )}
                 </span>
               </div>
 
@@ -444,26 +484,28 @@ export default function DisplayPage() {
 
             {matchState.is_revealed && (
               <div className="p-4 rounded-2xl bg-emerald-950/80 border-2 border-emerald-500 text-center animate-in zoom-in">
-                <span className="text-xs uppercase font-bold text-emerald-400 block mb-1">ĐÁP ÁN CHÍNH XÁC ({countLettersOnly(currentQuestion?.correct_answer)} CHỮ CÁI):</span>
+                <span className="text-xs uppercase font-bold text-emerald-400 block mb-1">
+                  ĐÁP ÁN CHÍNH XÁC {isVCNV ? `(${countLettersOnly(currentQuestion?.correct_answer)} CHỮ CÁI)` : ""}:
+                </span>
                 <span className="text-2xl font-black text-white">{currentQuestion?.correct_answer}</span>
               </div>
             )}
           </div>
 
-          {/* 4 BỤC THÍ SINH SÂN KHẤU */}
+          {/* 4 BỤC THÍ SINH SÂN KHẤU (CÓ SPOTLIGHT THÍ SINH ĐANG THI CHÍNH) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {matchState.players.map((player) => {
               const theme = slotThemes[player.slot_number - 1];
               const resp = matchState.current_responses[player.slot_number];
-              const hasStar = matchState.star_of_hope_slot === player.slot_number;
-              const isActive = matchState.active_player_slot === player.slot_number;
+              const hasStar = isVeDich && matchState.star_of_hope_slot === player.slot_number;
+              const isActive = isVeDich && matchState.active_player_slot === player.slot_number;
 
               return (
                 <div
                   key={player.slot_number}
                   className={`bg-[#0d121f] border-2 ${
                     isActive
-                      ? "border-amber-400 ring-4 ring-amber-400/20 scale-[1.02]"
+                      ? "border-amber-400 ring-4 ring-amber-400/30 scale-[1.03] shadow-xl shadow-amber-500/20"
                       : hasStar
                       ? "border-amber-400 shadow-lg shadow-amber-500/20"
                       : resp?.is_correct === true
@@ -481,8 +523,8 @@ export default function DisplayPage() {
                   )}
 
                   {isActive && !hasStar && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400 text-black font-black text-[10px] shadow">
-                      <span>ĐANG THI</span>
+                    <div className="absolute top-2 right-2 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400 text-black font-black text-[10px] shadow">
+                      <span>ĐANG THI CHÍNH</span>
                     </div>
                   )}
 
