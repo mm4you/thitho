@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export function normalizeCode(str: string): string {
+function normalizeCode(str: string): string {
   if (!str) return "";
   return str
     .toUpperCase()
@@ -8,7 +8,6 @@ export function normalizeCode(str: string): string {
     .replace(/^GK/, "");
 }
 
-// Danh sach luu tru cac ma da tao
 const generatedCodes = new Set<string>([
   "4H46SH",
   "8NF8XW",
