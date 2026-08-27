@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -18,7 +18,6 @@ import {
   ChevronRight,
   ChevronLeft,
   Tv,
-  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -257,17 +256,17 @@ export default function AdminLivePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Top Header */}
+    <div className="space-y-6 max-w-6xl mx-auto font-sans">
+      {/* Tiêu đề Bảng MC */}
       <div className="flex flex-wrap items-center justify-between border-b border-zinc-800 pb-4 gap-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-white uppercase">
-            ĐIỀU KHIỂN TRẬN ĐẤU (MC)
+            ĐIỀU KHIỂN TRẬN ĐẤU (BAN GIÁM KHẢO)
           </h1>
-          <p className="text-xs text-slate-400 font-medium">Bảng điều phối trung tâm</p>
+          <p className="text-xs text-slate-400 font-medium">{matchState.title}</p>
         </div>
 
-        {/* Nút Chuyển Màn Hình Chờ */}
+        {/* Nút Chuyển Màn Hình Chờ / Thi Đấu */}
         <Button
           onClick={handleToggleStandby}
           className={`font-bold text-xs h-10 px-4 gap-2 transition-all ${
@@ -324,7 +323,7 @@ export default function AdminLivePage() {
             ) : matchState.is_revealed ? (
               <span className="px-3 py-1 rounded bg-amber-600/30 text-amber-400 border border-amber-500/40">ĐÃ MỞ ĐÁP ÁN</span>
             ) : matchState.is_locked ? (
-              <span className="px-3 py-1 rounded bg-red-600/30 text-red-400 border border-red-500/40">ĐÃ HẾT GIỜ / KHÓA</span>
+              <span className="px-3 py-1 rounded bg-red-600/30 text-red-400 border border-red-500/40">ĐÃ HẾT GIỜ / KHÓA BÀI</span>
             ) : matchState.is_timer_running ? (
               <span className="px-3 py-1 rounded bg-blue-600 text-white animate-pulse">ĐANG ĐẾM NGƯỢC</span>
             ) : (
@@ -339,7 +338,7 @@ export default function AdminLivePage() {
             onClick={handleStartTimer}
             className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
               !matchState.is_timer_running && !matchState.is_locked
-                ? "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/30 scale-102 ring-2 ring-blue-400"
+                ? "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/30 scale-102 ring-2 ring-blue-400 cursor-pointer"
                 : "bg-slate-900 border border-slate-800 text-slate-400"
             }`}
           >
@@ -352,7 +351,7 @@ export default function AdminLivePage() {
             disabled={matchState.is_locked}
             className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
               matchState.is_timer_running && !matchState.is_locked
-                ? "bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/30 ring-2 ring-red-400"
+                ? "bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/30 ring-2 ring-red-400 cursor-pointer"
                 : "bg-slate-900 border border-slate-800 text-slate-400"
             }`}
           >
@@ -365,7 +364,7 @@ export default function AdminLivePage() {
             disabled={matchState.is_revealed}
             className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
               matchState.is_locked && !matchState.is_revealed
-                ? "bg-amber-500 text-black hover:bg-amber-400 shadow-lg shadow-amber-500/30 ring-2 ring-amber-400"
+                ? "bg-amber-500 text-black hover:bg-amber-400 shadow-lg shadow-amber-500/30 ring-2 ring-amber-400 cursor-pointer"
                 : "bg-slate-900 border border-slate-800 text-slate-400"
             }`}
           >
@@ -378,19 +377,19 @@ export default function AdminLivePage() {
             disabled={matchState.is_scored}
             className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
               matchState.is_revealed && !matchState.is_scored
-                ? "bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400"
+                ? "bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400 cursor-pointer"
                 : "bg-slate-900 border border-slate-800 text-slate-400"
             }`}
           >
             <span className="text-[10px] opacity-70">BƯỚC 4</span>
-            <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> CHẤM ĐIỂM</span>
+            <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> CHẤM ĐIỂM TỰ ĐỘNG</span>
           </button>
 
           <button
             onClick={handleNextQuestion}
             className={`h-14 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
               matchState.is_scored
-                ? "bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/30 ring-2 ring-indigo-400"
+                ? "bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/30 ring-2 ring-indigo-400 cursor-pointer"
                 : "bg-slate-900 border border-slate-800 text-slate-400"
             }`}
           >
@@ -403,7 +402,7 @@ export default function AdminLivePage() {
       {/* Câu Hỏi & Đáp Án Chuẩn */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 bg-[#0b1329] border border-blue-900/60 rounded-2xl p-5 space-y-3">
-          <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
             <span className="font-bold uppercase text-blue-400">NỘI DUNG CÂU HỎI</span>
             <span>+{currentQuestion?.points_correct}đ đúng / -{currentQuestion?.points_wrong}đ sai</span>
           </div>
@@ -416,7 +415,7 @@ export default function AdminLivePage() {
           </div>
         </div>
 
-        {/* Chuông */}
+        {/* Trạng Thái Chuông */}
         <div className="bg-[#0b1329] border border-blue-900/60 rounded-2xl p-5 flex flex-col justify-between">
           <span className="text-xs font-bold text-slate-400 uppercase">CHUÔNG BÁO GIÀNH QUYỀN</span>
           {matchState.buzzer_winner_slot ? (
@@ -425,7 +424,7 @@ export default function AdminLivePage() {
               <span className="text-xs font-mono font-bold block">Thời gian: {(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s</span>
               <button
                 onClick={handleResetBuzzer}
-                className="w-full py-1.5 rounded-lg bg-black text-white font-bold text-xs"
+                className="w-full py-1.5 rounded-lg bg-black text-white font-bold text-xs cursor-pointer"
               >
                 Reset Chuông
               </button>
@@ -438,7 +437,7 @@ export default function AdminLivePage() {
         </div>
       </div>
 
-      {/* 4 Thí Sinh Telemetry */}
+      {/* Giám Sát 4 Máy Thí Sinh */}
       <div className="space-y-3">
         <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">
           GIÁM SÁT 4 MÁY THÍ SINH
@@ -459,8 +458,8 @@ export default function AdminLivePage() {
                 } rounded-2xl p-4 space-y-3`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded bg-blue-600 text-white font-black text-xs">
-                    TS {player.slot_number}
+                  <span className="px-2.5 py-0.5 rounded bg-blue-600 text-white font-black text-xs">
+                    VỊ TRÍ {player.slot_number}
                   </span>
                   <span className="font-mono text-base font-black text-amber-400">
                     {player.score} đ
@@ -479,20 +478,20 @@ export default function AdminLivePage() {
                       <span className="text-[10px] font-mono text-slate-400">{(resp.response_time_ms / 1000).toFixed(2)}s</span>
                     </div>
                   ) : (
-                    <span className="text-xs text-slate-600 italic">Chưa gửi</span>
+                    <span className="text-xs text-slate-600 italic">Chưa nộp</span>
                   )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => handleManualGrade(player.slot_number, true)}
-                    className="py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1"
+                    className="py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" /> Đúng
                   </button>
                   <button
                     onClick={() => handleManualGrade(player.slot_number, false)}
-                    className="py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center justify-center gap-1"
+                    className="py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <XCircle className="w-3.5 h-3.5" /> Sai
                   </button>
@@ -501,8 +500,8 @@ export default function AdminLivePage() {
                 <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
                   <span>Chỉnh điểm:</span>
                   <div className="flex gap-1 font-mono">
-                    <button onClick={() => handleScoreOverride(player.slot_number, 10)} className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-white">+10</button>
-                    <button onClick={() => handleScoreOverride(player.slot_number, -10)} className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-white">-10</button>
+                    <button onClick={() => handleScoreOverride(player.slot_number, 10)} className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-white cursor-pointer">+10</button>
+                    <button onClick={() => handleScoreOverride(player.slot_number, -10)} className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-white cursor-pointer">-10</button>
                   </div>
                 </div>
               </div>
