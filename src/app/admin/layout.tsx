@@ -26,8 +26,10 @@ export default function AdminLayout({
         return;
       }
 
+      // Ban Giam Khao co quyen vao: /admin/live, /admin/players, /admin/questions
+      // Chi rieng trang Trung Tam Toi Cao /admin la doc quyen cua Super Admin (ungnhutkhang53@gmail.com)
       const isSuperAdmin = email === SUPER_ADMIN_EMAIL || token.startsWith("SUPER_ADMIN_");
-      if (!isSuperAdmin && (pathname === "/admin" || pathname === "/admin/players")) {
+      if (!isSuperAdmin && pathname === "/admin") {
         router.push("/admin/live");
         return;
       }
@@ -36,7 +38,7 @@ export default function AdminLayout({
     }
   }, [router, pathname]);
 
-  // Tu dong dang xuat va da Ban Giam Khao cu ra ngoai neu Quan Tri Vien doi ma moi
+  // Tu dong da Ban Giam Khao cu ra ngoai neu Quan Tri Vien doi ma moi
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
       if (event.type === "REVOKE_ADMIN_SESSIONS") {
@@ -45,10 +47,9 @@ export default function AdminLayout({
           const token = localStorage.getItem("admin_auth_token");
           const isSuperAdmin = email === SUPER_ADMIN_EMAIL || token?.startsWith("SUPER_ADMIN_");
 
-          // Neu khong phai Super Admin (tuc la Ban Giam Khao dung ma cu), lap tuc da ra trang login
           if (!isSuperAdmin) {
             localStorage.removeItem("admin_auth_token");
-            alert("Quản trị viên đã đổi mã Giám Khảo mới. Phiên đăng nhập cũ đã hết hạn!");
+            alert("Quản trị viên tối cao đã cấp mã Giám Khảo mới. Phiên cũ đã hết hạn!");
             router.push("/login");
           }
         }

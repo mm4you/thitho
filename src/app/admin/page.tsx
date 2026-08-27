@@ -9,14 +9,12 @@ import {
   subscribeToGameChannel,
   getAdminPassword,
   setAdminPassword,
+  syncMatchStateToCloud,
 } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import {
-  Sliders,
-  Users,
-  HelpCircle,
-  Tv,
-  ShieldCheck,
+  Crown,
+  ShieldAlert,
   KeyRound,
   RefreshCw,
   Copy,
@@ -25,7 +23,14 @@ import {
   EyeOff,
   Save,
   RotateCcw,
-  ExternalLink,
+  Sliders,
+  Tv,
+  Activity,
+  Lock,
+  Unlock,
+  AlertTriangle,
+  Download,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -38,21 +43,20 @@ function generateAlphanumericCode(length = 6, prefix = ""): string {
   return result;
 }
 
-export default function AdminDashboardPage() {
+export default function SupremeAdminDashboardPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
-  const [originUrl, setOriginUrl] = useState<string>("");
-
   const [currentAdminPass, setCurrentAdminPass] = useState<string>("GK-OLYMPIA-2026");
   const [showAdminPass, setShowAdminPass] = useState<boolean>(false);
   const [isEditingAdminPass, setIsEditingAdminPass] = useState<boolean>(false);
   const [tempAdminPass, setTempAdminPass] = useState<string>("");
   const [adminPassSavedAlert, setAdminPassSavedAlert] = useState<boolean>(false);
   const [copiedAdminPass, setCopiedAdminPass] = useState<boolean>(false);
-  const [copiedSlot, setCopiedSlot] = useState<number | null>(null);
+
+  // Health Monitoring
+  const [lastPing, setLastPing] = useState<number>(Date.now());
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setOriginUrl(window.location.origin);
       const pass = getAdminPassword();
       setCurrentAdminPass(pass);
       setTempAdminPass(pass);
@@ -61,6 +65,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
+      setLastPing(Date.now());
       if (event.type === "UPDATE_PLAYER_INFO") {
         setMatchState((prev) => ({
           ...prev,
@@ -70,6 +75,8 @@ export default function AdminDashboardPage() {
               : p
           ),
         }));
+      } else if (event.type === "SYNC_STATE") {
+        setMatchState(event.state);
       }
     });
     return () => unsubscribe();
@@ -86,7 +93,9 @@ export default function AdminDashboardPage() {
     setAdminPassword(tempAdminPass.trim());
     setCurrentAdminPass(tempAdminPass.trim());
     setIsEditingAdminPass(false);
-    setAdminPassSavedAlert(true); sendGameEvent({ type: "REVOKE_ADMIN_SESSIONS", new_code_timestamp: Date.now() });
+    setAdminPassSavedAlert(true);
+    // Phat tin hieu huy toan bo phien dang nhap cua ma cu
+    sendGameEvent({ type: "REVOKE_ADMIN_SESSIONS", new_code_timestamp: Date.now() });
     setTimeout(() => setAdminPassSavedAlert(false), 3000);
   };
 
@@ -96,45 +105,68 @@ export default function AdminDashboardPage() {
     setTimeout(() => setCopiedAdminPass(false), 2000);
   };
 
-  const handleGenerateRandomPlayerCodes = () => {
-    const updatedPlayers = matchState.players.map((p) => {
-      const randCode = generateAlphanumericCode(5);
-      return { ...p, pin_code: randCode };
-    });
-
-    const newState = { ...matchState, players: updatedPlayers };
+  const handleEmergencyFreeze = () => {
+    const nextLocked = !matchState.is_locked;
+    const newState = {
+      ...matchState,
+      is_locked: nextLocked,
+      is_timer_running: false,
+    };
     setMatchState(newState);
-    saveMatchStateLocally(newState);
+    syncMatchStateToCloud(newState);
+    sendGameEvent({ type: "LOCK_ANSWERS" });
     sendGameEvent({ type: "SYNC_STATE", state: newState });
+    alert(nextLocked ? "ĐÃ ĐÓNG BĂNG TOÀN BỘ PHÒNG THI!" : "ĐÃ MỞ KHÓA PHÒNG THI!");
   };
 
-  const handleCopyLink = (slot: number, code: string) => {
-    const joinUrl = `${originUrl || "https://olymquiz.vercel.app"}/join?slot=${slot}&pin=${code}`;
-    navigator.clipboard.writeText(joinUrl);
-    setCopiedSlot(slot);
-    setTimeout(() => setCopiedSlot(null), 2000);
+  const handleBackupMatch = () => {
+    const dataStr = JSON.stringify(matchState, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `backup_toan_bo_tran_dau_${Date.now()}.json`;
+    link.click();
   };
 
-  const handleResetScores = () => {
-    if (confirm("Bạn có chắc chắn muốn đặt lại điểm số của 4 thí sinh về 0?")) {
-      const updatedPlayers = matchState.players.map((p) => ({ ...p, score: 0 }));
-      const newState = { ...matchState, players: updatedPlayers };
+  const handleMasterResetMatch = () => {
+    if (confirm("CẢNH BÁO QUẢN TRỊ VIÊN TỐI CAO: Bạn có chắc chắn muốn đặt lại điểm số và toàn bộ trạng thái thi đấu về ban đầu?")) {
+      const resetPlayers = matchState.players.map((p) => ({ ...p, score: 0 }));
+      const newState: MatchState = {
+        ...matchState,
+        is_standby: true,
+        is_timer_running: false,
+        time_left: 15,
+        is_locked: false,
+        is_revealed: false,
+        is_scored: false,
+        buzzer_winner_slot: null,
+        buzzer_winner_time_ms: null,
+        current_round_index: 0,
+        current_question_index: 0,
+        players: resetPlayers,
+        current_responses: {},
+      };
       setMatchState(newState);
-      saveMatchStateLocally(newState);
+      syncMatchStateToCloud(newState);
       sendGameEvent({ type: "SYNC_STATE", state: newState });
+      alert("Đã khởi động lại toàn bộ trận đấu!");
     }
   };
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto font-sans select-none">
+      {/* Header Siêu Cấp */}
       <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-5 gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold uppercase tracking-tight text-white flex items-center gap-3">
-            <ShieldCheck className="w-8 h-8 text-blue-500" />
-            TRUNG TÂM QUẢN TRỊ TOÀN BỘ HỆ THỐNG
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider mb-2">
+            <Crown className="w-3.5 h-3.5" /> SUPREME CONTROLLER • QUẢN TRỊ TỐI CAO
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-white flex items-center gap-3">
+            TRUNG TÂM QUẢN TRỊ SIÊU CẤP
           </h1>
           <p className="text-xs text-slate-400 font-medium mt-1">
-            Bảng điều khiển tối cao: Quản lý mã Giám Khảo, cấp mã bảo mật 4 thí sinh và điều phối trận đấu
+            Tổng tư lệnh điều phối: Quản lý mã Giám Khảo, giám sát kết nối thời gian thực và can thiệp khẩn cấp
           </p>
         </div>
 
@@ -152,23 +184,23 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* KHU VỰC 1: QUẢN TRỊ MÃ TRUY CẬP BAN GIÁM KHẢO */}
-      <div className="bg-[#0d121f] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-5">
+      {/* KHU VỰC 1: QUẢN TRỊ MÃ TRUY CẬP BAN GIÁM KHẢO (ĐỘC QUYỀN SUPER ADMIN) */}
+      <div className="bg-[#0d121f] border-2 border-amber-500/30 rounded-3xl p-6 md:p-8 shadow-2xl space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
               <KeyRound className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold uppercase text-white">MÃ BAN GIÁM KHẢO (DO BẠN TẠO)</h2>
-              <p className="text-xs text-slate-400 font-medium">Bạn sinh mã ngẫu nhiên tại đây để cấp quyền cho Ban Giám Khảo điều hành trận đấu</p>
+              <h2 className="text-lg font-black uppercase text-white">MÃ BAN GIÁM KHẢO (DO BẠN TẠO & THU HỒI)</h2>
+              <p className="text-xs text-slate-400 font-medium">Cấp mã này cho Ban Giám Khảo để họ vào điều hành trận đấu và quản lý 4 thí sinh</p>
             </div>
           </div>
 
           <Button
             size="sm"
             onClick={handleGenerateRandomAdminPass}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-10 px-4 gap-2 cursor-pointer shadow"
+            className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs h-10 px-4 gap-2 cursor-pointer shadow-lg shadow-amber-500/20"
           >
             <RefreshCw className="w-4 h-4" /> Sinh Mã Giám Khảo Mới
           </Button>
@@ -181,14 +213,14 @@ export default function AdminDashboardPage() {
               value={tempAdminPass}
               onChange={(e) => setTempAdminPass(e.target.value)}
               placeholder="Nhập mã Giám Khảo mới..."
-              className="flex-1 min-w-[240px] bg-[#0d121f] border border-slate-700 rounded-xl px-4 py-2.5 text-base font-mono font-bold text-white focus:outline-none focus:border-blue-500 uppercase"
+              className="flex-1 min-w-[240px] bg-[#0d121f] border border-slate-700 rounded-xl px-4 py-2.5 text-base font-mono font-bold text-white focus:outline-none focus:border-amber-400 uppercase"
             />
             <Button
               size="sm"
               onClick={handleSaveAdminPass}
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-11 px-5 gap-1.5 cursor-pointer"
             >
-              <Save className="w-4 h-4" /> Lưu Mã Giám Khảo
+              <Save className="w-4 h-4" /> Lưu & Thu Hồi Mã Cũ
             </Button>
             <Button
               size="sm"
@@ -227,7 +259,7 @@ export default function AdminDashboardPage() {
               >
                 {copiedAdminPass ? (
                   <>
-                    <Check className="w-4 h-4 text-emerald-400" /> Đã Copy Mã!
+                    <Check className="w-4 h-4 text-emerald-400" /> Đã Copy!
                   </>
                 ) : (
                   <>
@@ -243,7 +275,7 @@ export default function AdminDashboardPage() {
                   setTempAdminPass(currentAdminPass);
                   setIsEditingAdminPass(true);
                 }}
-                className="border-slate-700 text-slate-300 text-xs h-10 px-3 cursor-pointer"
+                className="border-slate-700 text-slate-300 text-xs h-10 px-3.5 cursor-pointer"
               >
                 Chỉnh Sửa
               </Button>
@@ -253,95 +285,53 @@ export default function AdminDashboardPage() {
 
         {adminPassSavedAlert && (
           <p className="text-xs font-bold text-emerald-400 bg-emerald-950/40 p-3 rounded-xl border border-emerald-800/60 text-center animate-in fade-in">
-            Đã lưu mã Giám Khảo mới thành công vào hệ thống!
+            Đã lưu mã mới và lập tức hủy phiên làm việc của mã cũ!
           </p>
         )}
       </div>
 
-      {/* KHU VỰC 2: QUẢN LÝ MÃ BẢO MẬT 4 THÍ SINH */}
+      {/* KHU VỰC 2: GIÁM SÁT THỜI GIAN THỰC (REALTIME CONNECTION MONITOR) */}
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold uppercase text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-amber-400" />
-              MÃ BẢO MẬT 4 MÁY THÍ SINH (CHỮ & SỐ)
-            </h2>
-            <p className="text-xs text-slate-400 font-medium">Bạn sinh mã ngẫu nhiên cho từng máy và gửi link cho thí sinh đăng nhập</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleResetScores}
-              className="border-slate-800 text-slate-400 hover:text-red-400 text-xs h-9 cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset Điểm
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleGenerateRandomPlayerCodes}
-              className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-9 px-4 gap-1.5 cursor-pointer shadow"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Sinh Mã Mới 4 Máy
-            </Button>
-          </div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold uppercase text-white flex items-center gap-2">
+            <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
+            GIÁM SÁT LUỒNG TRẬN ĐẤU & 4 THÍ SINH
+          </h2>
+          <span className="text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-500/50 px-3 py-1 rounded-full font-mono font-bold">
+            SUPABASE REALTIME: ĐANG KẾT NỐI
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {matchState.players.map((player) => {
-            const code = player.pin_code || `${player.slot_number}${player.slot_number}${player.slot_number}${player.slot_number}`;
-
+            const resp = matchState.current_responses[player.slot_number];
             return (
               <div
                 key={player.slot_number}
-                className="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 space-y-4 flex flex-col justify-between shadow-xl"
+                className="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 space-y-3 shadow-md"
               >
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-xs text-white">
+                    <span className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center font-bold text-xs text-white">
                       {player.slot_number}
                     </span>
-                    <span className="font-bold text-sm text-white uppercase">MÁY {player.slot_number}</span>
+                    <span className="font-bold text-xs text-white uppercase">{player.name}</span>
                   </div>
                   <span className="font-mono text-base font-bold text-amber-400">{player.score} đ</span>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="font-bold text-sm text-white line-clamp-1">{player.name}</div>
-                  <div className="text-xs text-slate-400 line-clamp-1">{player.school_name || "Thí sinh"}</div>
+                <div className="space-y-1 text-xs">
+                  <div className="text-slate-400">Trường: <span className="text-white font-medium">{player.school_name || "Thí sinh"}</span></div>
+                  <div className="text-slate-400">Mã PIN: <span className="font-mono font-bold text-amber-400">{player.pin_code || "CHƯA ĐẶT"}</span></div>
                 </div>
 
-                <div className="bg-[#070a12] border border-slate-800 rounded-xl p-3 text-center">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 block">MÃ BẢO MẬT:</span>
-                  <span className="font-mono text-2xl font-black text-amber-400 tracking-widest">{code}</span>
-                </div>
-
-                <div className="space-y-2 pt-1">
-                  <Button
-                    size="sm"
-                    onClick={() => handleCopyLink(player.slot_number, code)}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 gap-1.5 cursor-pointer"
-                  >
-                    {copiedSlot === player.slot_number ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" /> Đã Copy Link!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" /> Copy Link Cho TS {player.slot_number}
-                      </>
-                    )}
-                  </Button>
-
-                  <a
-                    href={`/join?slot=${player.slot_number}&pin=${code}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] font-semibold text-slate-400 hover:text-blue-400 flex items-center justify-center gap-1 py-1"
-                  >
-                    Mở kết nối máy này <ExternalLink className="w-3 h-3" />
-                  </a>
+                <div className="p-2.5 rounded-lg bg-[#070a12] border border-slate-800 text-xs flex items-center justify-between">
+                  <span className="text-slate-500">Trạng thái:</span>
+                  {resp ? (
+                    <span className="font-bold text-emerald-400">Đã nộp bài ({(resp.response_time_ms / 1000).toFixed(2)}s)</span>
+                  ) : (
+                    <span className="text-slate-600">Đang chờ</span>
+                  )}
                 </div>
               </div>
             );
@@ -349,37 +339,58 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* KHU VỰC 3: LỐI VÀO CHÍNH */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
-        <Link href="/admin/live" className="block group">
-          <div className="bg-[#0d121f] border border-slate-800 group-hover:border-blue-500 rounded-2xl p-6 transition-all shadow-xl space-y-3">
-            <Sliders className="w-8 h-8 text-blue-400" />
-            <h3 className="text-base font-bold uppercase text-white">1. Bàn Ban Giám Khảo</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Bảng điều hành trận đấu tự động: Bắt đầu câu hỏi, tự động khóa bài và cộng điểm nổ pháo hoa.
-            </p>
+      {/* KHU VỰC 3: QUYỀN CAN THIỆP KHẨN CẤP (MASTER EMERGENCY OVERRIDES) */}
+      <div className="bg-[#0d121f] border border-red-500/40 rounded-3xl p-6 md:p-8 space-y-5 shadow-xl">
+        <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+          <div className="w-10 h-10 rounded-xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400">
+            <ShieldAlert className="w-5 h-5" />
           </div>
-        </Link>
+          <div>
+            <h2 className="text-base font-bold uppercase text-white">CAN THIỆP KHẨN CẤP TOÀN HỆ THỐNG</h2>
+            <p className="text-xs text-slate-400 font-medium">Chỉ Quản Trị Viên Tối Cao mới có quyền kích hoạt các lệnh khẩn cấp này</p>
+          </div>
+        </div>
 
-        <Link href="/admin/questions" className="block group">
-          <div className="bg-[#0d121f] border border-slate-800 group-hover:border-emerald-500 rounded-2xl p-6 transition-all shadow-xl space-y-3">
-            <HelpCircle className="w-8 h-8 text-emerald-400" />
-            <h3 className="text-base font-bold uppercase text-white">2. Ngân Hàng Câu Hỏi</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Soạn đề, cấu hình thời gian từng vòng và Import file đề thi tự động đồng bộ Cloud Database.
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button
+            onClick={handleEmergencyFreeze}
+            className="p-4 rounded-2xl bg-[#070a12] border border-amber-500/50 hover:bg-amber-950/20 text-left space-y-2 transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase text-amber-400">1. Đóng Băng / Mở Khóa Phòng Thi</span>
+              {matchState.is_locked ? <Lock className="w-4 h-4 text-amber-400" /> : <Unlock className="w-4 h-4 text-slate-400" />}
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Khóa cứng toàn bộ 4 máy thí sinh và dừng đồng hồ ngay lập tức nếu có sự cố phòng thi.
             </p>
-          </div>
-        </Link>
+          </button>
 
-        <Link href="/display" target="_blank" className="block group">
-          <div className="bg-[#0d121f] border border-slate-800 group-hover:border-amber-500 rounded-2xl p-6 transition-all shadow-xl space-y-3">
-            <Tv className="w-8 h-8 text-amber-400" />
-            <h3 className="text-base font-bold uppercase text-white">3. Màn Hình Máy Chiếu</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Màn hình sân khấu hội trường: Chế độ chờ bảng điểm 4 thí sinh và chế độ thi đấu trực tiếp.
+          <button
+            onClick={handleBackupMatch}
+            className="p-4 rounded-2xl bg-[#070a12] border border-blue-500/50 hover:bg-blue-950/20 text-left space-y-2 transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase text-blue-400">2. Sao Lưu Trận Đấu Nhanh</span>
+              <Download className="w-4 h-4 text-blue-400" />
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Xuất toàn bộ điểm số, câu hỏi và thời gian của trận đấu ra file JSON an toàn.
             </p>
-          </div>
-        </Link>
+          </button>
+
+          <button
+            onClick={handleMasterResetMatch}
+            className="p-4 rounded-2xl bg-[#070a12] border border-red-500/50 hover:bg-red-950/20 text-left space-y-2 transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase text-red-400">3. Khởi Động Lại Trận Đấu</span>
+              <RotateCcw className="w-4 h-4 text-red-400" />
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Reset điểm số 4 thí sinh về 0 và đưa màn hình máy chiếu về chế độ chờ ban đầu.
+            </p>
+          </button>
+        </div>
       </div>
     </div>
   );
