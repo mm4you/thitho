@@ -18,6 +18,9 @@ import {
   Star,
   Sparkles,
   UserCheck,
+  Edit3,
+  Save,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -31,6 +34,10 @@ export default function PlayerSlotPage() {
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
   const [myResponseTime, setMyResponseTime] = useState<number | null>(null);
   const [myAnswer, setMyAnswer] = useState<string>("");
+
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState<boolean>(false);
+  const [editName, setEditName] = useState<string>("");
+  const [editSchool, setEditSchool] = useState<string>("");
 
   const startTimeRef = useRef<number>(Date.now());
   const timerRunningRef = useRef<boolean>(false);
@@ -59,14 +66,13 @@ export default function PlayerSlotPage() {
   const isMyTurnInVeDich = isVeDich && matchState.active_player_slot === slotNumber;
   const hasMyStar = isVeDich && matchState.star_of_hope_slot === slotNumber;
 
+  // LƯU SESSION TỰ ĐỘNG CHO THÍ SINH
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const authSlot = localStorage.getItem("authenticated_slot");
-      if (authSlot !== String(slotNumber)) {
-        router.push(`/join?slot=${slotNumber}`);
-      }
+      localStorage.setItem("auth_player_slot", String(slotNumber));
+      localStorage.setItem("authenticated_slot", String(slotNumber));
     }
-  }, [slotNumber, router]);
+  }, [slotNumber]);
 
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
@@ -168,11 +174,88 @@ export default function PlayerSlotPage() {
     });
   };
 
+  const handleOpenEditProfile = () => {
+    setEditName(me.name);
+    setEditSchool(me.school_name || "");
+    setIsEditProfileOpen(true);
+  };
+
+  const handleSaveProfile = () => {
+    if (!editName.trim()) return;
+    sendGameEvent({
+      type: "UPDATE_PLAYER_INFO",
+      slot_number: slotNumber,
+      name: editName.trim(),
+      school_name: editSchool.trim(),
+    });
+    setMatchState((prev) => ({
+      ...prev,
+      players: prev.players.map((p) =>
+        p.slot_number === slotNumber
+          ? { ...p, name: editName.trim(), school_name: editSchool.trim() }
+          : p
+      ),
+    }));
+    setIsEditProfileOpen(false);
+  };
+
   const isBuzzerLocked = matchState.buzzer_winner_slot !== null;
   const amIBuzzerWinner = matchState.buzzer_winner_slot === slotNumber;
 
   return (
     <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-4 md:p-6 font-sans select-none">
+      {/* Modal Sửa Tên Thí Sinh Trực Tiếp */}
+      {isEditProfileOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#0d121f] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 className="text-sm font-bold uppercase text-white flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-blue-400" />
+                CẬP NHẬT THÔNG TIN THÍ SINH (MÁY {slotNumber})
+              </h2>
+              <button onClick={() => setIsEditProfileOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">
+                  HỌ VÀ TÊN THÍ SINH:
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-[#070a12] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">
+                  TRƯỜNG / ĐƠN VỊ:
+                </label>
+                <input
+                  type="text"
+                  value={editSchool}
+                  onChange={(e) => setEditSchool(e.target.value)}
+                  className="w-full bg-[#070a12] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <Button variant="ghost" size="sm" onClick={() => setIsEditProfileOpen(false)} className="text-xs text-slate-400">
+                Hủy
+              </Button>
+              <Button size="sm" onClick={handleSaveProfile} className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 px-4 gap-1.5 rounded-xl cursor-pointer">
+                <Save className="w-3.5 h-3.5" /> Lưu Thông Tin
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Header Thí Sinh */}
       <header className="w-full max-w-4xl mx-auto flex items-center justify-between bg-[#0d121f] border border-slate-800 rounded-2xl p-4 shadow-xl">
         <div className="flex items-center gap-3">
@@ -190,7 +273,16 @@ export default function PlayerSlotPage() {
                 </span>
               )}
             </div>
-            <h2 className="text-base md:text-lg font-bold text-white line-clamp-1">{me.name}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base md:text-lg font-bold text-white line-clamp-1">{me.name}</h2>
+              <button
+                onClick={handleOpenEditProfile}
+                className="text-slate-500 hover:text-white p-1 rounded-md"
+                title="Đổi tên thí sinh"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
