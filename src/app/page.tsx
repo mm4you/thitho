@@ -1,17 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Tv, Sliders, User, ExternalLink, ShieldCheck, Sparkles, Trophy, ArrowRight } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Tv, Sliders, User, ExternalLink, Trophy, ArrowRight } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   const players = [
-    { slot: 1, name: "Thí sinh 1 (Nguyễn Hoàng Nam)", school: "THPT Chuyên Hà Nội - Amsterdam" },
-    { slot: 2, name: "Thí sinh 2 (Trần Thu Hà)", school: "THPT Chuyên Lê Hồng Phong" },
-    { slot: 3, name: "Thí sinh 3 (Lê Minh Quân)", school: "THPT Chuyên Quốc Học Huế" },
-    { slot: 4, name: "Thí sinh 4 (Phạm Thảo Vy)", school: "THPT Chuyên Phan Bội Châu" },
+    { slot: 1, name: "Thí sinh 1" },
+    { slot: 2, name: "Thí sinh 2" },
+    { slot: 3, name: "Thí sinh 3" },
+    { slot: 4, name: "Thí sinh 4" },
   ];
 
   return (
@@ -27,20 +27,11 @@ export default function HomePage() {
             <p className="text-xs text-zinc-400">Hệ thống thi đấu 4 người chơi trực tiếp</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="border-zinc-800 text-zinc-400 gap-1.5 py-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Supabase Realtime Active
-          </Badge>
-        </div>
       </div>
 
       {/* Main Hero & Quick Access */}
       <div className="w-full max-w-5xl my-10 space-y-8">
         <div className="space-y-2 text-center md:text-left">
-          <Badge variant="secondary" className="bg-zinc-900 border-zinc-800 text-zinc-300">
-            Format Olympia Standard
-          </Badge>
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-50">
             Trung Tâm Điều Phối Cuộc Thi
           </h2>
@@ -61,7 +52,7 @@ export default function HomePage() {
                 <ExternalLink className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300" />
               </CardTitle>
               <CardDescription className="text-zinc-400">
-                Giao diện toàn màn hình cho khán giả: Đếm ngược, lật mở đáp án 4 thí sinh, nổ điểm và âm thanh SFX.
+                Giao diện toàn màn hình cho khán giả: Đếm ngược, lật mở đáp án 4 thí sinh, nổ điểm và âm thanh hiệu ứng.
               </CardDescription>
             </CardHeader>
             <CardFooter className="border-t border-zinc-800/60 pt-4">
@@ -105,10 +96,10 @@ export default function HomePage() {
         <div className="space-y-4 pt-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              Giao Diện 4 Máy Thí Sinh (Mở trên điện thoại hoặc laptop)
+              Giao Diện 4 Máy Thí Sinh
             </h3>
-            <Link href="/login" className="text-xs text-zinc-400 hover:text-zinc-200 underline">
-              Đăng nhập bằng mã PIN
+            <Link href="/join" className="text-xs text-amber-400 hover:underline">
+              Kết nối bằng mã PIN bí mật ➔
             </Link>
           </div>
 
@@ -128,9 +119,6 @@ export default function HomePage() {
                   <CardTitle className="text-sm font-semibold text-zinc-100 line-clamp-1">
                     {p.name}
                   </CardTitle>
-                  <CardDescription className="text-xs text-zinc-500 line-clamp-1">
-                    {p.school}
-                  </CardDescription>
                 </CardHeader>
                 <CardFooter className="p-4 pt-0">
                   <Link href={`/player/${p.slot}`} target="_blank" className="w-full">
@@ -146,11 +134,8 @@ export default function HomePage() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full max-w-5xl border-t border-zinc-800/80 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 gap-2">
-        <p>Thi Thơ - Hệ thống Gameshow Đấu Trí Realtime</p>
-        <p className="flex items-center gap-1">
-          <ShieldCheck className="w-4 h-4 text-emerald-500" /> Bảo mật chuẩn OWASP Top 10 • Database O(1)
-        </p>
+      <footer className="w-full max-w-5xl border-t border-zinc-800/80 pt-6 flex items-center justify-between text-xs text-zinc-500">
+        <p>Thi Thơ - Hệ Thống Gameshow Đấu Trí Trực Tiếp</p>
       </footer>
     </main>
   );
