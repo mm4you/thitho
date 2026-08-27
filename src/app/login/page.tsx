@@ -3,7 +3,8 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Mail } from "lucide-react";
+import { Lock, Eye, EyeOff, ArrowRight, Mail } from "lucide-react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { getAdminPassword, SUPER_ADMIN_EMAIL } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
@@ -25,7 +26,6 @@ function LoginForm() {
     const entered = password.trim();
     const enteredEmail = email.trim().toLowerCase();
 
-    // Kiem tra email Super Admin va mat khau hop le
     if (
       (enteredEmail === SUPER_ADMIN_EMAIL.toLowerCase() || enteredEmail === "admin" || enteredEmail === "") &&
       (entered === validAdminPass ||
@@ -46,16 +46,18 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-md bg-[#0d121f] border border-slate-800 rounded-2xl p-8 shadow-xl space-y-6">
-      <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/40 mx-auto flex items-center justify-center text-blue-400 mb-2">
-          <ShieldCheck className="w-6 h-6" />
+      <div className="text-center space-y-3">
+        <div className="flex justify-center">
+          <BrandLogo size="lg" showWordmark={false} />
         </div>
-        <h2 className="text-xl font-bold text-white tracking-tight uppercase">
-          ĐĂNG NHẬP QUẢN TRỊ HỆ THỐNG
-        </h2>
-        <p className="text-xs text-slate-400 font-medium">
-          Dành riêng cho Quản trị viên & Ban Giám Khảo
-        </p>
+        <div>
+          <h2 className="text-xl font-bold text-white tracking-tight uppercase">
+            ĐĂNG NHẬP QUẢN TRỊ
+          </h2>
+          <p className="text-xs text-slate-400 font-medium mt-0.5">
+            Dành riêng cho Quản trị viên & Ban Giám Khảo
+          </p>
+        </div>
       </div>
 
       <form onSubmit={handleLogin} className="space-y-4">

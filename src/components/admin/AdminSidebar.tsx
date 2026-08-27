@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Sliders, Users, HelpCircle, Tv, LogOut, Trophy, Home, LayoutDashboard, UserCheck } from "lucide-react";
+import { Sliders, Users, HelpCircle, Tv, LogOut, Home, LayoutDashboard, UserCheck } from "lucide-react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { SUPER_ADMIN_EMAIL } from "@/lib/supabase";
 
 export function AdminSidebar() {
@@ -44,16 +45,8 @@ export function AdminSidebar() {
     <aside className="w-64 border-r border-slate-800 bg-[#070a12] flex flex-col justify-between shrink-0 h-screen sticky top-0 font-sans select-none">
       <div>
         {/* Brand Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-black font-bold shadow-sm">
-              <Trophy className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold tracking-tight text-white uppercase">QUẢN TRỊ HỆ THỐNG</h2>
-              <p className="text-[10px] text-slate-400 font-medium">olymquiz.vercel.app</p>
-            </div>
-          </div>
+        <div className="p-4 border-b border-slate-800">
+          <BrandLogo size="sm" />
         </div>
 
         {/* Navigation */}

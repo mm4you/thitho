@@ -1,22 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Tv, Sliders, Trophy, ArrowRight, ShieldCheck, KeyRound } from "lucide-react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
+import { Tv, Sliders, ArrowRight, ShieldCheck, KeyRound } from "lucide-react";
 
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-6 md:p-12 font-sans select-none">
       {/* Header */}
       <div className="w-full max-w-5xl mx-auto flex items-center justify-between border-b border-slate-800 pb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-black font-bold shadow-sm">
-            <Trophy className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white uppercase">ĐẤU TRÍ ARENA</h1>
-            <p className="text-xs text-slate-400 font-medium">Hệ thống thi đấu trực tiếp 4 thí sinh</p>
-          </div>
-        </div>
+        <BrandLogo size="md" />
 
         <Link
           href="/login"
@@ -34,7 +27,7 @@ export default function HomePage() {
             CHỌN CỔNG TRUY CẬP
           </h2>
           <p className="text-slate-400 text-sm max-w-md mx-auto">
-            olymquiz.vercel.app • Hệ thống đấu trí chuẩn quốc gia
+            olymquiz.vercel.app • Hệ thống đấu trí trực tiếp 4 thí sinh
           </p>
         </div>
 
@@ -103,7 +96,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <div className="w-full max-w-5xl mx-auto border-t border-slate-800/80 pt-5 flex items-center justify-between text-xs text-slate-500 font-medium">
-        <span>OLYMPLAN ARENA</span>
+        <span>OLYMQUIZ BRANDKIT SYSTEM</span>
         <span>olymquiz.vercel.app</span>
       </div>
     </main>
