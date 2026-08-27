@@ -1,6 +1,34 @@
-﻿class SoundManager {
+// Studio Sound Manager - Audio Samples + Studio Fallback Synthesizer
+class SoundManager {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private audioCache: Map<string, HTMLAudioElement> = new Map();
+
+  // Danh sách các Audio Samples chuẩn Gameshow Studio chất lượng cao
+  private sampleUrls = {
+    tick: "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3", // Tiếng gõ đồng hồ kịch tính
+    buzzer: "https://assets.mixkit.co/active_storage/sfx/1070/1070-preview.mp3", // Tiếng chuông bấm giành quyền
+    correct: "https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3", // Fanfare chiến thắng đúng
+    wrong: "https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3", // Tiếng báo sai nhẹ nhàng
+    timeUp: "https://assets.mixkit.co/active_storage/sfx/995/995-preview.mp3", // Tiếng còi hết giờ
+    reveal: "https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3", // Tiếng lật mở đáp án
+  };
+
+  constructor() {
+    // Preload audio samples
+    if (typeof window !== "undefined") {
+      Object.entries(this.sampleUrls).forEach(([key, url]) => {
+        try {
+          const audio = new Audio(url);
+          audio.preload = "auto";
+          audio.volume = 0.6;
+          this.audioCache.set(key, audio);
+        } catch {
+          // Ignored
+        }
+      });
+    }
+  }
 
   private getContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -24,158 +52,182 @@
     return this.isMuted;
   }
 
-  // Tiếng tick đếm ngược chuẩn Studio (tiếng gõ gỗ tinh tế)
+  private playSample(key: keyof typeof this.sampleUrls, fallbackSynth: () => void) {
+    if (this.isMuted) return;
+
+    try {
+      const cached = this.audioCache.get(key);
+      if (cached) {
+        const soundClone = cached.cloneNode() as HTMLAudioElement;
+        soundClone.volume = key === "tick" ? 0.35 : 0.6;
+        soundClone.play().catch(() => {
+          fallbackSynth();
+        });
+        return;
+      }
+    } catch {
+      // Fallback
+    }
+    fallbackSynth();
+  }
+
+  // 1. Đếm ngược (Tick gõ gỗ studio ấm)
   playTick() {
-    if (this.isMuted) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
+    this.playSample("tick", () => {
+      const ctx = this.getContext();
+      if (!ctx || this.isMuted) return;
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
 
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(900, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.04);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1200, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.05);
 
-    gain.gain.setValueAtTime(0.2, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(2000, ctx.currentTime);
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
 
-    osc.start();
-    osc.stop(ctx.currentTime + 0.04);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    });
   }
 
-  // Tiếng chuông giành quyền bấm chuông (Bell Chime ngân vang)
+  // 2. Chuông giành quyền bấm chuông (Bell Chime ngân vang)
   playBuzzer() {
-    if (this.isMuted) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
+    this.playSample("buzzer", () => {
+      const ctx = this.getContext();
+      if (!ctx || this.isMuted) return;
 
-    const freqs = [523.25, 659.25, 783.99, 1046.5]; // C Major Chord
-    freqs.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const freqs = [523.25, 659.25, 783.99, 1046.5];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
 
-      gain.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-      osc.start(ctx.currentTime + idx * 0.03);
-      osc.stop(ctx.currentTime + 0.6);
+        osc.start(ctx.currentTime + idx * 0.03);
+        osc.stop(ctx.currentTime + 0.6);
+      });
     });
   }
 
-  // Tiếng Đáp Án Đúng: Hợp âm Fanfare hoành tráng (C - E - G - C cao)
+  // 3. Đáp án đúng (Fanfare chiến thắng hoành tráng)
   playCorrect() {
-    if (this.isMuted) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
+    this.playSample("correct", () => {
+      const ctx = this.getContext();
+      if (!ctx || this.isMuted) return;
 
-    const notes = [
-      { f: 523.25, t: 0.0, d: 0.15 },  // C5
-      { f: 659.25, t: 0.1, d: 0.15 },  // E5
-      { f: 783.99, t: 0.2, d: 0.2 },   // G5
-      { f: 1046.5, t: 0.3, d: 0.6 },   // C6
-    ];
+      const notes = [
+        { f: 523.25, t: 0.0, d: 0.15 },
+        { f: 659.25, t: 0.1, d: 0.15 },
+        { f: 783.99, t: 0.2, d: 0.2 },
+        { f: 1046.5, t: 0.3, d: 0.6 },
+      ];
 
-    notes.forEach(({ f, t, d }) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      notes.forEach(({ f, t, d }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(f, ctx.currentTime + t);
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(f, ctx.currentTime + t);
 
-      gain.gain.setValueAtTime(0.25, ctx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-      osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + d);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + d);
+      });
     });
   }
 
-  // Tiếng Đáp Án Sai: Trầm nhẹ, thanh lịch (2 nốt trầm)
+  // 4. Đáp án sai (Nhẹ nhàng thanh lịch)
   playWrong() {
-    if (this.isMuted) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
+    this.playSample("wrong", () => {
+      const ctx = this.getContext();
+      if (!ctx || this.isMuted) return;
 
-    const notes = [
-      { f: 220, t: 0.0, d: 0.18 }, // A3
-      { f: 174.61, t: 0.15, d: 0.3 }, // F3
-    ];
-
-    notes.forEach(({ f, t, d }) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(f, ctx.currentTime + t);
+      osc.frequency.setValueAtTime(180, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.35);
 
-      gain.gain.setValueAtTime(0.12, ctx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + d);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
     });
   }
 
-  // Tiếng Lật Mở Đáp Án (Whoosh Chime)
+  // 5. Lật mở đáp án (Whoosh Chime)
   playReveal() {
-    if (this.isMuted) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
+    this.playSample("reveal", () => {
+      const ctx = this.getContext();
+      if (!ctx || this.isMuted) return;
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(400, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.2);
-
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start();
-    osc.stop(ctx.currentTime + 0.25);
-  }
-
-  // Tiếng Hết Giờ (Double Chime)
-  playTimeUp() {
-    if (this.isMuted) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    [440, 349.23].forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.15);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.2);
 
-      gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.15);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.15 + 0.35);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start(ctx.currentTime + idx * 0.15);
-      osc.stop(ctx.currentTime + idx * 0.15 + 0.35);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    });
+  }
+
+  // 6. Hết giờ (Double Chime)
+  playTimeUp() {
+    this.playSample("timeUp", () => {
+      const ctx = this.getContext();
+      if (!ctx || this.isMuted) return;
+
+      [440, 349.23].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.15);
+
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.15 + 0.35);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(ctx.currentTime + idx * 0.15);
+        osc.stop(ctx.currentTime + idx * 0.15 + 0.35);
+      });
     });
   }
 }
