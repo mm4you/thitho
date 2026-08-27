@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";`nimport { useRouter } from "next/navigation";`nimport { LogOut } from "lucide-react";
 import { sound } from "@/lib/sounds";
 import {
   subscribeToGameChannel,
@@ -36,6 +36,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export default function AdminLivePage() {
+  const router = useRouter();
+
+  // Auth Guard: Kiểm tra phiên đăng nhập của Admin
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("admin_auth_token");
+      if (!token) {
+        router.push("/login?redirect=/admin/live");
+      }
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("admin_auth_token");
+      router.push("/login");
+    }
+  };
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
   const [showQRModal, setShowQRModal] = useState<boolean>(false);
   const [copiedSlot, setCopiedSlot] = useState<number | null>(null);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";`nimport { useRouter } from "next/navigation";`nimport { KeyRound, LogOut } from "lucide-react";
 import Link from "next/link";
 import { loadSavedMatchState, saveMatchStateLocally, sendGameEvent } from "@/lib/supabase";
 import { MatchState, Round, Question, QuestionType } from "@/types/game";
@@ -21,6 +21,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export default function AdminSettingsPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("admin_auth_token");
+      if (!token) {
+        router.push("/login?redirect=/admin");
+      }
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("admin_auth_token");
+      router.push("/login");
+    }
+  };
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"rounds" | "players" | "bulk">("rounds");
