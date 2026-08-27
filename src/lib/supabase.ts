@@ -5,6 +5,8 @@ import { initialMatchState } from "./mockData";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://tnelelxbjdkvzfgxdchj.supabase.co";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_5OuRWIUz-0cMVOH4LwMcOg_M4w1XLvU";
 
+export const SUPER_ADMIN_EMAIL = "ungnhutkhang53@gmail.com";
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   realtime: {
     params: {

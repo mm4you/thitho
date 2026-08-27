@@ -16,11 +16,11 @@ export default function DisplayPage() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
-  const slotColors = [
-    { text: "text-red-400", bg: "bg-red-600", border: "border-red-500", cardBg: "bg-red-950/20" },
-    { text: "text-blue-400", bg: "bg-blue-600", border: "border-blue-500", cardBg: "bg-blue-950/20" },
-    { text: "text-amber-400", bg: "bg-amber-600", border: "border-amber-500", cardBg: "bg-amber-950/20" },
-    { text: "text-emerald-400", bg: "bg-emerald-600", border: "border-emerald-500", cardBg: "bg-emerald-950/20" },
+  const slotThemes = [
+    { name: "ĐỎ", border: "border-red-500/80", accent: "text-red-400", badge: "bg-red-500/20 text-red-300 border-red-500/40" },
+    { name: "XANH", border: "border-blue-500/80", accent: "text-blue-400", badge: "bg-blue-500/20 text-blue-300 border-blue-500/40" },
+    { name: "VÀNG", border: "border-amber-500/80", accent: "text-amber-400", badge: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
+    { name: "LỤC", border: "border-emerald-500/80", accent: "text-emerald-400", badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
   ];
 
   const toggleMute = () => {
@@ -195,22 +195,21 @@ export default function DisplayPage() {
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
 
-  // 1. MÀN HÌNH CHỜ SÂN KHẤU
+  // 1. MÀN HÌNH CHỜ SÂN KHẤU: BẢNG ĐIỂM 4 THÍ SINH
   if (matchState.is_standby) {
     return (
-      <div className="min-h-screen bg-[#070b14] text-white flex flex-col justify-between p-8 font-sans select-none relative">
-        {/* Header Tinh Gọn */}
-        <div className="flex items-center justify-between">
+      <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-8 font-sans select-none">
+        {/* Header Thanh Lịch */}
+        <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-bold"
-              title="Về Trang Chủ"
+              className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center gap-1.5 text-xs font-semibold"
             >
-              <Home className="w-4 h-4" />
-              <span>Thoát Về Trang Chủ</span>
+              <Home className="w-3.5 h-3.5" />
+              <span>Trang Chủ</span>
             </Link>
-            <span className="text-xl font-black uppercase tracking-wider text-slate-200">
+            <span className="text-lg font-bold tracking-tight text-white uppercase">
               {matchState.title || "ĐẤU TRÍ ARENA"}
             </span>
           </div>
@@ -218,14 +217,14 @@ export default function DisplayPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={toggleFullscreen}
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
+              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
               title="Toàn màn hình"
             >
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
             <button
               onClick={toggleMute}
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
+              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
               title="Âm thanh"
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -233,38 +232,38 @@ export default function DisplayPage() {
           </div>
         </div>
 
-        {/* 4 Khung Thí Sinh Lớn Ở Trung Tâm */}
-        <div className="my-auto py-6 max-w-7xl mx-auto w-full">
-          <div className="text-center mb-8">
-            <span className="text-sm font-bold tracking-widest text-blue-400 uppercase">
-              {currentRound?.title || "VÒNG THI ĐẤU"}
+        {/* 4 Thí Sinh Thanh Tao */}
+        <div className="my-auto py-6 max-w-6xl mx-auto w-full space-y-8">
+          <div className="text-center">
+            <span className="text-xs font-bold tracking-widest text-slate-400 uppercase">
+              BẢNG ĐIỂM THI ĐẤU
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {matchState.players.map((player, idx) => {
-              const theme = slotColors[idx] || slotColors[0];
+              const theme = slotThemes[idx] || slotThemes[0];
               return (
                 <div
                   key={player.slot_number}
-                  className={`bg-[#0d1322] border-2 ${theme.border} rounded-2xl p-6 text-center flex flex-col justify-between h-[360px] shadow-xl`}
+                  className={`bg-[#0d121f] border ${theme.border} rounded-2xl p-6 text-center flex flex-col justify-between h-[340px] shadow-sm`}
                 >
                   <div className="space-y-4">
-                    <div className={`w-14 h-14 rounded-2xl ${theme.bg} mx-auto flex items-center justify-center font-black text-2xl text-white shadow-md`}>
-                      {player.slot_number}
-                    </div>
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${theme.badge}`}>
+                      VỊ TRÍ {player.slot_number}
+                    </span>
                     <div>
-                      <h3 className="text-2xl font-black text-white line-clamp-2">
+                      <h3 className="text-2xl font-bold text-white line-clamp-2">
                         {player.name}
                       </h3>
-                      <p className="text-sm font-medium text-slate-400 line-clamp-1 mt-1">
+                      <p className="text-xs font-medium text-slate-400 line-clamp-1 mt-1">
                         {player.school_name || "Thí sinh"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t border-slate-800">
-                    <span className="text-xs uppercase font-bold text-slate-500 tracking-wider block mb-1">
+                  <div className="pt-6 border-t border-slate-800/80">
+                    <span className="text-[11px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
                       ĐIỂM SỐ
                     </span>
                     <span className="font-mono text-5xl font-black text-amber-400">
@@ -277,8 +276,8 @@ export default function DisplayPage() {
           </div>
         </div>
 
-        <div className="text-center text-xs text-slate-600 font-semibold tracking-wider">
-          SẴN SÀNG BƯỚC VÀO TRẬN ĐẤU
+        <div className="text-center text-xs text-slate-600 font-medium tracking-wider">
+          CHỜ BẮT ĐẦU CÂU HỎI TIẾP THEO
         </div>
       </div>
     );
@@ -288,37 +287,33 @@ export default function DisplayPage() {
   const timerPercent = timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-white flex flex-col justify-between p-6 md:p-8 font-sans select-none relative">
-      {/* Top Header Tinh Gọn */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-6 md:p-8 font-sans select-none">
+      {/* Top Header */}
+      <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-1 text-xs font-bold"
-            title="Về Trang Chủ"
+            className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center gap-1 text-xs font-medium"
           >
-            <Home className="w-4 h-4" />
+            <Home className="w-3.5 h-3.5" />
             <span>Thoát</span>
           </Link>
-          <span className="px-3 py-1 rounded bg-blue-600 font-black text-xs uppercase">
-            {currentRound?.title}
-          </span>
-          <span className="text-lg font-bold text-slate-300">
-            Câu {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
+          <span className="text-sm font-bold text-slate-300">
+            {currentRound?.title} • Câu {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={toggleFullscreen}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
             title="Toàn màn hình"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </button>
           <button
             onClick={toggleMute}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
             title="Âm thanh"
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -328,53 +323,53 @@ export default function DisplayPage() {
 
       {/* Buzzer Alert */}
       {matchState.buzzer_winner_slot && (
-        <div className="my-2 p-3 rounded-xl bg-amber-500 text-black font-black text-center text-lg flex items-center justify-center gap-2 animate-bounce">
-          <Zap className="w-6 h-6 fill-current" />
+        <div className="my-2 p-3 rounded-xl bg-amber-500 text-black font-bold text-center text-base flex items-center justify-center gap-2 animate-bounce shadow">
+          <Zap className="w-5 h-5 fill-current" />
           THÍ SINH {matchState.buzzer_winner_slot} GIÀNH QUYỀN TRẢ LỜI! ({(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s)
         </div>
       )}
 
-      {/* Khung Câu Hỏi & Đồng Hồ */}
-      <div className="my-auto py-4 max-w-5xl mx-auto w-full space-y-5">
-        {/* Đồng Hồ Đếm Ngược */}
+      {/* Trung Tâm: Câu Hỏi & Đồng Hồ */}
+      <div className="my-auto py-4 max-w-5xl mx-auto w-full space-y-6">
+        {/* Đồng Hồ Đếm Ngược Gọn Gàng */}
         <div className="flex justify-center">
-          <div className="relative w-24 h-24 flex items-center justify-center">
+          <div className="relative w-20 h-20 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" className="stroke-slate-800" strokeWidth="8" fill="transparent" />
+              <circle cx="50" cy="50" r="42" className="stroke-slate-800" strokeWidth="6" fill="transparent" />
               <circle
                 cx="50"
                 cy="50"
                 r="42"
                 className={`transition-all duration-1000 ease-linear ${timeLeft <= 5 ? "stroke-red-500" : "stroke-amber-400"}`}
-                strokeWidth="8"
+                strokeWidth="6"
                 strokeDasharray={264}
                 strokeDashoffset={264 - (264 * timerPercent) / 100}
                 strokeLinecap="round"
                 fill="transparent"
               />
             </svg>
-            <span className={`absolute font-mono text-3xl font-black ${timeLeft <= 5 ? "text-red-400 animate-ping" : "text-white"}`}>
+            <span className={`absolute font-mono text-3xl font-black ${timeLeft <= 5 ? "text-red-400" : "text-white"}`}>
               {timeLeft}
             </span>
           </div>
         </div>
 
-        {/* Câu Hỏi Lớn */}
-        <div className="bg-[#0d1322] border-2 border-blue-900 rounded-3xl p-6 md:p-10 text-center shadow-2xl space-y-5">
-          <h2 className="text-2xl md:text-3xl font-black text-white leading-relaxed">
+        {/* Khung Câu Hỏi Trang Nhã */}
+        <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-6 md:p-10 text-center space-y-5">
+          <h2 className="text-2xl md:text-3xl font-bold text-white leading-relaxed">
             {currentQuestion?.question_text}
           </h2>
 
-          {/* 4 Lựa Chọn Trắc Nghiệm */}
+          {/* 4 Đáp Án Trắc Nghiệm */}
           {currentQuestion?.options && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 text-left">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-left">
               {currentQuestion.options.map((opt, i) => (
                 <div
                   key={i}
-                  className={`p-3.5 rounded-xl border-2 font-bold text-base transition-all ${
+                  className={`p-3.5 rounded-xl border font-semibold text-base transition-all ${
                     matchState.is_revealed && opt.startsWith(currentQuestion.correct_answer[0])
-                      ? "bg-emerald-950/90 border-emerald-400 text-emerald-300 ring-2 ring-emerald-500/40"
-                      : "bg-[#070b14] border-slate-800 text-slate-200"
+                      ? "bg-emerald-950/80 border-emerald-500 text-emerald-300 ring-1 ring-emerald-500/50"
+                      : "bg-[#070a12] border-slate-800 text-slate-200"
                   }`}
                 >
                   {opt}
@@ -383,13 +378,13 @@ export default function DisplayPage() {
             </div>
           )}
 
-          {/* Mở Đáp Án */}
+          {/* Mở Đáp Án Đúng */}
           {matchState.is_revealed && (
-            <div className="p-4 rounded-xl bg-emerald-950/80 border-2 border-emerald-400 text-center animate-in fade-in">
-              <span className="text-xs uppercase font-bold text-emerald-400 block mb-0.5">
+            <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/80 text-center animate-in fade-in">
+              <span className="text-[11px] uppercase font-bold text-emerald-400 block mb-0.5">
                 ĐÁP ÁN ĐÚNG:
               </span>
-              <span className="text-2xl font-black text-emerald-200">
+              <span className="text-2xl font-bold text-emerald-200">
                 {currentQuestion?.correct_answer}
               </span>
             </div>
@@ -397,10 +392,10 @@ export default function DisplayPage() {
         </div>
       </div>
 
-      {/* 4 Khung Thí Sinh Dưới Cùng */}
+      {/* 4 Thí Sinh Dưới Cùng: Dễ Quan Sát */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {matchState.players.map((player, idx) => {
-          const theme = slotColors[idx] || slotColors[0];
+          const theme = slotThemes[idx] || slotThemes[0];
           const resp = matchState.current_responses[player.slot_number];
           const isRevealed = matchState.is_revealed;
           const isCorrect = resp?.is_correct === true;
@@ -409,41 +404,41 @@ export default function DisplayPage() {
           return (
             <div
               key={player.slot_number}
-              className={`border-2 ${
+              className={`border ${
                 isRevealed && isCorrect
-                  ? "border-emerald-400 bg-emerald-950/60 ring-2 ring-emerald-500/40"
+                  ? "border-emerald-500 bg-emerald-950/40"
                   : isRevealed && isWrong
-                  ? "border-red-500 bg-red-950/60"
-                  : theme.border + " bg-[#0d1322]"
-              } rounded-2xl p-4 transition-all flex flex-col justify-between`}
+                  ? "border-red-500 bg-red-950/40"
+                  : theme.border + " bg-[#0d121f]"
+              } rounded-xl p-4 transition-all flex flex-col justify-between`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="font-bold text-sm text-white line-clamp-1">
                   {player.slot_number}. {player.name}
                 </span>
-                <span className="font-mono text-base font-black text-amber-400">
+                <span className="font-mono text-base font-bold text-amber-400">
                   {player.score} đ
                 </span>
               </div>
 
-              <div className="h-14 rounded-xl bg-[#070b14] border border-slate-800 flex items-center justify-center px-3 text-center">
+              <div className="h-12 rounded-lg bg-[#070a12] border border-slate-800/80 flex items-center justify-center px-3 text-center">
                 {!isRevealed ? (
                   resp ? (
-                    <span className="px-3 py-1 rounded bg-blue-600 text-white font-black text-xs uppercase tracking-wider animate-pulse">
-                      ĐÃ NỘP ({(resp.response_time_ms / 1000).toFixed(2)}s)
+                    <span className="px-2.5 py-0.5 rounded text-xs font-bold text-blue-400 bg-blue-950/60 border border-blue-800/60">
+                      Đã nộp ({(resp.response_time_ms / 1000).toFixed(2)}s)
                     </span>
                   ) : (
-                    <span className="text-xs font-semibold text-slate-500">
+                    <span className="text-xs text-slate-500 font-medium">
                       Đang suy nghĩ...
                     </span>
                   )
                 ) : (
                   <div className="flex items-center justify-between w-full">
-                    <span className="font-black text-sm uppercase text-white line-clamp-1">
+                    <span className="font-bold text-sm text-white uppercase line-clamp-1">
                       {resp ? resp.answer_text : "(Trống)"}
                     </span>
-                    {isCorrect && <Check className="w-5 h-5 text-emerald-400 shrink-0 ml-1 stroke-[3]" />}
-                    {isWrong && <X className="w-5 h-5 text-red-400 shrink-0 ml-1 stroke-[3]" />}
+                    {isCorrect && <Check className="w-4 h-4 text-emerald-400 shrink-0 ml-1" />}
+                    {isWrong && <X className="w-4 h-4 text-red-400 shrink-0 ml-1" />}
                   </div>
                 )}
               </div>
