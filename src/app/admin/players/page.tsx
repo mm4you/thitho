@@ -6,6 +6,8 @@ import {
   saveMatchStateLocally,
   sendGameEvent,
   subscribeToGameChannel,
+  getAdminPassword,
+  setAdminPassword,
 } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import {
@@ -16,13 +18,18 @@ import {
   Edit2,
   RotateCcw,
   ExternalLink,
+  ShieldCheck,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Save,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-function generateAlphanumericCode(length = 5): string {
+function generateAlphanumericCode(length = 6, prefix = ""): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let result = "";
+  let result = prefix;
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -32,14 +39,25 @@ function generateAlphanumericCode(length = 5): string {
 export default function AdminPlayersPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
   const [copiedSlot, setCopiedSlot] = useState<number | null>(null);
+  const [copiedAdminPass, setCopiedAdminPass] = useState<boolean>(false);
   const [editingSlot, setEditingSlot] = useState<number | null>(null);
   const [tempName, setTempName] = useState<string>("");
   const [tempSchool, setTempSchool] = useState<string>("");
   const [originUrl, setOriginUrl] = useState<string>("");
 
+  // MC Password State
+  const [currentAdminPass, setCurrentAdminPass] = useState<string>("MC-OLYMPIA-2026");
+  const [showAdminPass, setShowAdminPass] = useState<boolean>(false);
+  const [isEditingAdminPass, setIsEditingAdminPass] = useState<boolean>(false);
+  const [tempAdminPass, setTempAdminPass] = useState<string>("");
+  const [adminPassSavedAlert, setAdminPassSavedAlert] = useState<boolean>(false);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setOriginUrl(window.location.origin);
+      const pass = getAdminPassword();
+      setCurrentAdminPass(pass);
+      setTempAdminPass(pass);
     }
   }, []);
 
@@ -59,7 +77,28 @@ export default function AdminPlayersPage() {
     return () => unsubscribe();
   }, []);
 
-  const handleGenerateRandomCodes = () => {
+  const handleGenerateRandomAdminPass = () => {
+    const newPass = generateAlphanumericCode(6, "MC-");
+    setTempAdminPass(newPass);
+    setIsEditingAdminPass(true);
+  };
+
+  const handleSaveAdminPass = () => {
+    if (!tempAdminPass.trim()) return;
+    setAdminPassword(tempAdminPass.trim());
+    setCurrentAdminPass(tempAdminPass.trim());
+    setIsEditingAdminPass(false);
+    setAdminPassSavedAlert(true);
+    setTimeout(() => setAdminPassSavedAlert(false), 3000);
+  };
+
+  const handleCopyAdminPass = () => {
+    navigator.clipboard.writeText(currentAdminPass);
+    setCopiedAdminPass(true);
+    setTimeout(() => setCopiedAdminPass(false), 2000);
+  };
+
+  const handleGenerateRandomPlayerCodes = () => {
     const updatedPlayers = matchState.players.map((p) => {
       const randCode = generateAlphanumericCode(5);
       return { ...p, pin_code: randCode };
@@ -125,10 +164,10 @@ export default function AdminPlayersPage() {
         <div>
           <h1 className="text-2xl font-black tracking-tight text-white uppercase flex items-center gap-2.5">
             <Users className="w-6 h-6 text-blue-500" />
-            QUẢN LÝ KẾT NỐI 4 THÍ SINH
+            QUẢN LÝ MÃ BẢO MẬT MC & THÍ SINH
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Cấp mã bảo mật ngẫu nhiên (chữ và số) và link kết nối trực tiếp cho từng máy thi đấu
+            Tạo và lưu trữ lâu dài mã truy cập cho Ban Giám Khảo và 4 máy thi đấu
           </p>
         </div>
 
@@ -144,15 +183,123 @@ export default function AdminPlayersPage() {
 
           <Button
             size="sm"
-            onClick={handleGenerateRandomCodes}
+            onClick={handleGenerateRandomPlayerCodes}
             className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs gap-1.5 cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Sinh Mã Ngẫu Nhiên Mới (Chữ & Số)
+            <RefreshCw className="w-3.5 h-3.5" /> Sinh Mã Mới 4 Thí Sinh
           </Button>
         </div>
       </div>
 
-      {/* 4 Thẻ Máy Thí Sinh */}
+      {/* KHU VỰC 1: MẬT KHẨU MC SỬ DỤNG LÂU DÀI */}
+      <div className="bg-[#0b1329] border-2 border-blue-900 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-900/60 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-black uppercase text-white">MẬT KHẨU QUẢN TRỊ MC (LƯU LÂU DÀI)</h2>
+              <p className="text-xs text-slate-400 font-medium">Dùng để đăng nhập vào Bảng điều khiển trận đấu</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleGenerateRandomAdminPass}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Sinh Mật Khẩu MC Mới
+            </Button>
+          </div>
+        </div>
+
+        {isEditingAdminPass ? (
+          <div className="flex flex-wrap items-center gap-3 bg-[#060a14] p-3 rounded-xl border border-blue-900">
+            <input
+              type="text"
+              value={tempAdminPass}
+              onChange={(e) => setTempAdminPass(e.target.value)}
+              placeholder="Nhập mật khẩu MC mới..."
+              className="flex-1 min-w-[200px] bg-[#0b1329] border border-slate-700 rounded-lg px-4 py-2 text-sm font-mono font-bold text-white focus:outline-none focus:border-blue-500 uppercase"
+            />
+            <Button
+              size="sm"
+              onClick={handleSaveAdminPass}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 gap-1.5 cursor-pointer"
+            >
+              <Save className="w-4 h-4" /> Lưu Mật Khẩu Lâu Dài
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsEditingAdminPass(false)}
+              className="text-xs h-9 text-slate-400 hover:text-white"
+            >
+              Hủy
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between bg-[#060a14] p-4 rounded-xl border border-blue-950 gap-4">
+            <div className="flex items-center gap-3">
+              <KeyRound className="w-5 h-5 text-amber-400" />
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">MẬT KHẨU HIỆN TẠI:</span>
+                <span className="font-mono text-xl font-black text-amber-400 tracking-wider">
+                  {showAdminPass ? currentAdminPass : "••••••••••••"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAdminPass(!showAdminPass)}
+                className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                title={showAdminPass ? "Ẩn" : "Hiện"}
+              >
+                {showAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+
+              <Button
+                size="sm"
+                onClick={handleCopyAdminPass}
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 gap-1.5 cursor-pointer"
+              >
+                {copiedAdminPass ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Đã Copy!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" /> Copy Mật Khẩu MC
+                  </>
+                )}
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setTempAdminPass(currentAdminPass);
+                  setIsEditingAdminPass(true);
+                }}
+                className="border-slate-800 text-slate-300 text-xs h-9"
+              >
+                <Edit2 className="w-3.5 h-3.5 mr-1" /> Sửa
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {adminPassSavedAlert && (
+          <p className="text-xs font-bold text-emerald-400 bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-800/60 text-center animate-in fade-in">
+            Đã lưu mật khẩu MC mới thành công! Bạn có thể sử dụng mật khẩu này để đăng nhập lâu dài.
+          </p>
+        )}
+      </div>
+
+      {/* KHU VỰC 2: 4 THẺ MÃ BẢO MẬT 4 MÁY THÍ SINH */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {matchState.players.map((player) => {
           const code = player.pin_code || `${player.slot_number}${player.slot_number}${player.slot_number}${player.slot_number}`;
@@ -259,18 +406,18 @@ export default function AdminPlayersPage() {
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3.5 h-3.5" /> Copy Link Cho TS {player.slot_number}
+                          <Copy className="w-3.5 h-3.5" /> Copy Link TS {player.slot_number}
                         </>
                       )}
                     </Button>
 
                     <a
-                      href={`/player/${player.slot_number}`}
+                      href={`/join?slot=${player.slot_number}&pin=${code}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1"
                     >
-                      Mở giao diện máy này <ExternalLink className="w-3 h-3" />
+                      Vào máy bằng mã PIN này <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
                 </div>

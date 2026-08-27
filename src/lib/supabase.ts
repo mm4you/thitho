@@ -1,4 +1,4 @@
-﻿import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import { initialMatchState } from "./mockData";
 
@@ -20,7 +20,6 @@ if (typeof window !== "undefined" && "BroadcastChannel" in window) {
 }
 
 export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) => void) {
-  // 1. Supabase Realtime Broadcast
   const channel = supabase.channel(CHANNEL_NAME, {
     config: { broadcast: { self: false } },
   });
@@ -31,11 +30,8 @@ export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) =>
         onEvent(payload.payload as RealtimeEventPayload);
       }
     })
-    .subscribe((status) => {
-      console.log("Supabase Realtime Channel status:", status);
-    });
+    .subscribe();
 
-  // 2. Fallback Window BroadcastChannel (cho local tabs testing tức thì 0 latency)
   const handleLocal = (e: MessageEvent) => {
     if (e.data) {
       onEvent(e.data as RealtimeEventPayload);
@@ -54,12 +50,10 @@ export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) =>
 }
 
 export async function sendGameEvent(event: RealtimeEventPayload) {
-  // Gửi qua BroadcastChannel local
   if (broadcastChannel) {
     broadcastChannel.postMessage(event);
   }
 
-  // Gửi qua Supabase Realtime
   try {
     const channel = supabase.channel(CHANNEL_NAME);
     await channel.send({
@@ -68,11 +62,12 @@ export async function sendGameEvent(event: RealtimeEventPayload) {
       payload: event,
     });
   } catch (err) {
-    console.warn("Supabase broadcast error (using local bus):", err);
+    console.warn("Supabase broadcast error:", err);
   }
 }
 
 const STORAGE_KEY = "olympia_current_match_state";
+const ADMIN_PASS_KEY = "custom_admin_password";
 
 export function loadSavedMatchState(): MatchState {
   if (typeof window === "undefined") return initialMatchState;
@@ -91,6 +86,24 @@ export function saveMatchStateLocally(state: MatchState) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Fallback
+  }
+}
+
+export function getAdminPassword(): string {
+  if (typeof window === "undefined") return "MC-OLYMPIA-2026";
+  try {
+    return localStorage.getItem(ADMIN_PASS_KEY) || "MC-OLYMPIA-2026";
+  } catch {
+    return "MC-OLYMPIA-2026";
+  }
+}
+
+export function setAdminPassword(newPassword: string) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(ADMIN_PASS_KEY, newPassword.trim());
   } catch {
     // Fallback
   }
