@@ -11,7 +11,7 @@ export interface Question {
   points_correct: number;
   points_wrong: number;
   image_url?: string;
-  audio_url?: string;
+  audio_url?: string; explanation?: string;
 }
 
 export interface Round {
