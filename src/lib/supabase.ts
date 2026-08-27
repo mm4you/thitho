@@ -6,6 +6,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://tnelelxbjdk
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_5OuRWIUz-0cMVOH4LwMcOg_M4w1XLvU";
 
 export const SUPER_ADMIN_EMAIL = "ungnhutkhang53@gmail.com";
+export const DEFAULT_MASTER_PASS = "OlymQuiz@Khang2026!";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   realtime: {
@@ -94,11 +95,11 @@ export function saveMatchStateLocally(state: MatchState) {
 }
 
 export function getAdminPassword(): string {
-  if (typeof window === "undefined") return "MC-OLYMPIA-2026";
+  if (typeof window === "undefined") return DEFAULT_MASTER_PASS;
   try {
-    return localStorage.getItem(ADMIN_PASS_KEY) || "MC-OLYMPIA-2026";
+    return localStorage.getItem(ADMIN_PASS_KEY) || DEFAULT_MASTER_PASS;
   } catch {
-    return "MC-OLYMPIA-2026";
+    return DEFAULT_MASTER_PASS;
   }
 }
 
