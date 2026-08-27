@@ -27,15 +27,12 @@ export default function HomePage() {
         </Link>
       </div>
 
-      {/* 2 Cổng Truy Cập Bảo Mật Tuyệt Đối */}
+      {/* 2 Cổng Truy Cập Cực Kỳ Tinh Gọn */}
       <div className="w-full max-w-5xl mx-auto my-auto py-8 space-y-8">
         <div className="text-center space-y-2">
           <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white">
             CHỌN CỔNG TRUY CẬP HỆ THỐNG
           </h2>
-          <p className="text-slate-400 text-sm max-w-md mx-auto">
-            Hệ thống bảo mật phân quyền độc lập giữa Ban Giám Khảo và Thí Sinh
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -52,9 +49,6 @@ export default function HomePage() {
               <h3 className="text-2xl font-black uppercase text-white">
                 ĐIỀU KHIỂN & MÁY CHIẾU
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Khu vực dành cho Ban Tổ Chức: Điều phối 5 bước trận đấu, mở đề thi, cấp mã bảo mật và chiếu màn hình hội trường.
-              </p>
             </div>
 
             <div className="space-y-3 pt-4 border-t border-slate-800">
@@ -78,7 +72,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* CỔNG 2: THÍ SINH (BẮT BUỘC NHẬP MÃ BẢO MẬT) */}
+          {/* CỔNG 2: THÍ SINH */}
           <div className="bg-[#0d1322] border-2 border-amber-500/50 rounded-3xl p-8 flex flex-col justify-between shadow-xl space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -91,9 +85,6 @@ export default function HomePage() {
               <h3 className="text-2xl font-black uppercase text-white">
                 KẾT NỐI MÁY THI ĐẤU
               </h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Thí sinh phải nhập đúng Mã bảo mật do Ban Giám Khảo cấp mới có thể kết nối vào máy thi đấu của mình.
-              </p>
             </div>
 
             <div className="pt-4 border-t border-slate-800">
@@ -102,18 +93,15 @@ export default function HomePage() {
                   <KeyRound className="w-5 h-5" /> NHẬP MÃ BẢO MẬT ĐỂ VÀO PHÒNG THI
                 </button>
               </Link>
-              <span className="text-[11px] text-slate-500 text-center block mt-3 font-medium">
-                Mỗi vị trí máy 1, 2, 3, 4 đều có mã bảo vệ riêng biệt
-              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer Tinh Gọn */}
       <div className="w-full max-w-5xl mx-auto border-t border-slate-800 pt-6 flex items-center justify-between text-xs font-semibold text-slate-500">
         <span>OLYMPIA ARENA PLATFORM</span>
-        <span>BẢO MẬT XÁC THỰC 100%</span>
+        <span>HỆ THỐNG THI ĐẤU TRỰC TIẾP</span>
       </div>
     </main>
   );
