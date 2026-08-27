@@ -9,13 +9,12 @@ import { getAdminPassword, SUPER_ADMIN_EMAIL, loadSavedMatchState, subscribeToGa
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import { Button } from "@/components/ui/button";
 
-// Ham loc sach 100% moi ky tu rac, chi giu lai chu va so
 function normalizeCode(str: string): string {
   if (!str) return "";
   return str
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "") // Xoa sach moi dau gach ngang, en-dash, em-dash, dau cach
-    .replace(/^GK/, ""); // Bo tien to GK neu co
+    .replace(/[^A-Z0-9]/g, "")
+    .replace(/^GK/, "");
 }
 
 function LoginForm() {
@@ -72,25 +71,28 @@ function LoginForm() {
     setIsVerifying(true);
 
     try {
-      const cleanServer = normalizeCode(serverJudgeCode);
-      const cleanState = normalizeCode(matchState.admin_access_code || "");
-      const cleanLocal = normalizeCode(getAdminPassword() || "");
+      // 1. Kiem tra truc tiep qua Server API (Single Source of Truth)
+      let serverConfirmed = false;
+      let activeCodeOnServer = serverJudgeCode;
+      try {
+        const res = await fetch(`/api/judge-code?code=${encodeURIComponent(rawEntered)}`);
+        const data = await res.json();
+        if (data?.is_valid) {
+          serverConfirmed = true;
+        }
+        if (data?.current_code) {
+          activeCodeOnServer = data.current_code;
+          setServerJudgeCode(data.current_code);
+        }
+      } catch {
+        // Network fallback
+      }
 
-      // Kiem tra ma hop le:
-      // 1. Khop voi ma hien hanh tren Server hoac State hoac Local
-      // 2. Hoac bat ky ma 4-10 ky tu chu/so do Admin tao
-      // 3. Hoac cac ma master
-      const isValid =
-        cleanEntered === cleanServer ||
-        cleanEntered === cleanState ||
-        cleanEntered === cleanLocal ||
-        cleanEntered === "4H46SH" ||
-        cleanEntered === "8NF8XW" ||
-        cleanEntered === "OLYMPIA2026" ||
-        cleanEntered === "ADMIN123" ||
-        cleanEntered === "9999" ||
-        cleanEntered === "1234" ||
-        cleanEntered.length >= 4;
+      // 2. So khop voi ma dang hoat dong duy nhat
+      const cleanActive = normalizeCode(activeCodeOnServer);
+      const isMaster = cleanEntered === "OLYMQUIZKHANG2026";
+
+      const isValid = serverConfirmed || cleanEntered === cleanActive || isMaster;
 
       if (isValid) {
         if (typeof window !== "undefined") {
@@ -98,7 +100,7 @@ function LoginForm() {
         }
         router.push(redirectPath || "/admin/live");
       } else {
-        setErrorMsg("Mã Giám Khảo không chính xác! Vui lòng liên hệ Quản trị viên để nhận mã truy cập.");
+        setErrorMsg("Mã Giám Khảo không chính xác! Mã cũ hoặc sai sẽ không thể đăng nhập. Vui lòng liên hệ Quản trị viên.");
       }
     } finally {
       setIsVerifying(false);
@@ -117,11 +119,9 @@ function LoginForm() {
       (enteredEmail === SUPER_ADMIN_EMAIL.toLowerCase() || enteredEmail === "admin") &&
       (entered === validPass ||
         normalizeCode(entered) === normalizeCode(serverJudgeCode) ||
-        normalizeCode(entered) === normalizeCode(matchState.admin_access_code || "") ||
         entered === "OlymQuiz@Khang2026!" ||
         entered === "admin123" ||
-        entered === "9999" ||
-        entered.length >= 4);
+        entered === "9999");
 
     if (isPassValid) {
       if (typeof window !== "undefined") {

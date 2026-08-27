@@ -14,7 +14,6 @@ import {
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import {
   Crown,
-  ShieldAlert,
   KeyRound,
   RefreshCw,
   Copy,
@@ -22,19 +21,11 @@ import {
   Eye,
   EyeOff,
   Save,
-  RotateCcw,
-  Sliders,
   Tv,
-  Activity,
-  Lock,
-  Unlock,
-  AlertTriangle,
-  Download,
-  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-function generateAlphanumericCode(length = 6, prefix = ""): string {
+function generateAlphanumericCode(length = 6, prefix = "GK-"): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let result = prefix;
   for (let i = 0; i < length; i++) {
@@ -45,15 +36,15 @@ function generateAlphanumericCode(length = 6, prefix = ""): string {
 
 export default function SupremeAdminDashboardPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
-  const [currentAdminPass, setCurrentAdminPass] = useState<string>("GK-OLYMPIA-2026");
+  const [currentAdminPass, setCurrentAdminPass] = useState<string>("GK-4H46SH");
   const [showAdminPass, setShowAdminPass] = useState<boolean>(false);
   const [isEditingAdminPass, setIsEditingAdminPass] = useState<boolean>(false);
   const [tempAdminPass, setTempAdminPass] = useState<string>("");
   const [adminPassSavedAlert, setAdminPassSavedAlert] = useState<boolean>(false);
   const [copiedAdminPass, setCopiedAdminPass] = useState<boolean>(false);
 
+  // Lay ma ban dau tu Server duy nhat mot lan khi mount
   useEffect(() => {
-    // Lay ma tu Server API
     fetch("/api/judge-code")
       .then((res) => res.json())
       .then((data) => {
@@ -62,14 +53,12 @@ export default function SupremeAdminDashboardPage() {
           setTempAdminPass(data.judge_code);
         }
       })
-      .catch(() => {});
-
-    if (typeof window !== "undefined") {
-      const pass = matchState.admin_access_code || getAdminPassword() || "GK-OLYMPIA-2026";
-      setCurrentAdminPass(pass);
-      setTempAdminPass(pass);
-    }
-  }, [matchState.admin_access_code]);
+      .catch(() => {
+        const local = getAdminPassword() || "GK-4H46SH";
+        setCurrentAdminPass(local);
+        setTempAdminPass(local);
+      });
+  }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
@@ -84,13 +73,6 @@ export default function SupremeAdminDashboardPage() {
         }));
       } else if (event.type === "SYNC_STATE") {
         setMatchState(event.state);
-        if (event.state.admin_access_code) {
-          setCurrentAdminPass(event.state.admin_access_code);
-          setTempAdminPass(event.state.admin_access_code);
-        }
-      } else if (event.type === "UPDATE_JUDGE_ACCESS_CODE") {
-        setCurrentAdminPass(event.code);
-        setTempAdminPass(event.code);
       }
     });
     return () => unsubscribe();
@@ -118,7 +100,7 @@ export default function SupremeAdminDashboardPage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
 
-    // Day len Server API de moi may khac dong bo ngay lap tuc
+    // Day len Server API de cap nhat duy nhat ma nay
     try {
       await fetch("/api/judge-code", {
         method: "POST",
@@ -177,14 +159,14 @@ export default function SupremeAdminDashboardPage() {
           <div className="flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-amber-400" />
             <div>
-              <h2 className="text-sm font-bold uppercase text-white">MÃ BẢO MẬT TRUY CẬP CỦA BAN GIÁM KHẢO</h2>
-              <p className="text-xs text-slate-400">Cung cấp mã này cho MC hoặc Giám Khảo để vào điều hành trận đấu</p>
+              <h2 className="text-sm font-bold uppercase text-white">MÃ BẢO MẬT TRUY CẬP DUY NHẤT CỦA BAN GIÁM KHẢO</h2>
+              <p className="text-xs text-slate-400">Khi đổi mã mới, toàn bộ mã cũ sẽ bị vô hiệu hóa ngay lập tức</p>
             </div>
           </div>
 
           {adminPassSavedAlert && (
             <span className="text-xs font-bold text-emerald-400 flex items-center gap-1 bg-emerald-950/60 border border-emerald-500/40 px-3 py-1 rounded-lg animate-in fade-in">
-              <Check className="w-4 h-4" /> Đã cập nhật & đồng bộ mã lên toàn hệ thống!
+              <Check className="w-4 h-4" /> Đã lưu & kích hoạt mã mới duy nhất!
             </span>
           )}
         </div>
@@ -230,7 +212,7 @@ export default function SupremeAdminDashboardPage() {
                     {copiedAdminPass ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     <span className="ml-1">{copiedAdminPass ? "Đã chép" : "Sao chép"}</span>
                   </Button>
-                  <Button size="sm" onClick={() => setIsEditingAdminPass(true)} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs h-8 px-3 rounded-lg">
+                  <Button size="sm" onClick={() => { setTempAdminPass(currentAdminPass); setIsEditingAdminPass(true); }} className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs h-8 px-3 rounded-lg">
                     Sửa mã
                   </Button>
                 </>
