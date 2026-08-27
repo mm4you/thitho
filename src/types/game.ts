@@ -53,6 +53,7 @@ export interface MatchState {
   buzzer_winner_slot: number | null;
   buzzer_winner_time_ms: number | null;
   star_of_hope_slot: number | null;
+  active_player_slot: number | null;
   players: PlayerState[];
   rounds: Round[];
   current_responses: Record<number, PlayerResponse>;
@@ -69,6 +70,7 @@ export type RealtimeEventPayload =
   | { type: "PRESS_BUZZER"; slot_number: number; press_time_ms: number }
   | { type: "RESET_BUZZER" }
   | { type: "TOGGLE_STAR_OF_HOPE"; slot_number: number | null }
+  | { type: "SET_ACTIVE_PLAYER"; slot_number: number | null }
   | { type: "OVERRIDE_SCORE"; slot_number: 1 | 2 | 3 | 4; delta: number }
   | { type: "UPDATE_PLAYER_INFO"; slot_number: 1 | 2 | 3 | 4; name: string; school_name?: string }
   | { type: "CHANGE_QUESTION"; round_index: number; question_index: number }

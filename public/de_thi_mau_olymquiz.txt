@@ -1,14 +1,23 @@
-====================================================================
-OLYMQUIZ - FILE ĐỀ THI MẪU CHUẨN 4 VÒNG THI (OLYMPIA ARENA)
-Quy chuẩn số lượng câu hỏi khuyến nghị:
-- VÒNG 1 (KHỞI ĐỘNG): 8 - 12 câu (Trắc nghiệm hoặc câu hỏi ngắn)
-- VÒNG 2 (VƯỢT CHƯỚNG NGẠI VẬT): 4 Hàng ngang + 1 Từ khóa chính (Tổng 5 câu)
-- VÒNG 3 (TĂNG TỐC): Chuẩn 4 câu (10s, 20s, 30s, 40s - tính điểm theo mili-giây)
-- VÒNG 4 (VỀ ĐÍCH): 8 - 12 câu (Mỗi thí sinh thi 2 - 3 câu, có Ngôi Sao Hy Vọng)
-====================================================================
+========================================================================================
+OLYMQUIZ - FILE ĐỀ THI MẪU CHUẨN 4 VÒNG THI & HƯỚNG DẪN CHI TIẾT CÁC CON SỐ
+========================================================================================
+
+📋 GIẢI THÍCH Ý NGHĨA CÁC CON SỐ TRONG FILE ĐỀ THI:
+Cú pháp 1 dòng có cấu trúc: [Nội dung câu hỏi] | [Đáp án chuẩn] | [Số Giây] | [Số Điểm]
+- Con số thứ 1 (Ví dụ: 15, 20, 30): Là THỜI GIAN ĐẾM NGƯỢC (tính bằng Giây).
+- Con số thứ 2 (Ví dụ: 10, 20, 30, 40): Là SỐ ĐIỂM THƯỞNG khi thí sinh trả lời đúng.
+
+----------------------------------------------------------------------------------------
+Quy chuẩn số lượng câu hỏi khuyến nghị cho Ban Giám Khảo:
+- VÒNG 1 (KHỞI ĐỘNG): 8 đến 12 câu (Mỗi câu 10 - 15 giây, 10 điểm/câu)
+- VÒNG 2 (VƯỢT CHƯỚNG NGẠI VẬT): 4 Hàng ngang (10đ/câu) + 1 Từ khóa chính (40đ)
+- VÒNG 3 (TĂNG TỐC): Đúng 4 câu tăng dần (10s, 20s, 30s, 40s - tính điểm theo mili-giây)
+- VÒNG 4 (VỀ ĐÍCH): 8 đến 12 câu (Gói 20đ hoặc 30đ chia cho 4 thí sinh, có Ngôi Sao Hy Vọng)
+========================================================================================
+
 
 [VÒNG 1: KHỞI ĐỘNG]
-# Khuyên dùng: 8 - 12 câu hỏi trắc nghiệm hoặc ngắn (10 - 15 giây/câu)
+# Cách 1: Dạng Trắc nghiệm 4 lựa chọn A/B/C/D (Thời gian: 15 giây, Điểm: 10 điểm)
 Câu 1: Thủ đô của nước CHXHCN Việt Nam là thành phố nào?
 A. Hà Nội
 B. Đà Nẵng
@@ -18,65 +27,46 @@ D. Hải Phòng
 Thời gian: 15
 Điểm: 10
 
-Câu 2: Kim loại nào có tính dẫn điện tốt nhất trong các kim loại sau?
-A. Vàng
-B. Bạc
-C. Đồng
-D. Nhôm
-Đáp án: B
-Thời gian: 15
-Điểm: 10
-
-Câu 3: Đơn vị đo cường độ dòng điện trong hệ SI là gì?
-A. Vôn (V)
-B. Oát (W)
-C. Ampe (A)
-D. Ôm (Ω)
-Đáp án: C
-Thời gian: 15
-Điểm: 10
-
-Câu 4: Tác phẩm 'Truyện Kiều' do đại thi hào nào sáng tác?
-A. Nguyễn Trãi
-B. Nguyễn Du
-C. Hồ Xuân Hương
-D. Đoàn Thị Điểm
-Đáp án: B
-Thời gian: 15
-Điểm: 10
+# Cách 2: Dạng 1 dòng siêu nhanh (Câu hỏi | Đáp án | Số giây | Số điểm)
+Câu 2: Đơn vị đo cường độ dòng điện trong hệ đo lường quốc tế SI là gì? | AMPE | 15 | 10
+Câu 3: Kim loại nào có tính dẫn điện tốt nhất trong tất cả các kim loại? | BẠC | 15 | 10
+Câu 4: Tác phẩm 'Truyện Kiều' do đại thi hào nào sáng tác? | NGUYỄN DU | 15 | 10
 
 
 [VÒNG 2: VƯỢT CHƯỚNG NGẠI VẬT]
-# Khuyên dùng: 4 Hàng ngang gợi ý + 1 Từ khóa chướng ngại vật chính
-Hàng ngang số 1: Quốc gia nào có diện tích lớn nhất thế giới? | NGA | 15 | 10
-Hàng ngang số 2: Đại dương nào có diện tích lớn nhất hành tinh? | THÁI BÌNH DƯƠNG | 15 | 10
-Hàng ngang số 3: Nguyên tố hóa học nào có ký hiệu là Fe? | SẮT | 15 | 10
-Hàng ngang số 4: Hành tinh nào có khối lượng lớn nhất trong Hệ Mặt Trời? | SAO MỘC | 15 | 10
-Từ khóa chướng ngại vật: ĐỊA LÝ VÀ VŨ TRỤ | ĐỊA LÝ VÀ VŨ TRỤ | 15 | 40
+# Cấu trúc: 4 Hàng ngang gợi ý (10 điểm) + 1 Từ khóa Chướng ngại vật chính (40 điểm)
+Hàng ngang số 1 (15 giây, 10 điểm): Quốc gia nào có diện tích lớn nhất thế giới? | NGA | 15 | 10
+Hàng ngang số 2 (15 giây, 10 điểm): Đại dương nào có diện tích lớn nhất hành tinh? | THÁI BÌNH DƯƠNG | 15 | 10
+Hàng ngang số 3 (15 giây, 10 điểm): Nguyên tố hóa học nào có ký hiệu là Fe? | SẮT | 15 | 10
+Hàng ngang số 4 (15 giây, 10 điểm): Hành tinh nào có kích thước lớn nhất Hệ Mặt Trời? | SAO MỘC | 15 | 10
+Từ khóa chướng ngại vật (15 giây, 40 điểm): ĐỊA LÝ VÀ VŨ TRỤ | ĐỊA LÝ VÀ VŨ TRỤ | 15 | 40
 
 
 [VÒNG 3: TĂNG TỐC]
-# Khuyên dùng chuẩn: Đúng 4 câu hỏi tốc độ (10s, 20s, 30s, 40s)
-Câu 1 (10s - Tự luận IQ): Sắp xếp các chữ cái sau thành từ có nghĩa: O L Y M P I A | OLYMPIA | 10 | 40
-Câu 2 (20s - Lịch sử/Hình ảnh): Hình ảnh gợi nhớ đến chiến dịch lừng lẫy năm 1954? | ĐIỆN BIÊN PHỦ | 20 | 40
-Câu 3 (30s - Logic dãy số): Tìm số tiếp theo trong dãy số: 2, 4, 8, 16, ... | 32 | 30 | 40
-Câu 4 (40s - Địa lý tổng hợp): Tỉnh nào có diện tích tự nhiên lớn nhất nước ta hiện nay? | NGHỆ AN | 40 | 40
+# Cấu trúc chuẩn: Đúng 4 câu hỏi tốc độ (10s, 20s, 30s, 40s)
+# Điểm số tự động trao theo mili-giây: Top 1 (+40đ), Top 2 (+30đ), Top 3 (+20đ), Top 4 (+10đ)
+Câu 1 (Thời gian: 10 giây): Sắp xếp các chữ cái sau thành từ có nghĩa: O L Y M P I A | OLYMPIA | 10 | 40
+Câu 2 (Thời gian: 20 giây): Chiến dịch lừng lẫy năm châu chấn động địa cầu năm 1954 là gì? | ĐIỆN BIÊN PHỦ | 20 | 40
+Câu 3 (Thời gian: 30 giây): Tìm số tiếp theo trong dãy số: 2, 4, 8, 16, ... | 32 | 30 | 40
+Câu 4 (Thời gian: 40 giây): Tỉnh nào có diện tích tự nhiên lớn nhất Việt Nam hiện nay? | NGHỆ AN | 40 | 40
 
 
 [VÒNG 4: VỀ ĐÍCH]
-# Khuyên dùng: 8 - 12 câu (Chia đều 2 - 3 câu cho từng thí sinh theo lượt thi)
-# LƯỢT THI CỦA THÍ SINH 1:
-Câu 1 (TS 1 - Gói 20đ): Nhà thơ nào trong văn học cổ điển được mệnh danh là Thi Tiên? | LÝ BẠCH | 20 | 20
-Câu 2 (TS 1 - Gói 30đ): Ai là người đầu tiên bay vào không gian vũ trụ vào năm 1961? | YURI GAGARIN | 30 | 30
+# Cấu trúc: 8 - 12 câu (Chia thành các gói 20đ hoặc 30đ cho 4 thí sinh)
+# Thí sinh có thể chọn đặt Ngôi Sao Hy Vọng ⭐ (Đúng: x2 thành +40đ hoặc +60đ; Sai: -50% thành -10đ hoặc -15đ)
 
-# LƯỢT THI CỦA THÍ SINH 2:
-Câu 3 (TS 2 - Gói 20đ): Chiến thắng Bạch Đằng đánh tan quân Nam Hán năm 938 do ai chỉ huy? | NGÔ QUYỀN | 20 | 20
-Câu 4 (TS 2 - Gói 30đ): Hành tinh nào trong Hệ Mặt Trời có nhiều vành đai băng đá nhất? | SAO THỔ | 30 | 30
+# LƯỢT THI THÍ SINH 1:
+Câu 1 (Gói 20 điểm - 20 giây): Nhà thơ nào trong văn học cổ điển được mệnh danh là Thi Tiên? | LÝ BẠCH | 20 | 20
+Câu 2 (Gói 30 điểm - 30 giây): Ai là người đầu tiên bay vào không gian vũ trụ vào năm 1961? | YURI GAGARIN | 30 | 30
 
-# LƯỢT THI CỦA THÍ SINH 3:
-Câu 5 (TS 3 - Gói 20đ): Khí nào chiếm tỉ lệ thể tích lớn nhất trong bầu khí quyển Trái Đất? | NITƠ | 20 | 20
-Câu 6 (TS 3 - Gói 30đ): Cầu thủ nào giành được nhiều Quả Bóng Vàng nhất lịch sử bóng đá? | MESSI | 30 | 30
+# LƯỢT THI THÍ SINH 2:
+Câu 3 (Gói 20 điểm - 20 giây): Chiến thắng Bạch Đằng đánh tan quân Nam Hán năm 938 do ai chỉ huy? | NGÔ QUYỀN | 20 | 20
+Câu 4 (Gói 30 điểm - 30 giây): Hành tinh nào trong Hệ Mặt Trời có hệ thống vành đai nổi bật nhất? | SAO THỔ | 30 | 30
 
-# LƯỢT THI CỦA THÍ SINH 4:
-Câu 7 (TS 4 - Gói 20đ): Nước nào đăng cai tổ chức Thế vận hội Olympic mùa hè 2024? | PHÁP | 20 | 20
-Câu 8 (TS 4 - Gói 30đ): Ai là tác giả của Thuyết Tương Đối trong vật lý hiện đại? | EINSTEIN | 30 | 30
+# LƯỢT THI THÍ SINH 3:
+Câu 5 (Gói 20 điểm - 20 giây): Khí nào chiếm tỉ lệ thể tích lớn nhất trong bầu khí quyển Trái Đất? | NITƠ | 20 | 20
+Câu 6 (Gói 30 điểm - 30 giây): Cầu thủ nào giành được nhiều Quả Bóng Vàng nhất lịch sử bóng đá? | MESSI | 30 | 30
+
+# LƯỢT THI THÍ SINH 4:
+Câu 7 (Gói 20 điểm - 20 giây): Nước nào đăng cai tổ chức Thế vận hội Olympic mùa hè 2024? | PHÁP | 20 | 20
+Câu 8 (Gói 30 điểm - 30 giây): Ai là tác giả của Thuyết Tương Đối trong vật lý hiện đại? | EINSTEIN | 30 | 30

@@ -22,13 +22,11 @@ import {
   Check,
   Volume2,
   VolumeX,
-  Bell,
-  CheckCheck,
-  XCircle,
   Edit3,
   Star,
   Save,
   X,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -205,6 +203,8 @@ export default function AdminLivePage() {
         }));
       } else if (event.type === "TOGGLE_STAR_OF_HOPE") {
         setMatchState((prev) => ({ ...prev, star_of_hope_slot: event.slot_number }));
+      } else if (event.type === "SET_ACTIVE_PLAYER") {
+        setMatchState((prev) => ({ ...prev, active_player_slot: event.slot_number }));
       }
     });
     return () => unsubscribe();
@@ -301,6 +301,15 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "CHANGE_QUESTION", round_index: roundIdx, question_index: questionIdx });
   };
 
+  // Chọn Thí Sinh thi Về Đích tùy ý (bất kỳ ai thi trước cũng được)
+  const handleSelectActivePlayer = (slot: number) => {
+    const nextSlot = matchState.active_player_slot === slot ? null : slot;
+    const newState = { ...matchState, active_player_slot: nextSlot };
+    setMatchState(newState);
+    syncMatchStateToCloud(newState);
+    sendGameEvent({ type: "SET_ACTIVE_PLAYER", slot_number: nextSlot });
+  };
+
   const handleToggleStar = (slot: number) => {
     const newStarSlot = matchState.star_of_hope_slot === slot ? null : slot;
     const newState = { ...matchState, star_of_hope_slot: newStarSlot };
@@ -370,9 +379,11 @@ export default function AdminLivePage() {
   };
 
   const activeTimeLimit = Number(customTimeInput) || 15;
+  const isVeDichRound = currentRound?.round_type === "ve_dich";
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto font-sans select-none">
+      {/* Modal Ban Giám Khảo Sửa Nhanh Câu Hỏi */}
       {isEditingCurrentQuestion && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-[#0d121f] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
@@ -431,7 +442,7 @@ export default function AdminLivePage() {
             BÀN ĐIỀU HÀNH TRẬN ĐẤU (BAN GIÁM KHẢO)
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Tự động chấm điểm 100% • Tích hợp bảng cộng/trừ điểm thủ công & Ngôi Sao Hy Vọng
+            Tự động chấm điểm 100% • Chọn thí sinh thi Về Đích linh hoạt • Ngôi Sao Hy Vọng x2 điểm đúng & -50% điểm sai
           </p>
         </div>
 
@@ -459,6 +470,46 @@ export default function AdminLivePage() {
           </Button>
         </div>
       </div>
+
+      {/* VÒNG VỀ ĐÍCH: BẢNG CHỌN THÍ SINH LÊN THI TUỲ Ý (BẤT KỲ AI THI TRƯỚC CŨNG ĐƯỢC) */}
+      {isVeDichRound && (
+        <div className="bg-[#0d121f] border-2 border-amber-500/40 rounded-2xl p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase text-amber-400 flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4" /> CHỌN THÍ SINH BƯỚC LÊN THI VỀ ĐÍCH (THỨ TỰ TÙY CHỌN):
+            </span>
+            <span className="text-[11px] text-slate-400 font-medium">Bấm vào tên để mở lượt thi riêng của thí sinh đó</span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+            {matchState.players.map((p) => {
+              const isActive = matchState.active_player_slot === p.slot_number;
+              const hasStar = matchState.star_of_hope_slot === p.slot_number;
+              return (
+                <button
+                  key={p.slot_number}
+                  onClick={() => handleSelectActivePlayer(p.slot_number)}
+                  className={`py-3 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                    isActive
+                      ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black shadow-lg shadow-amber-500/30 scale-[1.03] ring-2 ring-white/50"
+                      : "bg-[#070a12] border border-slate-800 text-slate-300 hover:text-white hover:border-amber-500/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span>{p.slot_number}. {p.name}</span>
+                    {hasStar && <Star className="w-3 h-3 fill-current text-amber-400 shrink-0" />}
+                  </div>
+                  {isActive ? (
+                    <span className="text-[9px] bg-black text-amber-300 px-1.5 py-0.5 rounded font-black tracking-wider">ĐANG THI</span>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 font-mono">{p.score}đ</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* KHU VỰC TÙY CHỈNH THỜI GIAN TỪNG VÒNG */}
       <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 space-y-3">
@@ -655,7 +706,7 @@ export default function AdminLivePage() {
         </div>
       </div>
 
-      {/* BẢNG CỘNG / TRỪ ĐIỂM & GIÁM SÁT 4 THÍ SINH (1 CHẠM SIÊU NHANH) */}
+      {/* BẢNG CỘNG / TRỪ ĐIỂM (TỰ ĐỘNG ĐỔI THÀNH GÓI ĐIỂM NGÔI SAO HY VỌNG KHI BẬT) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
@@ -668,13 +719,16 @@ export default function AdminLivePage() {
           {matchState.players.map((player) => {
             const resp = matchState.current_responses[player.slot_number];
             const hasStar = matchState.star_of_hope_slot === player.slot_number;
+            const isActive = matchState.active_player_slot === player.slot_number;
 
             return (
               <div
                 key={player.slot_number}
                 className={`bg-[#0d121f] border-2 ${
-                  hasStar
-                    ? "border-amber-400 shadow-lg shadow-amber-500/10"
+                  isActive
+                    ? "border-amber-400 ring-2 ring-amber-400/30"
+                    : hasStar
+                    ? "border-yellow-500/80 shadow-lg shadow-yellow-500/10"
                     : resp?.is_correct === true
                     ? "border-emerald-500/80 bg-emerald-950/20"
                     : resp?.is_correct === false
@@ -683,24 +737,28 @@ export default function AdminLivePage() {
                 } rounded-2xl p-4 space-y-3`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-white">
-                    {player.slot_number}. {player.name}
-                  </span>
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="font-bold text-xs text-white">
+                      {player.slot_number}. {player.name}
+                    </span>
+                    {isActive && <span className="text-[9px] bg-amber-500 text-black px-1.5 py-0.2 rounded font-black">ĐANG THI</span>}
+                  </div>
                   <span className="font-mono text-base font-bold text-amber-400">
                     {player.score} đ
                   </span>
                 </div>
 
+                {/* Nút Bật / Tắt Ngôi Sao Hy Vọng */}
                 <button
                   onClick={() => handleToggleStar(player.slot_number)}
-                  className={`w-full py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`w-full py-2 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     hasStar
-                      ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black shadow-md shadow-amber-500/20"
+                      ? "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-black shadow-md shadow-amber-500/30 scale-[1.02] animate-pulse"
                       : "bg-[#070a12] border border-slate-800 text-slate-400 hover:text-amber-400 hover:border-amber-500/50"
                   }`}
                 >
-                  <Star className={`w-3.5 h-3.5 ${hasStar ? "fill-current" : ""}`} />
-                  <span>{hasStar ? "ĐANG ĐẶT SAO (x2)" : "Bật Ngôi Sao Hy Vọng"}</span>
+                  <Star className={`w-4 h-4 ${hasStar ? "fill-current" : ""}`} />
+                  <span>{hasStar ? "⭐ ĐANG BẬT SAO (ĐÚNG x2 / SAI -50%)" : "Bật Ngôi Sao Hy Vọng"}</span>
                 </button>
 
                 <div className="p-2.5 rounded-lg bg-[#070a12] border border-slate-800 min-h-[46px] flex flex-col justify-center">
@@ -715,22 +773,41 @@ export default function AdminLivePage() {
                   )}
                 </div>
 
+                {/* BẢNG NÚT CỘNG / TRỪ ĐIỂM (TỰ ĐỘNG THAY ĐỔI THEO NGÔI SAO HY VỌNG) */}
                 <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
                   <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                    <span>Cộng điểm:</span>
+                    <span>{hasStar ? "⭐ Đúng (x2):" : "Cộng điểm:"}</span>
                     <div className="flex gap-1 font-mono font-bold text-xs">
-                      <button onClick={() => handleScoreOverride(player.slot_number, 10)} className="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60 cursor-pointer">+10</button>
-                      <button onClick={() => handleScoreOverride(player.slot_number, 20)} className="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60 cursor-pointer">+20</button>
-                      <button onClick={() => handleScoreOverride(player.slot_number, 30)} className="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60 cursor-pointer">+30</button>
+                      {hasStar ? (
+                        <>
+                          <button onClick={() => handleScoreOverride(player.slot_number, 40)} className="px-2 py-1 rounded bg-amber-500 text-black hover:bg-amber-400 cursor-pointer font-black shadow">+40 (Sao)</button>
+                          <button onClick={() => handleScoreOverride(player.slot_number, 60)} className="px-2 py-1 rounded bg-amber-500 text-black hover:bg-amber-400 cursor-pointer font-black shadow">+60 (Sao)</button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => handleScoreOverride(player.slot_number, 10)} className="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60 cursor-pointer">+10</button>
+                          <button onClick={() => handleScoreOverride(player.slot_number, 20)} className="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60 cursor-pointer">+20</button>
+                          <button onClick={() => handleScoreOverride(player.slot_number, 30)} className="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60 cursor-pointer">+30</button>
+                        </>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                    <span>Trừ điểm:</span>
+                    <span>{hasStar ? "⭐ Sai (-50%):" : "Trừ điểm:"}</span>
                     <div className="flex gap-1 font-mono font-bold text-xs">
-                      <button onClick={() => handleScoreOverride(player.slot_number, -10)} className="px-2 py-1 rounded bg-red-950/80 border border-red-500/40 text-red-400 hover:bg-red-900/60 cursor-pointer">-10</button>
-                      <button onClick={() => handleScoreOverride(player.slot_number, -15)} className="px-2 py-1 rounded bg-red-950/80 border border-red-500/40 text-red-400 hover:bg-red-900/60 cursor-pointer">-15</button>
-                      <button onClick={() => handleScoreOverride(player.slot_number, -20)} className="px-2 py-1 rounded bg-red-950/80 border border-red-500/40 text-red-400 hover:bg-red-900/60 cursor-pointer">-20</button>
+                      {hasStar ? (
+                        <>
+                          <button onClick={() => handleScoreOverride(player.slot_number, -10)} className="px-2 py-1 rounded bg-rose-950 border border-rose-500 text-rose-300 hover:bg-rose-900 cursor-pointer font-bold">-10 (Sao 20đ)</button>
+                          <button onClick={() => handleScoreOverride(player.slot_number, -15)} className="px-2 py-1 rounded bg-rose-950 border border-rose-500 text-rose-300 hover:bg-rose-900 cursor-pointer font-bold">-15 (Sao 30đ)</button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => handleScoreOverride(player.slot_number, -10)} className="px-2 py-1 rounded bg-red-950/80 border border-red-500/40 text-red-400 hover:bg-red-900/60 cursor-pointer">-10</button>
+                          <button onClick={() => handleScoreOverride(player.slot_number, -15)} className="px-2 py-1 rounded bg-red-950/80 border border-red-500/40 text-red-400 hover:bg-red-900/60 cursor-pointer">-15</button>
+                          <button onClick={() => handleScoreOverride(player.slot_number, -20)} className="px-2 py-1 rounded bg-red-950/80 border border-red-500/40 text-red-400 hover:bg-red-900/60 cursor-pointer">-20</button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
