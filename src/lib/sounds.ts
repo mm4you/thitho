@@ -1,47 +1,51 @@
-// Olympia Studio Sound Engine - HQ Broadcast Audio Samples
-// Phat truc tiep cac file audio studio chuan TV tu /sounds/
+// Olympia Studio Sound Engine - Multi-channel High Fidelity Broadcast Audio
+// He thong am thanh Gameshow chuyen nghiep: Da luong am thanh (Polyphonic), chong ngat tieng
 
 class StudioSoundEngine {
   private isMuted: boolean = false;
-  private audioCache: Record<string, HTMLAudioElement> = {};
+  private audioPool: Record<string, HTMLAudioElement[]> = {};
+  private poolSize: number = 3;
 
   constructor() {
     if (typeof window !== "undefined") {
-      this.preload();
+      this.initPool();
     }
   }
 
-  private preload() {
-    const soundFiles = [
-      { key: "tick", path: "/sounds/tick.mp3" },
-      { key: "buzzer", path: "/sounds/buzzer.mp3" },
-      { key: "correct", path: "/sounds/correct.mp3" },
-      { key: "wrong", path: "/sounds/wrong.mp3" },
-      { key: "timeup", path: "/sounds/timeup.mp3" },
-      { key: "reveal", path: "/sounds/reveal.mp3" },
-    ];
-
-    soundFiles.forEach(({ key, path }) => {
-      const audio = new Audio(path);
-      audio.preload = "auto";
-      this.audioCache[key] = audio;
+  private initPool() {
+    const soundKeys = ["tick", "buzzer", "correct", "wrong", "timeup", "reveal"];
+    soundKeys.forEach((key) => {
+      this.audioPool[key] = [];
+      for (let i = 0; i < this.poolSize; i++) {
+        const audio = new Audio(`/sounds/${key}.mp3`);
+        audio.preload = "auto";
+        this.audioPool[key].push(audio);
+      }
     });
   }
 
-  private playSample(key: string, volume = 0.8) {
+  private playFromPool(key: string, volume = 0.85) {
     if (this.isMuted) return;
     if (typeof window === "undefined") return;
 
     try {
-      let audio = this.audioCache[key];
-      if (!audio) {
-        audio = new Audio(`/sounds/${key}.mp3`);
-        this.audioCache[key] = audio;
+      if (!this.audioPool[key] || this.audioPool[key].length === 0) {
+        this.initPool();
       }
+
+      const pool = this.audioPool[key];
+      if (!pool) return;
+
+      // Tim 1 audio slot dang ranh hoac da ket thuc
+      let audio = pool.find((a) => a.paused || a.ended);
+      if (!audio) {
+        audio = pool[0];
+      }
+
       audio.currentTime = 0;
-      audio.volume = volume;
+      audio.volume = Math.max(0, Math.min(1, volume));
       audio.play().catch(() => {
-        // Trinh duyet chan autoplay
+        // Trinh duyet chan autoplay neu chua co tuong tac nguoi dung
       });
     } catch {
       // Fallback
@@ -56,34 +60,34 @@ class StudioSoundEngine {
     return this.isMuted;
   }
 
-  // 1. Tiếng Đồng Hồ Đếm Ngược (Mechanical Studio Clock Tick)
+  // 1. Tiếng Đồng Hồ Đếm Ngược Kịch Tính (Tension Tick)
   playTick() {
-    this.playSample("tick", 0.6);
+    this.playFromPool("tick", 0.7);
   }
 
-  // 2. Tiếng Chuông Bấm Giành Quyền (Game Show Buzzer Bell)
+  // 2. Tiếng Chuông Bấm Giành Quyền Đanh Thép (Sharp Buzzer Chime)
   playBuzzer() {
-    this.playSample("buzzer", 0.9);
+    this.playFromPool("buzzer", 1.0);
   }
 
-  // 3. Tiếng Đáp Án Đúng (Win Fanfare)
+  // 3. Tiếng Đáp Án Đúng Hoành Tráng (Win Fanfare)
   playCorrect() {
-    this.playSample("correct", 0.85);
+    this.playFromPool("correct", 0.95);
   }
 
-  // 4. Tiếng Đáp Án Sai (Game Show Wrong Buzz)
+  // 4. Tiếng Báo Sai Dứt Khoát (Wrong Buzz)
   playWrong() {
-    this.playSample("wrong", 0.7);
+    this.playFromPool("wrong", 0.8);
   }
 
-  // 5. Tiếng Lật Mở Đáp Án (Sparkle Reveal)
+  // 5. Tiếng Lật Mở Thẻ Đáp Án (Whoosh Sparkle)
   playReveal() {
-    this.playSample("reveal", 0.7);
+    this.playFromPool("reveal", 0.85);
   }
 
-  // 6. Tiếng Hết Giờ (Time's Up Gong)
+  // 6. Tiếng Hết Giờ (Dramatic Time's Up Gong)
   playTimeUp() {
-    this.playSample("timeup", 0.85);
+    this.playFromPool("timeup", 1.0);
   }
 }
 
