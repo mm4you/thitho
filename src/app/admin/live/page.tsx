@@ -9,7 +9,7 @@ import {
   syncMatchStateToCloud,
 } from "@/lib/supabase";
 import { sound } from "@/lib/sounds";
-import { MatchState, RealtimeEventPayload, Question } from "@/types/game";
+import { MatchState, RealtimeEventPayload } from "@/types/game";
 import {
   Play,
   CheckCircle2,
@@ -26,7 +26,7 @@ import {
   CheckCheck,
   XCircle,
   Edit3,
-  Plus,
+  Star,
   Save,
   X,
 } from "lucide-react";
@@ -41,7 +41,6 @@ export default function AdminLivePage() {
   const [savedTimeAlert, setSavedTimeAlert] = useState<string>("");
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
 
-  // Edit Question Modal State
   const [isEditingCurrentQuestion, setIsEditingCurrentQuestion] = useState<boolean>(false);
   const [editQuestionText, setEditQuestionText] = useState<string>("");
   const [editCorrectAnswer, setEditCorrectAnswer] = useState<string>("");
@@ -84,8 +83,11 @@ export default function AdminLivePage() {
 
     currentState.players.forEach((p) => {
       const resp = currentState.current_responses[p.slot_number];
+      const hasStar = currentState.star_of_hope_slot === p.slot_number;
+
       if (!resp) {
-        results[p.slot_number] = { is_correct: false, points_awarded: 0 };
+        const penalty = hasStar ? Math.floor(question.points_correct / 2) : 0;
+        results[p.slot_number] = { is_correct: false, points_awarded: -penalty };
         return;
       }
 
@@ -97,10 +99,11 @@ export default function AdminLivePage() {
         if (isTangToc) {
           points = tangTocPoints[rankIndex] || 10;
         } else {
-          points = question.points_correct;
+          points = hasStar ? question.points_correct * 2 : question.points_correct;
         }
       } else {
-        points = -question.points_wrong;
+        const penalty = hasStar ? Math.floor(question.points_correct / 2) : question.points_wrong;
+        points = -penalty;
       }
 
       results[p.slot_number] = { is_correct: isCorrect, points_awarded: points };
@@ -144,7 +147,13 @@ export default function AdminLivePage() {
     if (matchState.is_timer_running && matchState.time_left > 0) {
       interval = setInterval(() => {
         setMatchState((prev) => {
-          const nextTime = prev.time_left - 1; if (nextTime > 0) { sound.playTick(); } else if (nextTime === 0) { sound.playTimeUp(); }
+          const nextTime = prev.time_left - 1;
+          if (nextTime > 0) {
+            sound.playTick();
+          } else if (nextTime === 0) {
+            sound.playTimeUp();
+          }
+
           if (nextTime <= 0) {
             setTimeout(() => {
               executeAutoGrade(stateRef.current);
@@ -194,6 +203,8 @@ export default function AdminLivePage() {
               : p
           ),
         }));
+      } else if (event.type === "TOGGLE_STAR_OF_HOPE") {
+        setMatchState((prev) => ({ ...prev, star_of_hope_slot: event.slot_number }));
       }
     });
     return () => unsubscribe();
@@ -283,13 +294,21 @@ export default function AdminLivePage() {
       is_scored: false,
       buzzer_winner_slot: null,
       buzzer_winner_time_ms: null,
+      star_of_hope_slot: null,
       current_responses: {},
     };
     setMatchState(newState);
     sendGameEvent({ type: "CHANGE_QUESTION", round_index: roundIdx, question_index: questionIdx });
   };
 
-  // Ban Giam Khao sua nhanh cau hoi truc tiep
+  const handleToggleStar = (slot: number) => {
+    const newStarSlot = matchState.star_of_hope_slot === slot ? null : slot;
+    const newState = { ...matchState, star_of_hope_slot: newStarSlot };
+    setMatchState(newState);
+    syncMatchStateToCloud(newState);
+    sendGameEvent({ type: "TOGGLE_STAR_OF_HOPE", slot_number: newStarSlot });
+  };
+
   const handleOpenEditQuestion = () => {
     setEditQuestionText(currentQuestion?.question_text || "");
     setEditCorrectAnswer(currentQuestion?.correct_answer || "");
@@ -329,16 +348,18 @@ export default function AdminLivePage() {
     const newState = {
       ...matchState,
       players: matchState.players.map((p) =>
-        p.slot_number === slot ? { ...p, score: p.score + delta } : p
+        p.slot_number === slot ? { ...p, score: Math.max(0, p.score + delta) } : p
       ),
     };
     setMatchState(newState);
+    syncMatchStateToCloud(newState);
     sendGameEvent({ type: "OVERRIDE_SCORE", slot_number: slot as 1 | 2 | 3 | 4, delta });
   };
 
   const handleResetBuzzer = () => {
     const newState = { ...matchState, buzzer_winner_slot: null, buzzer_winner_time_ms: null };
     setMatchState(newState);
+    syncMatchStateToCloud(newState);
     sendGameEvent({ type: "RESET_BUZZER" });
   };
 
@@ -351,8 +372,7 @@ export default function AdminLivePage() {
   const activeTimeLimit = Number(customTimeInput) || 15;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto font-sans select-none">
-      {/* Modal Ban Giam Khao Sua Nhanh Cau Hoi */}
+    <div className="space-y-6 max-w-6xl mx-auto font-sans select-none">
       {isEditingCurrentQuestion && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-[#0d121f] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
@@ -411,7 +431,7 @@ export default function AdminLivePage() {
             BÀN ĐIỀU HÀNH TRẬN ĐẤU (BAN GIÁM KHẢO)
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Tự động chấm điểm 100% • Tự do nhập & tùy chỉnh thời gian từng vòng
+            Tự động chấm điểm 100% • Tích hợp bảng cộng/trừ điểm thủ công & Ngôi Sao Hy Vọng
           </p>
         </div>
 
@@ -437,30 +457,6 @@ export default function AdminLivePage() {
             <Tv className="w-4 h-4" />
             {matchState.is_standby ? "MÁY CHIẾU: MÀN HÌNH CHỜ" : "MÁY CHIẾU: ĐANG THI ĐẤU"}
           </Button>
-        </div>
-      </div>
-
-      {/* THANH THỬ ÂM THANH STUDIO TRỰC TIẾP */}
-      <div className="bg-[#0d121f] border border-slate-800 rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="text-slate-400 font-semibold uppercase flex items-center gap-1.5">
-          <Volume2 className="w-3.5 h-3.5 text-amber-400" /> Nghe thử âm thanh Studio:
-        </span>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button onClick={() => sound.playTick()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-white text-slate-300 cursor-pointer">
-            Gõ Đồng Hồ
-          </button>
-          <button onClick={() => sound.playBuzzer()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-amber-300 text-amber-400 font-bold flex items-center gap-1 cursor-pointer">
-            <Bell className="w-3 h-3" /> Chuông Giành Quyền
-          </button>
-          <button onClick={() => sound.playCorrect()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-emerald-300 text-emerald-400 font-bold flex items-center gap-1 cursor-pointer">
-            <CheckCheck className="w-3 h-3" /> Đúng (Fanfare)
-          </button>
-          <button onClick={() => sound.playWrong()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-red-300 text-red-400 flex items-center gap-1 cursor-pointer">
-            <XCircle className="w-3 h-3" /> Báo Sai
-          </button>
-          <button onClick={() => sound.playTimeUp()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-white text-slate-300 cursor-pointer">
-            Hết Giờ (Gong)
-          </button>
         </div>
       </div>
 
@@ -587,7 +583,6 @@ export default function AdminLivePage() {
           </div>
         </div>
 
-        {/* 2 NÚT ĐIỀU KHIỂN CHÍNH */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {!matchState.is_timer_running && !matchState.is_scored ? (
             <button
@@ -625,7 +620,7 @@ export default function AdminLivePage() {
         </div>
       </div>
 
-      {/* Câu Hỏi & Đáp Án Chuẩn - Cho phép Ban Giam Khao sua nhanh */}
+      {/* Câu Hỏi & Đáp Án Chuẩn */}
       <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 space-y-3">
         <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
           <span className="font-bold uppercase text-blue-400">NỘI DUNG CÂU HỎI</span>
@@ -660,25 +655,32 @@ export default function AdminLivePage() {
         </div>
       </div>
 
-      {/* Giám Sát Kết Quả Chấm Điểm 4 Thí Sinh */}
+      {/* BẢNG CỘNG / TRỪ ĐIỂM & GIÁM SÁT 4 THÍ SINH (1 CHẠM SIÊU NHANH) */}
       <div className="space-y-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-          KẾT QUẢ 4 THÍ SINH (TỰ ĐỘNG CHẤM & CỘNG ĐIỂM)
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <span>BẢNG CỘNG / TRỪ ĐIỂM THỦ CÔNG & NGÔI SAO HY VỌNG</span>
+          </h3>
+          <span className="text-[11px] text-slate-500">Giám khảo bấm trực tiếp các nút để cộng/trừ điểm</span>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {matchState.players.map((player) => {
             const resp = matchState.current_responses[player.slot_number];
+            const hasStar = matchState.star_of_hope_slot === player.slot_number;
+
             return (
               <div
                 key={player.slot_number}
-                className={`bg-[#0d121f] border ${
-                  resp?.is_correct === true
+                className={`bg-[#0d121f] border-2 ${
+                  hasStar
+                    ? "border-amber-400 shadow-lg shadow-amber-500/10"
+                    : resp?.is_correct === true
                     ? "border-emerald-500/80 bg-emerald-950/20"
                     : resp?.is_correct === false
                     ? "border-red-500/80 bg-red-950/20"
                     : "border-slate-800"
-                } rounded-xl p-4 space-y-3`}
+                } rounded-2xl p-4 space-y-3`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs text-white">
@@ -689,6 +691,18 @@ export default function AdminLivePage() {
                   </span>
                 </div>
 
+                <button
+                  onClick={() => handleToggleStar(player.slot_number)}
+                  className={`w-full py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    hasStar
+                      ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black shadow-md shadow-amber-500/20"
+                      : "bg-[#070a12] border border-slate-800 text-slate-400 hover:text-amber-400 hover:border-amber-500/50"
+                  }`}
+                >
+                  <Star className={`w-3.5 h-3.5 ${hasStar ? "fill-current" : ""}`} />
+                  <span>{hasStar ? "ĐANG ĐẶT SAO (x2)" : "Bật Ngôi Sao Hy Vọng"}</span>
+                </button>
+
                 <div className="p-2.5 rounded-lg bg-[#070a12] border border-slate-800 min-h-[46px] flex flex-col justify-center">
                   <span className="text-[10px] text-slate-500 uppercase block font-medium">Đáp án nộp:</span>
                   {resp ? (
@@ -697,15 +711,27 @@ export default function AdminLivePage() {
                       <span className="text-[10px] font-mono text-slate-400">{(resp.response_time_ms / 1000).toFixed(2)}s</span>
                     </div>
                   ) : (
-                    <span className="text-xs text-slate-600 italic">Chưa nộp</span>
+                    <span className="text-xs text-slate-600 italic">Chưa nộp bài</span>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs text-slate-400">
-                  <span>Chỉnh điểm:</span>
-                  <div className="flex gap-1 font-mono">
-                    <button onClick={() => handleScoreOverride(player.slot_number, 10)} className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-white cursor-pointer">+10</button>
-                    <button onClick={() => handleScoreOverride(player.slot_number, -10)} className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-white cursor-pointer">-10</button>
+                <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                    <span>Cộng điểm:</span>
+                    <div className="flex gap-1 font-mono font-bold text-xs">
+                      <button onClick={() => handleScoreOverride(player.slot_number, 10)} className="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60 cursor-pointer">+10</button>
+                      <button onClick={() => handleScoreOverride(player.slot_number, 20)} className="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60 cursor-pointer">+20</button>
+                      <button onClick={() => handleScoreOverride(player.slot_number, 30)} className="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60 cursor-pointer">+30</button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                    <span>Trừ điểm:</span>
+                    <div className="flex gap-1 font-mono font-bold text-xs">
+                      <button onClick={() => handleScoreOverride(player.slot_number, -10)} className="px-2 py-1 rounded bg-red-950/80 border border-red-500/40 text-red-400 hover:bg-red-900/60 cursor-pointer">-10</button>
+                      <button onClick={() => handleScoreOverride(player.slot_number, -15)} className="px-2 py-1 rounded bg-red-950/80 border border-red-500/40 text-red-400 hover:bg-red-900/60 cursor-pointer">-15</button>
+                      <button onClick={() => handleScoreOverride(player.slot_number, -20)} className="px-2 py-1 rounded bg-red-950/80 border border-red-500/40 text-red-400 hover:bg-red-900/60 cursor-pointer">-20</button>
+                    </div>
                   </div>
                 </div>
               </div>

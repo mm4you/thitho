@@ -6,7 +6,7 @@ import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home } from "lucide-react";
+import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home, Star, Sparkles } from "lucide-react";
 
 export default function DisplayPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
@@ -15,6 +15,7 @@ export default function DisplayPage() {
   const [timeLimit, setTimeLimit] = useState<number>(15);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [starOfHopeBanner, setStarOfHopeBanner] = useState<{ slot: number; name: string } | null>(null);
 
   const slotThemes = [
     { name: "ĐỎ", border: "border-red-500/80", accent: "text-red-400", badge: "bg-red-500/20 text-red-300 border-red-500/40" },
@@ -152,6 +153,15 @@ export default function DisplayPage() {
         });
       } else if (event.type === "RESET_BUZZER") {
         setMatchState((prev) => ({ ...prev, buzzer_winner_slot: null, buzzer_winner_time_ms: null }));
+      } else if (event.type === "TOGGLE_STAR_OF_HOPE") {
+        setMatchState((prev) => ({ ...prev, star_of_hope_slot: event.slot_number }));
+        if (event.slot_number) {
+          sound.playReveal();
+          const p = matchState.players.find((pl) => pl.slot_number === event.slot_number);
+          setStarOfHopeBanner({ slot: event.slot_number, name: p?.name || `Thí sinh ${event.slot_number}` });
+          confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 }, colors: ["#fbbf24", "#f59e0b", "#ffffff"] });
+          setTimeout(() => setStarOfHopeBanner(null), 4000);
+        }
       } else if (event.type === "OVERRIDE_SCORE") {
         setMatchState((prev) => ({
           ...prev,
@@ -170,21 +180,22 @@ export default function DisplayPage() {
         }));
       } else if (event.type === "CHANGE_QUESTION") {
         const round = matchState.rounds[event.round_index] || matchState.rounds[0];
-        const question = round.questions[event.question_index] || round.questions[0];
+        const question = round?.questions[event.question_index] || round?.questions[0];
         const newLimit = question?.time_limit || 15;
         setTimeLimit(newLimit);
         setTimeLeft(newLimit);
         setIsTimerActive(false);
-
         setMatchState((prev) => ({
           ...prev,
           current_round_index: event.round_index,
           current_question_index: event.question_index,
+          is_timer_running: false,
           is_locked: false,
           is_revealed: false,
           is_scored: false,
           buzzer_winner_slot: null,
           buzzer_winner_time_ms: null,
+          star_of_hope_slot: null,
           current_responses: {},
         }));
       }
@@ -194,258 +205,256 @@ export default function DisplayPage() {
 
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
-
-  // 1. MÀN HÌNH CHỜ SÂN KHẤU: BẢNG ĐIỂM 4 THÍ SINH
-  if (matchState.is_standby) {
-    return (
-      <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-8 font-sans select-none">
-        {/* Header Thanh Lịch */}
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center gap-1.5 text-xs font-semibold"
-            >
-              <Home className="w-3.5 h-3.5" />
-              <span>Trang Chủ</span>
-            </Link>
-            <span className="text-lg font-bold tracking-tight text-white uppercase">
-              {matchState.title || "ĐẤU TRÍ ARENA"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleFullscreen}
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
-              title="Toàn màn hình"
-            >
-              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={toggleMute}
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
-              title="Âm thanh"
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-
-        {/* 4 Thí Sinh Thanh Tao */}
-        <div className="my-auto py-6 max-w-6xl mx-auto w-full space-y-8">
-          <div className="text-center">
-            <span className="text-xs font-bold tracking-widest text-slate-400 uppercase">
-              BẢNG ĐIỂM THI ĐẤU
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {matchState.players.map((player, idx) => {
-              const theme = slotThemes[idx] || slotThemes[0];
-              return (
-                <div
-                  key={player.slot_number}
-                  className={`bg-[#0d121f] border ${theme.border} rounded-2xl p-6 text-center flex flex-col justify-between h-[340px] shadow-sm`}
-                >
-                  <div className="space-y-4">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${theme.badge}`}>
-                      VỊ TRÍ {player.slot_number}
-                    </span>
-                    <div>
-                      <h3 className="text-2xl font-bold text-white line-clamp-2">
-                        {player.name}
-                      </h3>
-                      <p className="text-xs font-medium text-slate-400 line-clamp-1 mt-1">
-                        {player.school_name || "Thí sinh"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-slate-800/80">
-                    <span className="text-[11px] uppercase font-bold text-slate-500 tracking-wider block mb-1">
-                      ĐIỂM SỐ
-                    </span>
-                    <span className="font-mono text-5xl font-black text-amber-400">
-                      {player.score}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="text-center text-xs text-slate-600 font-medium tracking-wider">
-          CHỜ BẮT ĐẦU CÂU HỎI TIẾP THEO
-        </div>
-      </div>
-    );
-  }
-
-  // 2. MÀN HÌNH THI ĐẤU
-  const timerPercent = timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 0;
+  const sortedPlayers = [...matchState.players].sort((a, b) => b.score - a.score);
 
   return (
-    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-6 md:p-8 font-sans select-none">
-      {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+    <div className="h-screen w-screen bg-[#070a12] text-white flex flex-col justify-between p-6 font-sans select-none overflow-hidden relative">
+      {/* Glow Sân Khấu */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-blue-600/15 via-amber-500/5 to-transparent blur-[140px] pointer-events-none" />
+
+      {/* POPUP HIỆU ỨNG NGÔI SAO HY VỌNG ĐỘNG TOÀN MÀN HÌNH */}
+      {starOfHopeBanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md animate-in zoom-in duration-300 pointer-events-none">
+          <div className="text-center space-y-4 p-8 rounded-3xl bg-gradient-to-b from-amber-950/80 to-[#070a12] border-2 border-amber-400 shadow-2xl shadow-amber-500/40 max-w-xl mx-4">
+            <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-black shadow-lg animate-bounce">
+              <Star className="w-14 h-14 fill-current" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-3xl md:text-4xl font-black uppercase text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 tracking-wider">
+                NGÔI SAO HY VỌNG!
+              </h2>
+              <p className="text-lg font-bold text-white uppercase">
+                {starOfHopeBanner.name} (VỊ TRÍ {starOfHopeBanner.slot})
+              </p>
+              <p className="text-xs text-amber-300 font-medium">
+                ⭐ Nhân đôi số điểm nếu trả lời đúng • Bị trừ 50% số điểm nếu trả lời sai
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header Máy Chiếu Sân Khấu */}
+      <header className="flex items-center justify-between z-10 border-b border-slate-800/80 pb-3">
         <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center gap-1 text-xs font-medium"
-          >
-            <Home className="w-3.5 h-3.5" />
-            <span>Thoát</span>
-          </Link>
-          <span className="text-sm font-bold text-slate-300">
-            {currentRound?.title} • Câu {matchState.current_question_index + 1}/{currentRound?.questions.length || 1}
+          <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-amber-400 text-xs font-bold uppercase tracking-wider">
+            OLYMQUIZ 2026
+          </span>
+          <span className="text-sm font-bold text-white uppercase">
+            {currentRound?.title}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
+            onClick={toggleMute}
+            className="p-2 rounded-xl bg-[#0d121f] border border-slate-800 hover:text-white text-slate-400 cursor-pointer"
+            title="Bật / Tắt âm thanh"
+          >
+            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+          </button>
+          <button
             onClick={toggleFullscreen}
-            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+            className="p-2 rounded-xl bg-[#0d121f] border border-slate-800 hover:text-white text-slate-400 cursor-pointer"
             title="Toàn màn hình"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </button>
-          <button
-            onClick={toggleMute}
-            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
-            title="Âm thanh"
+          <Link
+            href="/"
+            className="p-2 rounded-xl bg-[#0d121f] border border-slate-800 hover:text-white text-slate-400"
+            title="Về Trang Chủ"
           >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
+            <Home className="w-4 h-4" />
+          </Link>
         </div>
-      </div>
+      </header>
 
-      {/* Buzzer Alert */}
-      {matchState.buzzer_winner_slot && (
-        <div className="my-2 p-3 rounded-xl bg-amber-500 text-black font-bold text-center text-base flex items-center justify-center gap-2 animate-bounce shadow">
-          <Zap className="w-5 h-5 fill-current" />
-          THÍ SINH {matchState.buzzer_winner_slot} GIÀNH QUYỀN TRẢ LỜI! ({(matchState.buzzer_winner_time_ms! / 1000).toFixed(2)}s)
-        </div>
-      )}
-
-      {/* Trung Tâm: Câu Hỏi & Đồng Hồ */}
-      <div className="my-auto py-4 max-w-5xl mx-auto w-full space-y-6">
-        {/* Đồng Hồ Đếm Ngược Gọn Gàng */}
-        <div className="flex justify-center">
-          <div className="relative w-20 h-20 flex items-center justify-center">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" className="stroke-slate-800" strokeWidth="6" fill="transparent" />
-              <circle
-                cx="50"
-                cy="50"
-                r="42"
-                className={`transition-all duration-1000 ease-linear ${timeLeft <= 5 ? "stroke-red-500" : "stroke-amber-400"}`}
-                strokeWidth="6"
-                strokeDasharray={264}
-                strokeDashoffset={264 - (264 * timerPercent) / 100}
-                strokeLinecap="round"
-                fill="transparent"
-              />
-            </svg>
-            <span className={`absolute font-mono text-3xl font-black ${timeLeft <= 5 ? "text-red-400" : "text-white"}`}>
-              {timeLeft}
-            </span>
+      {/* MÀN HÌNH CHỜ STANDBY */}
+      {matchState.is_standby ? (
+        <main className="flex-1 flex flex-col justify-center items-center my-auto space-y-8 z-10">
+          <div className="text-center space-y-3">
+            <h1 className="text-4xl md:text-6xl font-black uppercase text-white tracking-tight">
+              BẢNG TỔNG SẮP <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-500">ĐIỂM SỐ</span>
+            </h1>
+            <p className="text-slate-400 text-sm max-w-md mx-auto">
+              Trận đấu đang chuẩn bị bước vào phần thi tiếp theo
+            </p>
           </div>
-        </div>
 
-        {/* Khung Câu Hỏi Trang Nhã */}
-        <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-6 md:p-10 text-center space-y-5">
-          <h2 className="text-2xl md:text-3xl font-bold text-white leading-relaxed">
-            {currentQuestion?.question_text}
-          </h2>
-
-          {/* 4 Đáp Án Trắc Nghiệm */}
-          {currentQuestion?.options && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-left">
-              {currentQuestion.options.map((opt, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 w-full max-w-5xl">
+            {sortedPlayers.map((player, rank) => {
+              const theme = slotThemes[player.slot_number - 1];
+              return (
                 <div
-                  key={i}
-                  className={`p-3.5 rounded-xl border font-semibold text-base transition-all ${
-                    matchState.is_revealed && opt.startsWith(currentQuestion.correct_answer[0])
-                      ? "bg-emerald-950/80 border-emerald-500 text-emerald-300 ring-1 ring-emerald-500/50"
-                      : "bg-[#070a12] border-slate-800 text-slate-200"
-                  }`}
+                  key={player.slot_number}
+                  className={`bg-[#0d121f] border ${theme.border} rounded-3xl p-6 text-center space-y-4 shadow-xl`}
                 >
-                  {opt}
+                  <div className="flex items-center justify-between">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${theme.badge}`}>
+                      BỤC {player.slot_number}
+                    </span>
+                    <span className="text-xs font-mono font-bold text-slate-500">#{rank + 1}</span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-bold text-white line-clamp-1">{player.name}</h3>
+                    <p className="text-xs text-slate-400 line-clamp-1">{player.school_name || "Thí sinh"}</p>
+                  </div>
+
+                  <div className="py-3 bg-[#070a12] rounded-2xl border border-slate-800">
+                    <span className="font-mono text-4xl font-black text-amber-400">{player.score}</span>
+                    <span className="text-xs text-slate-500 ml-1 font-bold">điểm</span>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Mở Đáp Án Đúng */}
-          {matchState.is_revealed && (
-            <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/80 text-center animate-in fade-in">
-              <span className="text-[11px] uppercase font-bold text-emerald-400 block mb-0.5">
-                ĐÁP ÁN ĐÚNG:
-              </span>
-              <span className="text-2xl font-bold text-emerald-200">
-                {currentQuestion?.correct_answer}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 4 Thí Sinh Dưới Cùng: Dễ Quan Sát */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {matchState.players.map((player, idx) => {
-          const theme = slotThemes[idx] || slotThemes[0];
-          const resp = matchState.current_responses[player.slot_number];
-          const isRevealed = matchState.is_revealed;
-          const isCorrect = resp?.is_correct === true;
-          const isWrong = resp?.is_correct === false;
-
-          return (
-            <div
-              key={player.slot_number}
-              className={`border ${
-                isRevealed && isCorrect
-                  ? "border-emerald-500 bg-emerald-950/40"
-                  : isRevealed && isWrong
-                  ? "border-red-500 bg-red-950/40"
-                  : theme.border + " bg-[#0d121f]"
-              } rounded-xl p-4 transition-all flex flex-col justify-between`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-sm text-white line-clamp-1">
-                  {player.slot_number}. {player.name}
+              );
+            })}
+          </div>
+        </main>
+      ) : (
+        /* MÀN HÌNH THI ĐẤU TRỰC TIẾP */
+        <main className="flex-1 flex flex-col justify-between my-4 space-y-5 z-10">
+          {/* KHUNG CÂU HỎI & ĐỒNG HỒ ĐẾM NGƯỢC */}
+          <div className="bg-[#0d121f] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-5 shadow-2xl relative">
+            <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-3">
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full bg-blue-600/20 border border-blue-500/40 text-blue-300 text-xs font-bold uppercase">
+                  CÂU HỎI {matchState.current_question_index + 1}
                 </span>
-                <span className="font-mono text-base font-bold text-amber-400">
-                  {player.score} đ
+                <span className="text-xs text-slate-400 font-medium">
+                  +{currentQuestion?.points_correct}đ đúng / -{currentQuestion?.points_wrong}đ sai
                 </span>
               </div>
 
-              <div className="h-12 rounded-lg bg-[#070a12] border border-slate-800/80 flex items-center justify-center px-3 text-center">
-                {!isRevealed ? (
-                  resp ? (
-                    <span className="px-2.5 py-0.5 rounded text-xs font-bold text-blue-400 bg-blue-950/60 border border-blue-800/60">
-                      Đã nộp ({(resp.response_time_ms / 1000).toFixed(2)}s)
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-500 font-medium">
-                      Đang suy nghĩ...
-                    </span>
-                  )
-                ) : (
-                  <div className="flex items-center justify-between w-full">
-                    <span className="font-bold text-sm text-white uppercase line-clamp-1">
-                      {resp ? resp.answer_text : "(Trống)"}
-                    </span>
-                    {isCorrect && <Check className="w-4 h-4 text-emerald-400 shrink-0 ml-1" />}
-                    {isWrong && <X className="w-4 h-4 text-red-400 shrink-0 ml-1" />}
+              {/* ĐỒNG HỒ ĐẾM NGƯỢC */}
+              <div className="flex items-center gap-3">
+                {matchState.buzzer_winner_slot && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 text-black font-black text-xs animate-bounce">
+                    <Zap className="w-4 h-4 fill-current" />
+                    TS {matchState.buzzer_winner_slot} GIÀNH QUYỀN TRẢ LỜI!
                   </div>
                 )}
+
+                <div className={`px-5 py-2 rounded-2xl font-mono text-2xl font-black border flex items-center gap-2 ${
+                  isTimerActive
+                    ? timeLeft <= 5
+                      ? "bg-red-950/80 border-red-500 text-red-400 animate-pulse"
+                      : "bg-blue-950/80 border-blue-500 text-blue-400"
+                    : "bg-[#070a12] border-slate-800 text-slate-400"
+                }`}>
+                  <span>{timeLeft}s</span>
+                </div>
               </div>
             </div>
-          );
-        })}
-      </div>
+
+            {/* NỘI DUNG CÂU HỎI */}
+            <p className="text-2xl md:text-3xl font-extrabold text-white leading-relaxed text-center py-4">
+              {currentQuestion?.question_text}
+            </p>
+
+            {/* CÁC LỰA CHỌN TRẮC NGHIỆM A/B/C/D (NẾU CÓ) */}
+            {currentQuestion?.options && currentQuestion.options.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                {currentQuestion.options.map((opt, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-2xl bg-[#070a12] border border-slate-800 text-base font-bold text-slate-200 flex items-center gap-3"
+                  >
+                    <span className="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 border border-blue-500/40 flex items-center justify-center shrink-0">
+                      {String.fromCharCode(65 + idx)}
+                    </span>
+                    <span>{opt.replace(/^[A-D][\.\:\)]\s*/, "")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ĐÁP ÁN ĐÚNG KHI LẬT MỞ */}
+            {matchState.is_revealed && (
+              <div className="p-4 rounded-2xl bg-emerald-950/80 border-2 border-emerald-500 text-center animate-in zoom-in">
+                <span className="text-xs uppercase font-bold text-emerald-400 block mb-1">ĐÁP ÁN CHÍNH XÁC:</span>
+                <span className="text-2xl font-black text-white">{currentQuestion?.correct_answer}</span>
+              </div>
+            )}
+          </div>
+
+          {/* 4 BỤC THÍ SINH SÂN KHẤU */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {matchState.players.map((player) => {
+              const theme = slotThemes[player.slot_number - 1];
+              const resp = matchState.current_responses[player.slot_number];
+              const hasStar = matchState.star_of_hope_slot === player.slot_number;
+
+              return (
+                <div
+                  key={player.slot_number}
+                  className={`bg-[#0d121f] border-2 ${
+                    hasStar
+                      ? "border-amber-400 shadow-lg shadow-amber-500/20"
+                      : resp?.is_correct === true
+                      ? "border-emerald-500 bg-emerald-950/30"
+                      : resp?.is_correct === false
+                      ? "border-red-500 bg-red-950/30"
+                      : theme.border
+                  } rounded-3xl p-5 space-y-3 relative overflow-hidden transition-all`}
+                >
+                  {/* Ngôi Sao Hy Vọng Badge */}
+                  {hasStar && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-black font-black text-[10px] shadow animate-pulse">
+                      <Star className="w-3 h-3 fill-current" />
+                      <span>x2 ĐIỂM</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${theme.badge}`}>
+                        BỤC {player.slot_number}
+                      </span>
+                      <span className="font-bold text-sm text-white line-clamp-1">{player.name}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-[#070a12] p-3 rounded-2xl border border-slate-800">
+                    <span className="text-xs text-slate-500 font-medium">Điểm số:</span>
+                    <span className="font-mono text-2xl font-black text-amber-400">{player.score}</span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#070a12] border border-slate-800 text-center min-h-[50px] flex items-center justify-center">
+                    {matchState.is_revealed ? (
+                      resp ? (
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-bold text-sm uppercase text-white truncate mr-2">{resp.answer_text}</span>
+                          {resp.is_correct ? (
+                            <span className="text-emerald-400 font-bold text-xs flex items-center gap-0.5">
+                              <Check className="w-3.5 h-3.5" /> +{resp.points_awarded}
+                            </span>
+                          ) : (
+                            <span className="text-red-400 font-bold text-xs flex items-center gap-0.5">
+                              <X className="w-3.5 h-3.5" /> {resp.points_awarded}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-600 italic">— Chưa nộp bài</span>
+                      )
+                    ) : resp ? (
+                      <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> Đã gửi ({(resp.response_time_ms / 1000).toFixed(2)}s)
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-500">Đang suy nghĩ...</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </main>
+      )}
+
+      {/* Footer Sạch Sẽ */}
+      <footer className="w-full" />
     </div>
   );
 }

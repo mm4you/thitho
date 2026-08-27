@@ -11,7 +11,8 @@ export interface Question {
   points_correct: number;
   points_wrong: number;
   image_url?: string;
-  audio_url?: string; explanation?: string;
+  audio_url?: string;
+  explanation?: string;
 }
 
 export interface Round {
@@ -51,6 +52,7 @@ export interface MatchState {
   is_scored: boolean;
   buzzer_winner_slot: number | null;
   buzzer_winner_time_ms: number | null;
+  star_of_hope_slot: number | null;
   players: PlayerState[];
   rounds: Round[];
   current_responses: Record<number, PlayerResponse>;
@@ -66,6 +68,7 @@ export type RealtimeEventPayload =
   | { type: "GRADE_ANSWERS"; results: Record<number, { is_correct: boolean; points_awarded: number }> }
   | { type: "PRESS_BUZZER"; slot_number: number; press_time_ms: number }
   | { type: "RESET_BUZZER" }
+  | { type: "TOGGLE_STAR_OF_HOPE"; slot_number: number | null }
   | { type: "OVERRIDE_SCORE"; slot_number: 1 | 2 | 3 | 4; delta: number }
   | { type: "UPDATE_PLAYER_INFO"; slot_number: 1 | 2 | 3 | 4; name: string; school_name?: string }
   | { type: "CHANGE_QUESTION"; round_index: number; question_index: number }

@@ -2,398 +2,332 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   subscribeToGameChannel,
   sendGameEvent,
   loadSavedMatchState,
-  saveMatchStateLocally,
 } from "@/lib/supabase";
-import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Zap, Send, Lock, Edit2, X, LogOut, CheckCircle2, ShieldAlert } from "lucide-react";
+import { sound } from "@/lib/sounds";
+import { MatchState, RealtimeEventPayload, Question } from "@/types/game";
+import {
+  Zap,
+  Send,
+  Lock,
+  CheckCircle2,
+  Bell,
+  Star,
+  Sparkles,
+  LogOut,
+  HelpCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function PlayerPage() {
+export default function PlayerSlotPage() {
   const params = useParams();
   const router = useRouter();
   const slotNumber = Number(params.slot) as 1 | 2 | 3 | 4;
 
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [inputText, setInputText] = useState<string>("");
-  const [submittedAnswer, setSubmittedAnswer] = useState<string>("");
-  const [submittedTime, setSubmittedTime] = useState<number | null>(null);
-  const [timerStartTime, setTimerStartTime] = useState<number>(Date.now());
-  const [buzzerPressed, setBuzzerPressed] = useState<boolean>(false);
+  const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
+  const [myResponseTime, setMyResponseTime] = useState<number | null>(null);
+  const [myAnswer, setMyAnswer] = useState<string>("");
 
-  const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
-  const [customName, setCustomName] = useState<string>("");
-  const [customSchool, setCustomSchool] = useState<string>("");
+  const startTimeRef = useRef<number>(Date.now());
+  const timerRunningRef = useRef<boolean>(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const slotThemes = [
+    { name: "ĐỎ", color: "from-red-600 to-rose-700", border: "border-red-500", text: "text-red-400", bg: "bg-red-950/40" },
+    { name: "XANH", color: "from-blue-600 to-cyan-700", border: "border-blue-500", text: "text-blue-400", bg: "bg-blue-950/40" },
+    { name: "VÀNG", color: "from-amber-500 to-yellow-600", border: "border-amber-500", text: "text-amber-400", bg: "bg-amber-950/40" },
+    { name: "LỤC", color: "from-emerald-600 to-green-700", border: "border-emerald-500", text: "text-emerald-400", bg: "bg-emerald-950/40" },
+  ];
 
-  const currentPlayer = matchState.players.find((p) => p.slot_number === slotNumber) || {
+  const currentTheme = slotThemes[slotNumber - 1] || slotThemes[0];
+  const me = matchState.players.find((p) => p.slot_number === slotNumber) || {
     slot_number: slotNumber,
     name: `Thí sinh ${slotNumber}`,
     score: 0,
-    school_name: "Thí sinh",
+    school_name: "Chưa kết nối",
   };
 
+  const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
+  const currentQuestion: Question =
+    currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
+
+  const roundType = currentRound?.round_type || "khoi_dong";
+  const hasMyStar = matchState.star_of_hope_slot === slotNumber;
+
+  // Xac thuc ma PIN bao mat cua may
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedPin = localStorage.getItem(`auth_pin_slot_${slotNumber}`);
-      const validPin = (currentPlayer?.pin_code || `${slotNumber}${slotNumber}${slotNumber}${slotNumber}`).toUpperCase().trim();
-
-      if (!savedPin || (savedPin.toUpperCase().trim() !== validPin && savedPin !== "1234" && savedPin !== "9999")) {
-        setIsAuthenticated(false);
+      const authSlot = localStorage.getItem("authenticated_slot");
+      if (authSlot !== String(slotNumber)) {
         router.push(`/join?slot=${slotNumber}`);
-      } else {
-        setIsAuthenticated(true);
       }
     }
-  }, [slotNumber, currentPlayer?.pin_code, router]);
-
-  useEffect(() => {
-    setCustomName(currentPlayer.name);
-    setCustomSchool(currentPlayer.school_name || "");
-  }, [currentPlayer.name, currentPlayer.school_name]);
+  }, [slotNumber, router]);
 
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
       if (event.type === "SYNC_STATE") {
         setMatchState(event.state);
       } else if (event.type === "START_TIMER") {
-        setTimerStartTime(Date.now());
-        setSubmittedAnswer("");
-        setSubmittedTime(null);
+        startTimeRef.current = event.start_time || Date.now();
+        timerRunningRef.current = true;
+        setHasSubmitted(false);
         setInputText("");
-        setBuzzerPressed(false);
+        setMyAnswer("");
+        setMyResponseTime(null);
         setMatchState((prev) => ({
           ...prev,
+          is_standby: false,
           is_timer_running: true,
-          time_left: event.time_limit,
           is_locked: false,
           is_revealed: false,
           is_scored: false,
+          buzzer_winner_slot: null,
+          current_responses: {},
         }));
-        setTimeout(() => inputRef.current?.focus(), 150);
       } else if (event.type === "LOCK_ANSWERS") {
+        timerRunningRef.current = false;
         setMatchState((prev) => ({ ...prev, is_locked: true, is_timer_running: false }));
       } else if (event.type === "REVEAL_ANSWERS") {
         setMatchState((prev) => ({ ...prev, is_revealed: true }));
       } else if (event.type === "GRADE_ANSWERS") {
-        setMatchState((prev) => {
-          const updatedPlayers = prev.players.map((p) => {
-            const res = event.results[p.slot_number];
-            return res ? { ...p, score: p.score + res.points_awarded } : p;
-          });
-          return { ...prev, is_scored: true, players: updatedPlayers };
+        const updatedPlayers = matchState.players.map((p) => {
+          const res = event.results[p.slot_number];
+          return res ? { ...p, score: p.score + res.points_awarded } : p;
         });
+        setMatchState((prev) => ({ ...prev, is_scored: true, players: updatedPlayers }));
+      } else if (event.type === "PRESS_BUZZER") {
+        sound.playBuzzer();
+        setMatchState((prev) => ({ ...prev, buzzer_winner_slot: event.slot_number }));
       } else if (event.type === "RESET_BUZZER") {
-        setBuzzerPressed(false);
         setMatchState((prev) => ({ ...prev, buzzer_winner_slot: null }));
-      } else if (event.type === "UPDATE_PLAYER_INFO") {
-        setMatchState((prev) => ({
-          ...prev,
-          players: prev.players.map((p) =>
-            p.slot_number === event.slot_number
-              ? { ...p, name: event.name, school_name: event.school_name }
-              : p
-          ),
-        }));
+      } else if (event.type === "TOGGLE_STAR_OF_HOPE") {
+        setMatchState((prev) => ({ ...prev, star_of_hope_slot: event.slot_number }));
       } else if (event.type === "CHANGE_QUESTION") {
-        setSubmittedAnswer("");
-        setSubmittedTime(null);
+        setHasSubmitted(false);
         setInputText("");
-        setBuzzerPressed(false);
+        setMyAnswer("");
+        setMyResponseTime(null);
         setMatchState((prev) => ({
           ...prev,
           current_round_index: event.round_index,
           current_question_index: event.question_index,
           is_timer_running: false,
-          is_locked: true,
+          is_locked: false,
           is_revealed: false,
           is_scored: false,
           buzzer_winner_slot: null,
+          current_responses: {},
         }));
       }
     });
 
     return () => unsubscribe();
-  }, [slotNumber]);
-
-  const handleExitRoom = () => {
-    if (confirm("Bạn có chắc chắn muốn thoát khỏi phòng thi đấu này?")) {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(`auth_pin_slot_${slotNumber}`);
-        localStorage.removeItem("auth_player_slot");
-      }
-      router.push("/join");
-    }
-  };
-
-  if (isAuthenticated === false || isAuthenticated === null) {
-    return (
-      <div className="min-h-screen bg-[#070a12] text-white flex flex-col items-center justify-center p-4">
-        <ShieldAlert className="w-10 h-10 text-amber-400 mb-2 animate-pulse" />
-        <h2 className="text-lg font-bold uppercase text-white">Đang Xác Thực Quyền Truy Cập...</h2>
-        <p className="text-xs text-slate-400 mt-1">Vui lòng đợi trong giây lát</p>
-      </div>
-    );
-  }
-
-  const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
-  const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
-
-  const canInteract = matchState.is_timer_running && !matchState.is_locked;
+  }, [matchState.players]);
 
   const handleSubmitAnswer = (answer: string) => {
-    if (!canInteract || !answer.trim() || submittedAnswer) return;
-    const timeMs = Math.max(50, Date.now() - timerStartTime);
+    if (!answer.trim() || hasSubmitted || !matchState.is_timer_running || matchState.is_locked) {
+      return;
+    }
 
-    setSubmittedAnswer(answer.trim());
-    setSubmittedTime(timeMs);
+    const elapsed = Date.now() - startTimeRef.current;
+    setHasSubmitted(true);
+    setMyAnswer(answer.trim());
+    setMyResponseTime(elapsed);
 
     sendGameEvent({
       type: "SUBMIT_ANSWER",
       slot_number: slotNumber,
       answer_text: answer.trim(),
-      response_time_ms: timeMs,
+      response_time_ms: elapsed,
     });
   };
 
   const handlePressBuzzer = () => {
-    if (!canInteract || buzzerPressed || matchState.buzzer_winner_slot) return;
-    const timeMs = Math.max(50, Date.now() - timerStartTime);
-    setBuzzerPressed(true);
-
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate(200);
-    }
-
+    if (matchState.buzzer_winner_slot) return;
+    const elapsed = Date.now() - startTimeRef.current;
     sendGameEvent({
       type: "PRESS_BUZZER",
       slot_number: slotNumber,
-      press_time_ms: timeMs,
+      press_time_ms: elapsed,
     });
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customName.trim()) return;
-
-    const updatedPlayers = matchState.players.map((p) =>
-      p.slot_number === slotNumber
-        ? { ...p, name: customName.trim(), school_name: customSchool.trim() }
-        : p
-    );
-
-    const updatedState = { ...matchState, players: updatedPlayers };
-    setMatchState(updatedState);
-    saveMatchStateLocally(updatedState);
-
+  const handleToggleMyStar = () => {
+    const nextStar = hasMyStar ? null : slotNumber;
     sendGameEvent({
-      type: "UPDATE_PLAYER_INFO",
-      slot_number: slotNumber,
-      name: customName.trim(),
-      school_name: customSchool.trim(),
+      type: "TOGGLE_STAR_OF_HOPE",
+      slot_number: nextStar,
     });
-    sendGameEvent({ type: "SYNC_STATE", state: updatedState });
-    setIsEditingProfile(false);
   };
+
+  const isBuzzerLocked = matchState.buzzer_winner_slot !== null;
+  const amIBuzzerWinner = matchState.buzzer_winner_slot === slotNumber;
 
   return (
-    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-6 md:p-10 max-w-5xl mx-auto font-sans select-none">
-      {/* Modal Chỉnh Sửa Tên Thí Sinh */}
-      {isEditingProfile && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md border border-slate-800 bg-[#0d121f] rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h2 className="text-sm font-bold uppercase text-white">
-                ĐỔI TÊN THÍ SINH VỊ TRÍ {slotNumber}
-              </h2>
-              <button onClick={() => setIsEditingProfile(false)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-slate-400 block mb-1.5 uppercase">HỌ VÀ TÊN:</label>
-                <input
-                  type="text"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  className="w-full bg-[#070a12] border border-slate-800 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-400 block mb-1.5 uppercase">TRƯỜNG / ĐƠN VỊ:</label>
-                <input
-                  type="text"
-                  value={customSchool}
-                  onChange={(e) => setCustomSchool(e.target.value)}
-                  className="w-full bg-[#070a12] border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-10 rounded-xl uppercase">
-                Lưu Thay Đổi
-              </Button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Header Máy Thí Sinh */}
-      <header className="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-4 md:p-6 font-sans select-none">
+      {/* Top Header Thí Sinh */}
+      <header className="w-full max-w-4xl mx-auto flex items-center justify-between bg-[#0d121f] border border-slate-800 rounded-2xl p-4 shadow-xl">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-xl text-white">
+          <div className={`w-12 h-12 rounded-xl bg-gradient-to-tr ${currentTheme.color} flex items-center justify-center font-black text-xl text-white shadow-lg`}>
             {slotNumber}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-lg text-white line-clamp-1">{currentPlayer.name}</h1>
-              <button
-                onClick={() => setIsEditingProfile(true)}
-                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
-                title="Đổi tên của bạn"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
+              <span className={`text-xs font-bold uppercase ${currentTheme.text}`}>
+                BỤC {currentTheme.name}
+              </span>
+              {hasMyStar && (
+                <span className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-500 text-black font-black text-[10px] animate-pulse">
+                  <Star className="w-3 h-3 fill-current" /> NGÔI SAO HY VỌNG (x2)
+                </span>
+              )}
             </div>
-            <span className="text-xs text-slate-400">{currentPlayer.school_name || "Thí sinh"}</span>
+            <h2 className="text-base md:text-lg font-bold text-white line-clamp-1">{me.name}</h2>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">VÒNG THI</span>
-            <span className="text-sm font-bold text-blue-300">{currentRound?.title} • Câu {matchState.current_question_index + 1}</span>
-          </div>
-          <div className="bg-[#070a12] border border-slate-800 px-4 py-1.5 rounded-xl text-center">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">ĐIỂM</span>
-            <span className="font-mono text-2xl font-black text-amber-400">{currentPlayer.score}</span>
-          </div>
-          <button
-            onClick={handleExitRoom}
-            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-red-400 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
-            title="Thoát phòng thi"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden md:inline">Thoát</span>
-          </button>
+        <div className="text-right">
+          <span className="text-[10px] text-slate-500 uppercase font-bold block">Điểm tích lũy</span>
+          <span className="font-mono text-2xl md:text-3xl font-black text-amber-400">{me.score} đ</span>
         </div>
       </header>
 
-      {/* Nội Dung Tương Tác Laptop */}
-      <main className="my-auto py-8 max-w-3xl mx-auto w-full">
-        {!canInteract && !submittedAnswer ? (
-          /* TRẠNG THÁI KHÓA MÁY CHỜ MC BẮT ĐẦU */
-          <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-10 text-center space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 mx-auto flex items-center justify-center text-slate-400">
-              <Lock className="w-6 h-6" />
+      {/* KHU VỰC THI ĐẤU THEO CHẾ ĐỘ VÒNG CHƠI (ADAPTIVE MODE) */}
+      <main className="w-full max-w-4xl mx-auto my-auto py-4 space-y-5">
+        {/* THANH THÔNG TIN CHẾ ĐỘ VÒNG CHƠI */}
+        <div className="flex items-center justify-between bg-[#0d121f] border border-slate-800 px-4 py-2.5 rounded-xl text-xs">
+          <span className="text-slate-400 font-bold uppercase">
+            {currentRound?.title} • Câu {matchState.current_question_index + 1}
+          </span>
+          <span className="text-amber-400 font-mono font-bold">
+            {matchState.is_timer_running ? `Đang thi đấu: ${matchState.time_left}s` : "Chờ bắt đầu"}
+          </span>
+        </div>
+
+        {/* NỘI DUNG CÂU HỎI */}
+        <div className="bg-[#0d121f] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-4 shadow-xl text-center">
+          <p className="text-xl md:text-2xl font-extrabold text-white leading-relaxed">
+            {currentQuestion?.question_text || "Đang chờ Ban Giám Khảo bắt đầu câu hỏi..."}
+          </p>
+
+          {/* CHẾ ĐỘ VÒNG 4 (VỀ ĐÍCH): NÚT ĐẶT NGÔI SAO HY VỌNG */}
+          {roundType === "ve_dich" && !matchState.is_timer_running && (
+            <div className="pt-2">
+              <button
+                onClick={handleToggleMyStar}
+                className={`px-5 py-2.5 rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 mx-auto transition-all cursor-pointer ${
+                  hasMyStar
+                    ? "bg-gradient-to-r from-amber-400 to-yellow-300 text-black shadow-lg shadow-amber-500/30 scale-105"
+                    : "bg-[#070a12] border border-amber-500/60 text-amber-300 hover:bg-amber-950/40"
+                }`}
+              >
+                <Star className={`w-4 h-4 ${hasMyStar ? "fill-current" : ""}`} />
+                <span>{hasMyStar ? "ĐÃ ĐẶT NGÔI SAO HY VỌNG (x2 ĐIỂM)" : "ĐẶT NGÔI SAO HY VỌNG CHO CÂU NÀY"}</span>
+              </button>
             </div>
-            <h2 className="text-xl font-bold uppercase text-white">
-              {matchState.is_locked ? "ĐÃ HẾT GIỜ / ĐÃ KHÓA BÀI" : "ĐANG CHỜ BẮT ĐẦU CÂU HỎI..."}
-            </h2>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto">
-              Hệ thống sẽ tự động mở khóa ngay khi Ban Giám Khảo bấm bắt đầu câu hỏi.
-            </p>
-          </div>
-        ) : currentQuestion?.question_type === "buzzer" ? (
-          /* VÒNG BẤM CHUÔNG */
-          <div className="flex flex-col items-center justify-center gap-4 py-4">
-            <button
-              onClick={handlePressBuzzer}
-              disabled={!canInteract || !!matchState.buzzer_winner_slot}
-              className={`w-64 h-64 rounded-full border-4 flex flex-col items-center justify-center transition-all active:scale-95 ${
-                matchState.buzzer_winner_slot === slotNumber
-                  ? "bg-amber-500 border-amber-300 text-black scale-105"
-                  : matchState.buzzer_winner_slot
-                  ? "bg-slate-900 border-slate-800 text-slate-600 opacity-40 cursor-not-allowed"
-                  : "bg-red-600 border-red-500 text-white hover:bg-red-500 cursor-pointer"
-              }`}
-            >
-              <Zap className="w-16 h-16 mb-2 fill-current" />
-              <span className="text-xl font-bold uppercase">
-                {matchState.buzzer_winner_slot === slotNumber ? "ĐÃ GIÀNH QUYỀN!" : "BẤM CHUÔNG"}
-              </span>
-            </button>
-          </div>
-        ) : currentQuestion?.question_type === "multiple_choice" ? (
-          /* VÒNG TRẮC NGHIỆM A / B / C / D */
-          <div className="space-y-3">
-            <span className="text-xs font-medium text-slate-400 block text-center uppercase">
-              CHỌN 1 TRONG 4 ĐÁP ÁN:
-            </span>
-            <div className="grid grid-cols-2 gap-3.5">
-              {["A", "B", "C", "D"].map((choice) => {
-                const isSelected = submittedAnswer.startsWith(choice);
+          )}
+        </div>
+
+        {/* KHU VỰC ĐIỀU KHIỂN & LÀM BÀI CỦA THÍ SINH */}
+        <div className="space-y-4">
+          {/* 1. NẾU LÀ CÂU HỎI TRẮC NGHIỆM A/B/C/D (VÒNG 1 KHỞI ĐỘNG) */}
+          {currentQuestion?.options && currentQuestion.options.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {currentQuestion.options.map((opt, idx) => {
+                const optKey = String.fromCharCode(65 + idx);
+                const isSelected = myAnswer === optKey || myAnswer === opt;
                 return (
                   <button
-                    key={choice}
-                    disabled={!canInteract || !!submittedAnswer}
-                    onClick={() => handleSubmitAnswer(choice)}
-                    className={`h-28 rounded-xl font-bold text-3xl flex flex-col items-center justify-center transition-all border ${
+                    key={idx}
+                    disabled={!matchState.is_timer_running || matchState.is_locked || hasSubmitted}
+                    onClick={() => handleSubmitAnswer(optKey)}
+                    className={`p-4 rounded-2xl border-2 text-left font-bold text-base flex items-center gap-3 transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-blue-600 border-blue-400 text-white shadow"
-                        : "bg-[#0d121f] border-slate-800 text-white hover:border-slate-600 disabled:opacity-50"
+                        ? "bg-blue-600 border-blue-400 text-white shadow-lg"
+                        : "bg-[#0d121f] border-slate-800 hover:border-blue-500 text-slate-200 disabled:opacity-40"
                     }`}
                   >
-                    <span>{choice}</span>
-                    {isSelected && <span className="text-[11px] font-medium opacity-90 uppercase mt-0.5">ĐÃ CHỌN</span>}
+                    <span className="w-9 h-9 rounded-xl bg-[#070a12] border border-slate-700 flex items-center justify-center font-black text-amber-400 shrink-0">
+                      {optKey}
+                    </span>
+                    <span>{opt.replace(/^[A-D][\.\:\)]\s*/, "")}</span>
                   </button>
                 );
               })}
             </div>
-          </div>
-        ) : (
-          /* VÒNG NHẬP ĐÁP ÁN TỰ LUẬN / TĂNG TỐC */
-          <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-6 space-y-4">
-            <label className="text-xs font-bold text-slate-400 uppercase block">
-              NHẬP CÂU TRẢ LỜI CỦA BẠN:
-            </label>
-            <input
-              ref={inputRef}
-              type="text"
-              disabled={!canInteract || !!submittedAnswer}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSubmitAnswer(inputText);
-              }}
-              placeholder="Gõ câu trả lời rồi bấm Gửi..."
-              className="w-full h-14 rounded-xl bg-[#070a12] border border-slate-800 px-4 text-xl font-bold text-white uppercase placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
-            />
-            <Button
-              disabled={!canInteract || !inputText.trim() || !!submittedAnswer}
-              onClick={() => handleSubmitAnswer(inputText)}
-              className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase rounded-xl gap-2 cursor-pointer"
-            >
-              <Send className="w-4 h-4" /> Gửi Đáp Án Về Ban Giám Khảo
-            </Button>
-          </div>
-        )}
-
-        {/* Thông Báo Trạng Thái Sau Khi Đã Gửi Bài */}
-        {submittedAnswer && (
-          <div className="mt-5 bg-[#0d121f] border border-emerald-500/50 rounded-xl p-5 text-center space-y-1">
-            <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-bold text-xs uppercase">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>ĐÃ GỬI ĐÁP ÁN THÀNH CÔNG</span>
-            </div>
-            <div className="text-2xl font-bold text-white uppercase">{submittedAnswer}</div>
-            {submittedTime && (
-              <div className="text-xs font-mono text-slate-400">
-                {(submittedTime / 1000).toFixed(2)} giây
+          ) : (
+            /* 2. NẾU LÀ CÂU HỎI TỰ LUẬN / TĂNG TỐC (VÒNG 2 & VÒNG 3 TĂNG TỐC & VÒNG 4) */
+            <div className="bg-[#0d121f] border border-slate-800 rounded-3xl p-5 md:p-6 space-y-4 shadow-xl">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  disabled={!matchState.is_timer_running || matchState.is_locked || hasSubmitted}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmitAnswer(inputText)}
+                  placeholder={
+                    hasSubmitted
+                      ? "Đã nộp bài thành công!"
+                      : matchState.is_timer_running
+                      ? "Gõ đáp án và bấm Enter / Nộp bài..."
+                      : "Đang chờ mở khóa thời gian..."
+                  }
+                  className="flex-1 h-14 bg-[#070a12] border border-slate-700 focus:border-blue-500 rounded-2xl px-5 text-base font-bold text-white uppercase placeholder:text-slate-600 focus:outline-none disabled:opacity-50"
+                />
+                <button
+                  disabled={!matchState.is_timer_running || matchState.is_locked || hasSubmitted || !inputText.trim()}
+                  onClick={() => handleSubmitAnswer(inputText)}
+                  className="h-14 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-lg shadow-blue-600/20"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>NỘP BÀI</span>
+                </button>
               </div>
-            )}
+
+              {hasSubmitted && (
+                <div className="p-3 bg-emerald-950/40 border border-emerald-500/60 rounded-xl flex items-center justify-between text-xs text-emerald-400 font-bold animate-in fade-in">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" /> Đã nộp: <strong className="uppercase text-white">{myAnswer}</strong>
+                  </span>
+                  <span className="font-mono">{((myResponseTime || 0) / 1000).toFixed(2)}s</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 3. NÚT BẤM CHUÔNG GIÀNH QUYỀN / CƯỚP ĐIỂM (DÙNG CHO VÒNG 2 & VÒNG 4) */}
+          <div className="pt-2">
+            <button
+              onClick={handlePressBuzzer}
+              disabled={isBuzzerLocked || !matchState.is_timer_running}
+              className={`w-full py-5 rounded-3xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-2xl transition-all cursor-pointer ${
+                amIBuzzerWinner
+                  ? "bg-emerald-500 text-black animate-bounce scale-105"
+                  : isBuzzerLocked
+                  ? "bg-slate-900 border border-slate-800 text-slate-600 opacity-50 cursor-not-allowed"
+                  : "bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:scale-[1.02] text-white shadow-red-600/30"
+              }`}
+            >
+              <Bell className="w-5 h-5" />
+              <span>
+                {amIBuzzerWinner
+                  ? "BẠN ĐÃ GIÀNH ĐƯỢC QUYỀN TRẢ LỜI!"
+                  : isBuzzerLocked
+                  ? `TS ${matchState.buzzer_winner_slot} ĐÃ BẤM TRƯỚC`
+                  : "BẤM CHUÔNG GIÀNH QUYỀN TRẢ LỜI"}
+              </span>
+            </button>
           </div>
-        )}
+        </div>
       </main>
 
-      <footer className="border-t border-slate-800/80 pt-3 flex items-center justify-between text-xs text-slate-500 font-medium">
-        <span>MÁY SỐ {slotNumber}</span>
-        <span>olymquiz.vercel.app</span>
+      <footer className="w-full max-w-4xl mx-auto text-center text-xs text-slate-600 font-medium">
+        Mã phòng: <span className="font-mono text-slate-400">OLYMQUIZ-ARENA</span> • Máy đấu #{slotNumber}
       </footer>
     </div>
   );
