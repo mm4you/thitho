@@ -15,7 +15,7 @@ function LoginForm() {
 
   const [activeTab, setActiveTab] = useState<"gk" | "admin">("gk");
   const [gkCode, setGkCode] = useState<string>("");
-  const [adminEmail, setAdminEmail] = useState<string>(SUPER_ADMIN_EMAIL);
+  const [adminEmail, setAdminEmail] = useState<string>("");
   const [adminPassword, setAdminPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");

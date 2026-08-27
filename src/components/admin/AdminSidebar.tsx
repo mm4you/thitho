@@ -168,8 +168,8 @@ export function AdminSidebar() {
               </div>
               <div className="overflow-hidden">
                 <span className="text-[10px] font-black text-amber-400 uppercase block tracking-wider">SUPER ADMIN</span>
-                <span className="text-[11px] font-semibold text-slate-300 block truncate" title={SUPER_ADMIN_EMAIL}>
-                  {SUPER_ADMIN_EMAIL}
+                <span className="text-[11px] font-semibold text-slate-300 block truncate" title=Chủ Sở Hữu Hệ Thống>
+                  Chủ Sở Hữu Hệ Thống
                 </span>
               </div>
             </>
