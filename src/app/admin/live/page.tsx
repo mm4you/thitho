@@ -24,7 +24,11 @@ import {
   Settings,
   Bell,
   Sparkles,
-  ArrowRight,
+  QrCode,
+  X,
+  RefreshCw,
+  Copy,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -33,6 +37,8 @@ import { Button } from "@/components/ui/button";
 
 export default function AdminLivePage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
+  const [showQRModal, setShowQRModal] = useState<boolean>(false);
+  const [copiedSlot, setCopiedSlot] = useState<number | null>(null);
 
   useEffect(() => {
     saveMatchStateLocally(matchState);
@@ -63,6 +69,15 @@ export default function AdminLivePage() {
           }
           return prev;
         });
+      } else if (event.type === "UPDATE_PLAYER_INFO") {
+        setMatchState((prev) => ({
+          ...prev,
+          players: prev.players.map((p) =>
+            p.slot_number === event.slot_number
+              ? { ...p, name: event.name, school_name: event.school_name }
+              : p
+          ),
+        }));
       }
     });
 
@@ -72,7 +87,29 @@ export default function AdminLivePage() {
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
 
-  // BƯỚC 1: BẮT ĐẦU ĐẾM NGƯỢC
+  // Sinh mã PIN ngẫu nhiên 4 số cho 4 máy
+  const handleGenerateRandomPins = () => {
+    const updatedPlayers = matchState.players.map((p) => {
+      const randPin = String(Math.floor(1000 + Math.random() * 9000));
+      return { ...p, pin_code: randPin };
+    });
+
+    const newState = { ...matchState, players: updatedPlayers };
+    setMatchState(newState);
+    saveMatchStateLocally(newState);
+    sendGameEvent({ type: "SYNC_STATE", state: newState });
+  };
+
+  const handleCopyLink = (slot: number, pin: string) => {
+    if (typeof window !== "undefined") {
+      const origin = window.location.origin;
+      const joinUrl = `${origin}/join?slot=${slot}&pin=${pin}`;
+      navigator.clipboard.writeText(joinUrl);
+      setCopiedSlot(slot);
+      setTimeout(() => setCopiedSlot(null), 2000);
+    }
+  };
+
   const handleStartTimer = () => {
     const timeLimit = currentQuestion?.time_limit || 15;
     const newState: MatchState = {
@@ -91,26 +128,18 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
-  const handlePauseTimer = () => {
-    setMatchState((prev) => ({ ...prev, is_timer_running: false }));
-    sendGameEvent({ type: "PAUSE_TIMER" });
-  };
-
-  // BƯỚC 2: KHÓA BÀI (HẾT GIỜ)
   const handleLockAnswers = () => {
     const newState = { ...matchState, is_locked: true, is_timer_running: false };
     setMatchState(newState);
     sendGameEvent({ type: "LOCK_ANSWERS" });
   };
 
-  // BƯỚC 3: MỞ ĐÁP ÁN 4 THÍ SINH
   const handleRevealAnswers = () => {
     const newState = { ...matchState, is_revealed: true };
     setMatchState(newState);
     sendGameEvent({ type: "REVEAL_ANSWERS" });
   };
 
-  // BƯỚC 4: CHẤM ĐIỂM TỰ ĐỘNG THEO THỜI GIAN & ĐÁP ÁN
   const handleAutoGrade = () => {
     if (!currentQuestion) return;
     const isTangToc = currentRound.round_type === "tang_toc";
@@ -180,7 +209,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "GRADE_ANSWERS", results });
   };
 
-  // CHẤM THỦ CÔNG TỪNG THÍ SINH
   const handleManualGrade = (slot: number, isCorrect: boolean) => {
     const points = isCorrect ? currentQuestion.points_correct : -currentQuestion.points_wrong;
     const results = {
@@ -215,7 +243,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "GRADE_ANSWERS", results });
   };
 
-  // BƯỚC 5: CHUYỂN SANG CÂU TIẾP THEO
   const handleNextQuestion = () => {
     if (matchState.current_question_index < (currentRound?.questions.length || 1) - 1) {
       handleChangeQuestion(matchState.current_round_index, matchState.current_question_index + 1);
@@ -259,7 +286,88 @@ export default function AdminLivePage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-6 font-sans">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-6 font-sans relative">
+      {/* MODAL QR CODE & MÃ PIN RANDOM 4 MÁY */}
+      {showQRModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl border-zinc-800 bg-zinc-900 shadow-2xl">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-zinc-800">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <QrCode className="w-5 h-5 text-amber-400" />
+                  Mã Bí Mật & Kết Nối 4 Máy Thí Sinh
+                </CardTitle>
+                <CardDescription className="text-xs text-zinc-400">
+                  Cung cấp mã PIN hoặc copy link gửi cho thí sinh quét vào máy
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleGenerateRandomPins}
+                  className="border-zinc-700 bg-zinc-950 text-zinc-200 hover:bg-zinc-800 text-xs h-8 gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-400" /> Sinh Mã PIN Random Mới
+                </Button>
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {matchState.players.map((p) => {
+                  const pin = p.pin_code || `${p.slot_number}${p.slot_number}${p.slot_number}${p.slot_number}`;
+                  return (
+                    <div key={p.slot_number} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="border-zinc-700 text-zinc-300">
+                          Thí Sinh Vị Trí {p.slot_number}
+                        </Badge>
+                        <span className="text-xs text-zinc-400 font-medium line-clamp-1 max-w-[120px]">
+                          {p.name}
+                        </span>
+                      </div>
+
+                      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-center">
+                        <span className="text-[10px] uppercase font-semibold text-zinc-500 block">
+                          MÃ BÍ MẬT (PIN CODE)
+                        </span>
+                        <span className="font-mono text-2xl font-black tracking-widest text-amber-400">
+                          {pin}
+                        </span>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleCopyLink(p.slot_number, pin)}
+                        className="w-full bg-zinc-800 hover:bg-zinc-700 text-xs h-8 gap-1.5"
+                      >
+                        {copiedSlot === p.slot_number ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" /> Đã Copy Link!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" /> Copy Link Vào Máy TS {p.slot_number}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Top Header */}
       <header className="flex flex-wrap items-center justify-between border-b border-zinc-800 pb-4 mb-6 gap-4">
         <div className="flex items-center gap-3">
@@ -280,6 +388,13 @@ export default function AdminLivePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setShowQRModal(true)}
+            className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs gap-1.5"
+          >
+            <QrCode className="w-3.5 h-3.5" /> Mã PIN & Link 4 Máy
+          </Button>
           <Link href="/display" target="_blank">
             <Button variant="outline" size="sm" className="border-zinc-800 hover:bg-zinc-800 gap-1.5 text-xs text-zinc-300">
               <ExternalLink className="w-3.5 h-3.5" /> Mở Máy Chiếu
@@ -293,7 +408,7 @@ export default function AdminLivePage() {
         </div>
       </header>
 
-      {/* THANH ĐIỀU KHIỂN THEO 5 BƯỚC LOGIC CỦA MỘT CÂU HỎI */}
+      {/* 5 BƯỚC ĐIỀU KHIỂN LOGIC */}
       <Card className="border-zinc-800 bg-zinc-900/70 mb-6">
         <CardContent className="p-4 space-y-4">
           <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
@@ -339,9 +454,8 @@ export default function AdminLivePage() {
               </div>
             </div>
 
-            {/* Trạng thái hiện tại */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400">Trạng thái câu:</span>
+              <span className="text-xs text-zinc-400">Trạng thái:</span>
               {matchState.is_scored ? (
                 <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Đã Chấm Điểm</Badge>
               ) : matchState.is_revealed ? (
@@ -356,9 +470,7 @@ export default function AdminLivePage() {
             </div>
           </div>
 
-          {/* 5 NÚT THAO TÁC THEO ĐÚNG TIẾN TRÌNH LUẬT CHƠI */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-            {/* Bước 1: Bắt đầu */}
             <Button
               onClick={handleStartTimer}
               className={`h-11 font-bold text-xs gap-1.5 flex flex-col items-center justify-center ${
@@ -373,7 +485,6 @@ export default function AdminLivePage() {
               </div>
             </Button>
 
-            {/* Bước 2: Khóa máy */}
             <Button
               variant="secondary"
               onClick={handleLockAnswers}
@@ -390,7 +501,6 @@ export default function AdminLivePage() {
               </div>
             </Button>
 
-            {/* Bước 3: Mở đáp án */}
             <Button
               variant="outline"
               onClick={handleRevealAnswers}
@@ -407,7 +517,6 @@ export default function AdminLivePage() {
               </div>
             </Button>
 
-            {/* Bước 4: Chấm điểm */}
             <Button
               onClick={handleAutoGrade}
               disabled={matchState.is_scored}
@@ -423,7 +532,6 @@ export default function AdminLivePage() {
               </div>
             </Button>
 
-            {/* Bước 5: Câu tiếp theo */}
             <Button
               onClick={handleNextQuestion}
               className={`h-11 font-bold text-xs gap-1.5 flex flex-col items-center justify-center ${
@@ -507,10 +615,10 @@ export default function AdminLivePage() {
         </Card>
       </div>
 
-      {/* 4 Contestants Live Telemetry & Manual Override */}
+      {/* 4 Contestants Live Telemetry */}
       <div className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-          Giám Sát Trực Tiếp & Duyệt Điểm 4 Thí Sinh
+          Giám Sát Trực Tiếp 4 Thí Sinh
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -558,7 +666,6 @@ export default function AdminLivePage() {
                     )}
                   </div>
 
-                  {/* Manual Correct / Wrong Buttons */}
                   <div className="grid grid-cols-2 gap-1.5">
                     <Button
                       size="sm"
@@ -566,7 +673,7 @@ export default function AdminLivePage() {
                       onClick={() => handleManualGrade(player.slot_number, true)}
                       className="border-emerald-800/40 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/30 text-xs h-7 gap-1"
                     >
-                      <CheckCircle2 className="w-3 h-3" /> Đúng (+{currentQuestion?.points_correct}đ)
+                      <CheckCircle2 className="w-3 h-3" /> Đúng
                     </Button>
                     <Button
                       size="sm"
@@ -574,13 +681,12 @@ export default function AdminLivePage() {
                       onClick={() => handleManualGrade(player.slot_number, false)}
                       className="border-red-800/40 bg-red-950/20 text-red-400 hover:bg-red-900/30 text-xs h-7 gap-1"
                     >
-                      <XCircle className="w-3 h-3" /> Sai (-{currentQuestion?.points_wrong}đ)
+                      <XCircle className="w-3 h-3" /> Sai
                     </Button>
                   </div>
 
-                  {/* Manual Score Adjustment */}
                   <div className="flex items-center justify-between pt-2 border-t border-zinc-800/60 text-xs text-zinc-500">
-                    <span>Sửa điểm:</span>
+                    <span>Chỉnh điểm:</span>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleScoreOverride(player.slot_number, 10)}

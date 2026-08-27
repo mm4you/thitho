@@ -1,5 +1,4 @@
-﻿export type RoundType = "khoi_dong" | "vcnv" | "tang_toc" | "ve_dich" | "custom";
-
+export type RoundType = "khoi_dong" | "vcnv" | "tang_toc" | "ve_dich" | "custom";
 export type QuestionType = "multiple_choice" | "text_input" | "buzzer";
 
 export interface Player {
@@ -10,6 +9,7 @@ export interface Player {
   school_name?: string;
   avatar_url?: string;
   score: number;
+  pin_code?: string; // Mã bí mật random do Admin cấp
   is_connected?: boolean;
 }
 
@@ -21,10 +21,10 @@ export interface Question {
   media_url?: string;
   media_type?: "none" | "image" | "audio" | "video";
   question_type: QuestionType;
-  options?: string[]; // Cho trắc nghiệm: ["A. ...", "B. ...", "C. ...", "D. ..."]
+  options?: string[];
   correct_answer: string;
   explanation?: string;
-  time_limit: number; // giây
+  time_limit: number;
   points_correct: number;
   points_wrong: number;
 }
@@ -38,7 +38,7 @@ export interface Round {
   description?: string;
   questions: Question[];
   config?: {
-    cnv_keyword?: string; // Cho VCNV
+    cnv_keyword?: string;
     cnv_image_url?: string;
     obstacle_clues?: string[];
   };
@@ -68,7 +68,7 @@ export interface MatchState {
   buzzer_winner_time_ms: number | null;
   players: Player[];
   rounds: Round[];
-  current_responses: Record<number, PlayerResponse>; // key: slot_number 1..4
+  current_responses: Record<number, PlayerResponse>;
   timestamp?: number;
 }
 
@@ -84,4 +84,6 @@ export type RealtimeEventPayload =
   | { type: "GRADE_ANSWERS"; results: Record<number, { is_correct: boolean; points_awarded: number }> }
   | { type: "OVERRIDE_SCORE"; slot_number: 1 | 2 | 3 | 4; delta: number }
   | { type: "CHANGE_QUESTION"; round_index: number; question_index: number }
+  | { type: "UPDATE_PLAYER_INFO"; slot_number: 1 | 2 | 3 | 4; name: string; school_name: string }
+  | { type: "SET_PLAYER_PINS"; pins: Record<number, string> }
   | { type: "PLAY_SFX"; sfx: "correct" | "wrong" | "buzzer" | "tick" | "timeup" | "reveal" | "victory" };

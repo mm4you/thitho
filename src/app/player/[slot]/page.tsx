@@ -6,9 +6,10 @@ import {
   subscribeToGameChannel,
   sendGameEvent,
   loadSavedMatchState,
+  saveMatchStateLocally,
 } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Zap, Send, Lock, CheckCircle2, Clock } from "lucide-react";
+import { Zap, Send, Lock, CheckCircle2, Clock, Edit2, UserCheck, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,24 @@ export default function PlayerPage() {
   const [timerStartTime, setTimerStartTime] = useState<number>(Date.now());
   const [buzzerPressed, setBuzzerPressed] = useState<boolean>(false);
 
+  // Modal Custom Tên
+  const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
+  const [customName, setCustomName] = useState<string>("");
+  const [customSchool, setCustomSchool] = useState<string>("");
+
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const currentPlayer = matchState.players.find((p) => p.slot_number === slotNumber) || {
+    slot_number: slotNumber,
+    name: `Thí sinh ${slotNumber}`,
+    score: 0,
+    school_name: "Thí sinh",
+  };
+
+  useEffect(() => {
+    setCustomName(currentPlayer.name);
+    setCustomSchool(currentPlayer.school_name || "");
+  }, [currentPlayer.name, currentPlayer.school_name]);
 
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
@@ -60,6 +78,15 @@ export default function PlayerPage() {
       } else if (event.type === "RESET_BUZZER") {
         setBuzzerPressed(false);
         setMatchState((prev) => ({ ...prev, buzzer_winner_slot: null }));
+      } else if (event.type === "UPDATE_PLAYER_INFO") {
+        setMatchState((prev) => ({
+          ...prev,
+          players: prev.players.map((p) =>
+            p.slot_number === event.slot_number
+              ? { ...p, name: event.name, school_name: event.school_name }
+              : p
+          ),
+        }));
       } else if (event.type === "CHANGE_QUESTION") {
         setSubmittedAnswer("");
         setSubmittedTime(null);
@@ -79,13 +106,6 @@ export default function PlayerPage() {
 
     return () => unsubscribe();
   }, [slotNumber]);
-
-  const currentPlayer = matchState.players.find((p) => p.slot_number === slotNumber) || {
-    slot_number: slotNumber,
-    name: `Thí sinh ${slotNumber}`,
-    score: 0,
-    school_name: "Thí sinh",
-  };
 
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
@@ -121,9 +141,72 @@ export default function PlayerPage() {
     });
   };
 
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customName.trim()) return;
+
+    const updatedPlayers = matchState.players.map((p) =>
+      p.slot_number === slotNumber
+        ? { ...p, name: customName.trim(), school_name: customSchool.trim() }
+        : p
+    );
+
+    const updatedState = { ...matchState, players: updatedPlayers };
+    setMatchState(updatedState);
+    saveMatchStateLocally(updatedState);
+
+    sendGameEvent({
+      type: "UPDATE_PLAYER_INFO",
+      slot_number: slotNumber,
+      name: customName.trim(),
+      school_name: customSchool.trim(),
+    });
+    sendGameEvent({ type: "SYNC_STATE", state: updatedState });
+    setIsEditingProfile(false);
+  };
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between p-4 max-w-md mx-auto font-sans select-none">
-      {/* Top Card */}
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between p-4 max-w-md mx-auto font-sans select-none relative">
+      {/* Modal Đổi Tên Thí Sinh */}
+      {isEditingProfile && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-sm border-zinc-800 bg-zinc-900 shadow-2xl">
+            <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Đổi Tên Thí Sinh {slotNumber}</CardTitle>
+              <button onClick={() => setIsEditingProfile(false)} className="text-zinc-400 hover:text-zinc-100">
+                <X className="w-4 h-4" />
+              </button>
+            </CardHeader>
+            <CardContent className="p-4 pt-2">
+              <form onSubmit={handleSaveProfile} className="space-y-3">
+                <div>
+                  <label className="text-[11px] text-zinc-400 block mb-1">Họ và tên của bạn:</label>
+                  <input
+                    type="text"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm font-semibold text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-zinc-400 block mb-1">Trường / Đơn vị:</label>
+                  <input
+                    type="text"
+                    value={customSchool}
+                    onChange={(e) => setCustomSchool(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                  />
+                </div>
+                <Button type="submit" className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 text-xs font-bold h-9">
+                  Lưu & Hiển Thị Lên Màn Hình
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Top Header Card */}
       <Card className="border-zinc-800 bg-zinc-900/60 shadow-lg">
         <CardContent className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -131,7 +214,16 @@ export default function PlayerPage() {
               {slotNumber}
             </div>
             <div>
-              <h1 className="font-semibold text-sm text-zinc-100 line-clamp-1">{currentPlayer.name}</h1>
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-semibold text-sm text-zinc-100 line-clamp-1">{currentPlayer.name}</h1>
+                <button
+                  onClick={() => setIsEditingProfile(true)}
+                  className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                  title="Đổi tên của bạn"
+                >
+                  <Edit2 className="w-3 h-3" />
+                </button>
+              </div>
               <span className="text-xs text-zinc-500">{currentPlayer.school_name}</span>
             </div>
           </div>
@@ -147,7 +239,7 @@ export default function PlayerPage() {
         <span>Câu {matchState.current_question_index + 1}</span>
       </div>
 
-      {/* Main Interaction Area */}
+      {/* Main Interaction */}
       <main className="flex-1 flex flex-col justify-center my-2 gap-4">
         {currentQuestion?.question_type === "buzzer" ? (
           <div className="flex flex-col items-center justify-center gap-4 my-auto">
@@ -243,7 +335,7 @@ export default function PlayerPage() {
       </main>
 
       <footer className="text-center text-[11px] text-zinc-600 py-2">
-        Thí Sinh {slotNumber} • Kết Nối Realtime
+        Thí Sinh {slotNumber} • Nhấn vào tên để đổi tên hiển thị
       </footer>
     </div>
   );
