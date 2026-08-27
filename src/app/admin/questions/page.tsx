@@ -17,6 +17,8 @@ import {
   FileDown,
   Layers,
   Sparkles,
+  Tag,
+  Edit2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -31,7 +33,39 @@ export default function QuestionsManagePage() {
   const [fullExamResult, setFullExamResult] = useState<ParsedFullExamResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Edit Round Info Modal
+  const [isEditingRoundInfo, setIsEditingRoundInfo] = useState<boolean>(false);
+  const [tempRoundTitle, setTempRoundTitle] = useState<string>("");
+  const [tempRoundDesc, setTempRoundDesc] = useState<string>("");
+
   const currentRound = matchState.rounds[activeRoundIdx] || matchState.rounds[0];
+
+  const handleOpenEditRound = () => {
+    setTempRoundTitle(currentRound.title);
+    setTempRoundDesc(currentRound.description || "");
+    setIsEditingRoundInfo(true);
+  };
+
+  const handleSaveRoundInfo = () => {
+    if (!tempRoundTitle.trim()) return;
+    const updatedRounds = matchState.rounds.map((r, idx) => {
+      if (idx === activeRoundIdx) {
+        return {
+          ...r,
+          title: tempRoundTitle.trim(),
+          description: tempRoundDesc.trim(),
+        };
+      }
+      return r;
+    });
+
+    const newState = { ...matchState, rounds: updatedRounds };
+    setMatchState(newState);
+    syncMatchStateToCloud(newState);
+    setIsEditingRoundInfo(false);
+    setSavedAlert(true);
+    setTimeout(() => setSavedAlert(false), 2500);
+  };
 
   const handleUpdateRoundTime = (seconds: number) => {
     const sec = Math.max(1, Math.min(300, seconds || 15));
@@ -137,17 +171,21 @@ export default function QuestionsManagePage() {
   };
 
   const handleDownloadSample = () => {
-    const sampleText = `[VÒNG 1: KHỞI ĐỘNG]
-Câu 1: Thủ đô của Việt Nam là thành phố nào?
+    const sampleText = `====================================================================
+OLYMQUIZ - FILE ĐỀ THI MẪU CHUẨN 4 VÒNG THI (OLYMPIA ARENA)
+====================================================================
+
+[VÒNG 1: KHỞI ĐỘNG]
+Câu 1: Thủ đô của nước CHXHCN Việt Nam là thành phố nào?
 A. Hà Nội
 B. Đà Nẵng
 C. TP. Hồ Chí Minh
-D. Cần Thơ
+D. Hải Phòng
 Đáp án: A
 Thời gian: 15
 Điểm: 10
 
-Câu 2: Kim loại nào dẫn điện tốt nhất trong các kim loại sau?
+Câu 2: Kim loại nào có tính dẫn điện tốt nhất trong các kim loại sau?
 A. Vàng
 B. Bạc
 C. Đồng
@@ -158,25 +196,25 @@ Thời gian: 15
 
 [VÒNG 2: VƯỢT CHƯỚNG NGẠI VẬT]
 Hàng ngang số 1: Quốc gia nào có diện tích lớn nhất thế giới? | NGA | 15 | 10
-Hàng ngang số 2: Đại dương nào lớn nhất hành tinh? | THÁI BÌNH DƯƠNG | 15 | 10
-Hàng ngang số 3: Nguyên tố hóa học nào có ký hiệu là Fe? | SẮT | 15 | 10
-Từ khóa chướng ngại vật: ĐỊA LÝ THẾ GIỚI | ĐỊA LÝ THẾ GIỚI | 15 | 40
+Hàng ngang số 2: Đại dương nào có diện tích lớn nhất hành tinh? | THÁI BÌNH DƯƠNG | 15 | 10
+Từ khóa chướng ngại vật: ĐỊA LÝ VÀ VŨ TRỤ | ĐỊA LÝ VÀ VŨ TRỤ | 15 | 40
 
 [VÒNG 3: TĂNG TỐC]
-Sắp xếp các chữ cái sau thành từ có nghĩa: O L Y M P I A | OLYMPIA | 10 | 40
-Hình ảnh gợi nhớ đến chiến dịch lịch sử nào năm 1954? | ĐIỆN BIÊN PHỦ | 20 | 40
-Tìm số tiếp theo trong dãy số: 2, 4, 8, 16, ... | 32 | 30 | 40
-Tỉnh nào có diện tích lớn nhất Việt Nam? | NGHỆ AN | 40 | 40
+Câu 1: Sắp xếp các chữ cái sau thành từ có nghĩa: O L Y M P I A | OLYMPIA | 10 | 40
+Câu 2: Hình ảnh gợi nhớ đến chiến dịch lịch sử lừng lẫy năm 1954? | ĐIỆN BIÊN PHỦ | 20 | 40
+Câu 3: Tìm số tiếp theo trong dãy số: 2, 4, 8, 16, ... | 32 | 30 | 40
+Câu 4: Tỉnh nào có diện tích tự nhiên lớn nhất Việt Nam hiện nay? | NGHỆ AN | 40 | 40
 
 [VÒNG 4: VỀ ĐÍCH]
-Câu hỏi gói 20 điểm: Nhà thơ nào được mệnh danh là Thi Tiên? | LÝ BẠCH | 20 | 20
-Câu hỏi gói 30 điểm: Ai là người đầu tiên bay vào vũ trụ năm 1961? | YURI GAGARIN | 30 | 30`;
+Câu 1: Nhà thơ nào trong văn học cổ điển được mệnh danh là Thi Tiên? | LÝ BẠCH | 20 | 20
+Câu 2: Ai là người đầu tiên bay vào không gian vũ trụ vào năm 1961? | YURI GAGARIN | 30 | 30
+Câu 3: Chiến thắng Bạch Đằng đánh tan quân Nam Hán năm 938 do ai chỉ huy? | NGÔ QUYỀN | 20 | 20`;
 
     const blob = new Blob([sampleText], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "de_thi_toan_bo_4_vong_olymquiz.txt";
+    link.download = "de_thi_mau_chuan_4_vong_olymquiz.txt";
     link.click();
   };
 
@@ -219,6 +257,60 @@ Câu hỏi gói 30 điểm: Ai là người đầu tiên bay vào vũ trụ năm
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-sans select-none">
+      {/* MODAL EDIT ROUND INFO & TOPIC */}
+      {isEditingRoundInfo && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#0d121f] border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 className="text-base font-bold uppercase text-white flex items-center gap-2">
+                <Tag className="w-4 h-4 text-amber-400" />
+                CHỈNH SỬA TÊN & CHỦ ĐỀ VÒNG THI
+              </h2>
+              <button onClick={() => setIsEditingRoundInfo(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">
+                  TÊN VÒNG THI:
+                </label>
+                <input
+                  type="text"
+                  value={tempRoundTitle}
+                  onChange={(e) => setTempRoundTitle(e.target.value)}
+                  placeholder="Ví dụ: Vòng 1: Khởi Động..."
+                  className="w-full bg-[#070a12] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white font-bold focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">
+                  CHỦ ĐỀ / MÔ TẢ VÒNG THI:
+                </label>
+                <input
+                  type="text"
+                  value={tempRoundDesc}
+                  onChange={(e) => setTempRoundDesc(e.target.value)}
+                  placeholder="Ví dụ: Kiến thức tự nhiên & xã hội tổng hợp..."
+                  className="w-full bg-[#070a12] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <Button variant="ghost" size="sm" onClick={() => setIsEditingRoundInfo(false)} className="text-xs text-slate-400">
+                Hủy
+              </Button>
+              <Button size="sm" onClick={handleSaveRoundInfo} className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-9 px-4 rounded-xl cursor-pointer">
+                Lưu Thay Đổi
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL IMPORT 1 FILE CHO TOÀN BỘ 4 VÒNG THI */}
       {isImportModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -381,16 +473,24 @@ Câu hỏi gói 30 điểm: Ai là người đầu tiên bay vào vũ trụ năm
         ))}
       </div>
 
-      {/* CẤU HÌNH THỜI GIAN CHUẨN CHO VÒNG THI NÀY */}
+      {/* CẤU HÌNH THỜI GIAN & CHỦ ĐỀ VÒNG THI NÀY */}
       <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Clock className="w-5 h-5 text-amber-400" />
           <div>
-            <span className="text-sm font-bold text-white uppercase block">
-              THỜI GIAN ĐẾM NGƯỢC CỦA VÒNG: {currentRound.title}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white uppercase block">
+                {currentRound.title}
+              </span>
+              <button
+                onClick={handleOpenEditRound}
+                className="text-amber-400 hover:text-amber-300 text-xs font-semibold flex items-center gap-1 underline cursor-pointer"
+              >
+                <Edit2 className="w-3 h-3" /> Đổi tên / Chủ đề
+              </button>
+            </div>
             <span className="text-xs text-slate-400 font-medium">
-              Bạn có thể gõ trực tiếp số giây hoặc chọn nhanh mốc bên dưới
+              {currentRound.description || "Chưa có mô tả chủ đề"}
             </span>
           </div>
         </div>
