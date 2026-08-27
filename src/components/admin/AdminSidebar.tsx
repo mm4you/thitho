@@ -10,7 +10,6 @@ import {
   Tv,
   LogOut,
   Home,
-  LayoutDashboard,
   Crown,
   ShieldCheck,
 } from "lucide-react";
@@ -168,7 +167,7 @@ export function AdminSidebar() {
               </div>
               <div className="overflow-hidden">
                 <span className="text-[10px] font-black text-amber-400 uppercase block tracking-wider">SUPER ADMIN</span>
-                <span className="text-[11px] font-semibold text-slate-300 block truncate" title=Chủ Sở Hữu Hệ Thống>
+                <span className="text-[11px] font-semibold text-slate-300 block truncate">
                   Chủ Sở Hữu Hệ Thống
                 </span>
               </div>
