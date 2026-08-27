@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { Tv, Sliders, ArrowRight, ShieldCheck, KeyRound, Trophy, Zap, ChevronRight } from "lucide-react";
+import { Tv, Sliders, ArrowRight, ShieldCheck, KeyRound, Trophy, ChevronRight } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
@@ -18,7 +18,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-6 md:p-10 font-sans select-none relative overflow-hidden">
-      {/* Glow Hiệu Ứng Sân Khấu Sang Trọng */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-b from-blue-600/15 via-amber-500/5 to-transparent blur-[120px] pointer-events-none" />
 
       {/* Header Thanh Lịch */}
@@ -30,7 +29,7 @@ export default function HomePage() {
           className="px-4 py-2 rounded-xl bg-[#0d121f] border border-slate-800 hover:border-slate-700 hover:bg-[#131b2e] text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-2 transition-all"
         >
           <ShieldCheck className="w-4 h-4 text-blue-400" />
-          <span>Đăng Nhập MC</span>
+          <span>Cổng Ban Giám Khảo</span>
         </Link>
       </header>
 
@@ -51,7 +50,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Khu Vực Tương Tác 2 Cổng Lớn */}
+        {/* 2 Cổng Lớn */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* CỔNG 1: THÍ SINH NHẬP MÃ NHANH */}
           <div className="bg-[#0d121f] border-2 border-amber-500/30 hover:border-amber-500/60 rounded-3xl p-7 flex flex-col justify-between space-y-6 transition-all shadow-2xl relative overflow-hidden">
@@ -97,22 +96,22 @@ export default function HomePage() {
             </form>
           </div>
 
-          {/* CỔNG 2: BAN TỔ CHỨC & MC */}
+          {/* CỔNG 2: BAN GIÁM KHẢO & ĐIỀU HÀNH */}
           <div className="bg-[#0d121f] border border-slate-800 hover:border-slate-700 rounded-3xl p-7 flex flex-col justify-between space-y-6 transition-all shadow-xl">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="px-3 py-1 rounded-full bg-blue-950 text-blue-400 border border-blue-800 text-xs font-bold uppercase tracking-wider">
-                  BAN TỔ CHỨC
+                  BAN GIÁM KHẢO
                 </span>
                 <Sliders className="w-5 h-5 text-blue-400" />
               </div>
 
               <div>
                 <h3 className="text-2xl font-bold text-white">
-                  Điều Phối & Máy Chiếu
+                  Bàn Điều Hành Trận Đấu
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Bảng điều khiển 1 chạm cho MC và Màn hình trình chiếu sân khấu
+                  Bảng điều hành trận đấu 1 chạm và Màn hình trình chiếu sân khấu
                 </p>
               </div>
             </div>
@@ -121,7 +120,7 @@ export default function HomePage() {
               <Link href="/admin/live" className="block">
                 <button className="w-full h-12 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-between transition-all cursor-pointer shadow-lg shadow-blue-600/20">
                   <span className="flex items-center gap-2">
-                    <Sliders className="w-4 h-4" /> Bảng Điều Khiển MC
+                    <Sliders className="w-4 h-4" /> Bàn Điều Hành Trận Đấu
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
@@ -140,7 +139,6 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Bottom Spacer Sạch Sẽ */}
       <footer className="w-full max-w-5xl mx-auto" />
     </div>
   );

@@ -14,7 +14,7 @@ import {
   FileText,
   Download,
   X,
-  Sparkles,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -167,6 +167,17 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
     link.click();
   };
 
+  // Xuất toàn bộ ngân hàng câu hỏi ra file JSON lưu trữ
+  const handleExportFullExam = () => {
+    const dataStr = JSON.stringify(matchState.rounds, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `bo_de_olymquiz_${Date.now()}.json`;
+    link.click();
+  };
+
   const handleApplyImport = (mode: "replace" | "append") => {
     if (previewQuestions.length === 0) return;
 
@@ -215,7 +226,6 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
               </button>
             </div>
 
-            {/* Khung Huong Dan & Tai File Mau */}
             <div className="bg-[#070a12] p-3.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
               <span className="text-slate-300">
                 Định dạng hỗ trợ: <strong>Câu 1:... A. B. C. D. Đáp án:...</strong> hoặc cú pháp <strong>Câu hỏi | Đáp án | Giây | Điểm</strong>
@@ -228,7 +238,6 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
               </button>
             </div>
 
-            {/* Textarea Paste Hoac Chon File */}
             <div className="space-y-2 flex-1 overflow-y-auto">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-400 uppercase">
@@ -238,7 +247,7 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
                   onClick={() => fileInputRef.current?.click()}
                   className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 cursor-pointer"
                 >
-                  <Upload className="w-3.5 h-3.5" /> Tải Lên File (.txt, .csv)
+                  <Upload className="w-3.5 h-3.5" /> Tải Lên File (.txt, .csv, .json)
                 </button>
                 <input
                   ref={fileInputRef}
@@ -274,7 +283,6 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
               )}
             </div>
 
-            {/* Actions */}
             <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-800">
               <Button
                 variant="ghost"
@@ -316,6 +324,15 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
 
         <div className="flex items-center gap-2">
           <Button
+            variant="outline"
+            onClick={handleExportFullExam}
+            className="border-slate-700 text-slate-300 hover:text-white text-xs h-9 px-3.5 gap-1.5 rounded-xl cursor-pointer"
+            title="Tải toàn bộ bộ đề hiện tại về máy tính dưới dạng file JSON"
+          >
+            <FileDown className="w-4 h-4 text-amber-400" /> Xuất File Đề Thi
+          </Button>
+
+          <Button
             onClick={() => setIsImportModalOpen(true)}
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 gap-1.5 rounded-xl cursor-pointer shadow"
           >
@@ -336,7 +353,7 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
           <button
             key={round.id}
             onClick={() => setActiveRoundIdx(idx)}
-            className={`py-3 px-4 rounded-xl text-xs font-bold transition-all text-center ${
+            className={`py-3 px-4 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
               activeRoundIdx === idx
                 ? "bg-blue-600 text-white shadow-sm"
                 : "text-slate-400 hover:text-white hover:bg-slate-900"

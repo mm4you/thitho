@@ -13,34 +13,34 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get("redirect");
 
-  // Tab: "mc" (Chi can ma MC) hoac "admin" (Email + Master Pass)
-  const [activeTab, setActiveTab] = useState<"mc" | "admin">("mc");
-  const [mcCode, setMcCode] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"gk" | "admin">("gk");
+  const [gkCode, setGkCode] = useState<string>("");
   const [adminEmail, setAdminEmail] = useState<string>(SUPER_ADMIN_EMAIL);
   const [adminPassword, setAdminPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  const handleMcLogin = (e: React.FormEvent) => {
+  const handleGkLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
     const validCode = getAdminPassword();
-    const entered = mcCode.trim();
+    const entered = gkCode.trim();
 
     if (
       entered === validCode ||
       entered === "MC-OLYMPIA-2026" ||
+      entered === "GK-OLYMPIA-2026" ||
       entered === "OlymQuiz@Khang2026!" ||
       entered === "admin123" ||
       entered === "9999"
     ) {
       if (typeof window !== "undefined") {
-        localStorage.setItem("admin_auth_token", "MC_AUTHENTICATED_" + Date.now());
+        localStorage.setItem("admin_auth_token", "GK_AUTHENTICATED_" + Date.now());
       }
       router.push(redirectPath || "/admin/live");
     } else {
-      setErrorMsg("Mã MC không chính xác! Vui lòng liên hệ Quản trị viên để lấy mã.");
+      setErrorMsg("Mã Giám Khảo không chính xác! Vui lòng liên hệ Quản trị viên để lấy mã.");
     }
   };
 
@@ -80,26 +80,25 @@ function LoginForm() {
             ĐĂNG NHẬP HỆ THỐNG
           </h2>
           <p className="text-xs text-slate-400 font-medium mt-0.5">
-            Cổng điều phối dành cho MC & Quản trị viên
+            Cổng điều phối dành cho Ban Giám Khảo & Quản trị viên
           </p>
         </div>
       </div>
 
-      {/* 2 Tab Chuyển Đổi Rõ Ràng */}
       <div className="grid grid-cols-2 gap-1 bg-[#070a12] p-1 rounded-xl border border-slate-800">
         <button
           type="button"
           onClick={() => {
-            setActiveTab("mc");
+            setActiveTab("gk");
             setErrorMsg("");
           }}
-          className={`py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-            activeTab === "mc"
+          className={`py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeTab === "gk"
               ? "bg-blue-600 text-white shadow-sm"
               : "text-slate-400 hover:text-white"
           }`}
         >
-          <Sliders className="w-3.5 h-3.5" /> Dành Cho MC
+          <Sliders className="w-3.5 h-3.5" /> Ban Giám Khảo
         </button>
 
         <button
@@ -108,7 +107,7 @@ function LoginForm() {
             setActiveTab("admin");
             setErrorMsg("");
           }}
-          className={`py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+          className={`py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeTab === "admin"
               ? "bg-blue-600 text-white shadow-sm"
               : "text-slate-400 hover:text-white"
@@ -118,26 +117,25 @@ function LoginForm() {
         </button>
       </div>
 
-      {/* FORM 1: MC ĐĂNG NHẬP CHỈ BẰNG MÃ MC */}
-      {activeTab === "mc" ? (
-        <form onSubmit={handleMcLogin} className="space-y-4">
+      {activeTab === "gk" ? (
+        <form onSubmit={handleGkLogin} className="space-y-4">
           <div>
             <label className="text-xs font-semibold text-slate-400 block mb-1.5 uppercase">
-              NHẬP MÃ MC DO QUẢN TRỊ VIÊN CẤP:
+              NHẬP MÃ GIÁM KHẢO DO QUẢN TRỊ VIÊN CẤP:
             </label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                value={mcCode}
-                onChange={(e) => setMcCode(e.target.value)}
-                placeholder="Nhập mã MC (Ví dụ: MC-XXXXXX)..."
+                value={gkCode}
+                onChange={(e) => setGkCode(e.target.value)}
+                placeholder="Nhập mã Giám Khảo..."
                 className="w-full bg-[#070a12] border border-slate-800 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 font-mono"
               />
               <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -154,11 +152,10 @@ function LoginForm() {
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs h-11 rounded-xl uppercase tracking-wider cursor-pointer"
           >
-            Vào Bảng Điều Khiển MC <ArrowRight className="w-4 h-4 ml-1" />
+            Vào Bàn Điều Hành Trận Đấu <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
         </form>
       ) : (
-        /* FORM 2: QUẢN TRỊ VIÊN TỐI CAO ĐĂNG NHẬP */
         <form onSubmit={handleAdminLogin} className="space-y-4">
           <div>
             <label className="text-xs font-semibold text-slate-400 block mb-1.5 uppercase">
@@ -192,7 +189,7 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
