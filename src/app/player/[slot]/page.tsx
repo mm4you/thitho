@@ -202,6 +202,10 @@ export default function PlayerSlotPage() {
   const isBuzzerLocked = matchState.buzzer_winner_slot !== null;
   const amIBuzzerWinner = matchState.buzzer_winner_slot === slotNumber;
 
+  // NÚT BẤM CHUÔNG CHỈ XUẤT HIỆN DUY NHẤT Ở VÒNG 4 (VỀ ĐÍCH)
+  // Khi thí sinh chính trả lời sai, 3 thí sinh còn lại bấm chuông để cướp điểm!
+  const shouldShowBuzzer = isVeDich && !isMyTurnInVeDich;
+
   return (
     <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col justify-between p-4 md:p-6 font-sans select-none">
       {/* Modal Sửa Tên Thí Sinh Trực Tiếp */}
@@ -329,8 +333,8 @@ export default function PlayerSlotPage() {
             {currentQuestion?.question_text || "Đang chờ Ban Giám Khảo bắt đầu câu hỏi..."}
           </p>
 
-          {/* CHỈ VÒNG 4 MỚI CÓ NÚT ĐẶT NGÔI SAO HY VỌNG */}
-          {isVeDich && !matchState.is_timer_running && (
+          {/* CHỈ VÒNG 4 VÀ CHỈ THÍ SINH THI CHÍNH MỚI CÓ NÚT ĐẶT NGÔI SAO HY VỌNG */}
+          {isVeDich && isMyTurnInVeDich && !matchState.is_timer_running && (
             <div className="pt-2">
               <button
                 onClick={handleToggleMyStar}
@@ -412,31 +416,31 @@ export default function PlayerSlotPage() {
             </div>
           )}
 
-          {/* NÚT BẤM CHUÔNG GIÀNH QUYỀN / CƯỚP ĐIỂM (DÙNG CHO VÒNG 2 & VÒNG 4) */}
-          <div className="pt-2">
-            <button
-              onClick={handlePressBuzzer}
-              disabled={isBuzzerLocked || !matchState.is_timer_running}
-              className={`w-full py-5 rounded-3xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-2xl transition-all cursor-pointer ${
-                amIBuzzerWinner
-                  ? "bg-emerald-500 text-black animate-bounce scale-105"
-                  : isBuzzerLocked
-                  ? "bg-slate-900 border border-slate-800 text-slate-600 opacity-50 cursor-not-allowed"
-                  : "bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:scale-[1.02] text-white shadow-red-600/30"
-              }`}
-            >
-              <Bell className="w-5 h-5" />
-              <span>
-                {amIBuzzerWinner
-                  ? "BẠN ĐÃ GIÀNH ĐƯỢC QUYỀN TRẢ LỜI!"
-                  : isBuzzerLocked
-                  ? `TS ${matchState.buzzer_winner_slot} ĐÃ BẤM TRƯỚC`
-                  : isVeDich
-                  ? "BẤM CHUÔNG GIÀNH QUYỀN CƯỚP ĐIỂM (VÒNG VỀ ĐÍCH)"
-                  : "BẤM CHUÔNG GIÀNH QUYỀN TRẢ LỜI"}
-              </span>
-            </button>
-          </div>
+          {/* NÚT BẤM CHUÔNG: CHỈ XUẤT HIỆN DUY NHẤT Ở VÒNG 4 KHI CƯỚP ĐIỂM */}
+          {shouldShowBuzzer && (
+            <div className="pt-2">
+              <button
+                onClick={handlePressBuzzer}
+                disabled={isBuzzerLocked || !matchState.is_timer_running}
+                className={`w-full py-5 rounded-3xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-2xl transition-all cursor-pointer ${
+                  amIBuzzerWinner
+                    ? "bg-emerald-500 text-black animate-bounce scale-105"
+                    : isBuzzerLocked
+                    ? "bg-slate-900 border border-slate-800 text-slate-600 opacity-50 cursor-not-allowed"
+                    : "bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:scale-[1.02] text-white shadow-red-600/30"
+                }`}
+              >
+                <Bell className="w-5 h-5" />
+                <span>
+                  {amIBuzzerWinner
+                    ? "BẠN ĐÃ GIÀNH ĐƯỢC QUYỀN TRẢ LỜI!"
+                    : isBuzzerLocked
+                    ? `TS ${matchState.buzzer_winner_slot} ĐÃ BẤM TRƯỚC`
+                    : "BẤM CHUÔNG GIÀNH QUYỀN CƯỚP ĐIỂM (VÒNG VỀ ĐÍCH)"}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
