@@ -3,10 +3,10 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, KeyRound, Sparkles, UserCheck } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { loadSavedMatchState, saveMatchStateLocally, sendGameEvent } from "@/lib/supabase";
-import { MatchState } from "@/types/game";
+import { loadSavedMatchState, saveMatchStateLocally, sendGameEvent, subscribeToGameChannel } from "@/lib/supabase";
+import { MatchState, RealtimeEventPayload } from "@/types/game";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -25,6 +25,24 @@ function JoinForm() {
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   useEffect(() => {
+    const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
+      if (event.type === "SYNC_STATE") {
+        setMatchState(event.state);
+      } else if (event.type === "UPDATE_PLAYER_INFO") {
+        setMatchState((prev) => ({
+          ...prev,
+          players: prev.players.map((p) =>
+            p.slot_number === event.slot_number
+              ? { ...p, name: event.name, school_name: event.school_name }
+              : p
+          ),
+        }));
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const p = matchState.players.find((item) => item.slot_number === selectedSlot);
     if (p) {
       setPlayerName(p.name);
@@ -32,27 +50,10 @@ function JoinForm() {
     }
   }, [selectedSlot, matchState.players]);
 
-  const handleJoin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg("");
-
-    if (!playerName.trim()) {
-      setErrorMsg("Vui lòng nhập họ và tên của bạn!");
-      return;
-    }
-
-    const targetPlayer = matchState.players.find((p) => p.slot_number === selectedSlot);
-    const validPin = (targetPlayer?.pin_code || `${selectedSlot}${selectedSlot}${selectedSlot}${selectedSlot}`).toUpperCase().trim();
-    const enteredPin = pinCode.toUpperCase().trim();
-
-    if (enteredPin !== validPin && enteredPin !== "1234" && enteredPin !== "9999") {
-      setErrorMsg(`Mã bảo mật của Máy ${selectedSlot} không chính xác! Vui lòng liên hệ Ban Giám Khảo.`);
-      return;
-    }
-
+  const proceedToPlayerSlot = (slot: number, name: string, school: string) => {
     const updatedPlayers = matchState.players.map((p) =>
-      p.slot_number === selectedSlot
-        ? { ...p, name: playerName.trim(), school_name: schoolName.trim() }
+      p.slot_number === slot
+        ? { ...p, name: name.trim() || `Thí sinh ${slot}`, school_name: school.trim() }
         : p
     );
 
@@ -62,18 +63,24 @@ function JoinForm() {
 
     sendGameEvent({
       type: "UPDATE_PLAYER_INFO",
-      slot_number: selectedSlot as 1 | 2 | 3 | 4,
-      name: playerName.trim(),
-      school_name: schoolName.trim(),
+      slot_number: slot as 1 | 2 | 3 | 4,
+      name: name.trim() || `Thí sinh ${slot}`,
+      school_name: school.trim(),
     });
     sendGameEvent({ type: "SYNC_STATE", state: updatedState });
 
     if (typeof window !== "undefined") {
-      localStorage.setItem(`auth_pin_slot_${selectedSlot}`, enteredPin);
-      localStorage.setItem("auth_player_slot", String(selectedSlot));
+      localStorage.setItem(`auth_pin_slot_${slot}`, "AUTHENTICATED");
+      localStorage.setItem("auth_player_slot", String(slot));
+      localStorage.setItem("authenticated_slot", String(slot));
     }
 
-    router.push(`/player/${selectedSlot}`);
+    router.push(`/player/${slot}`);
+  };
+
+  const handleJoin = (e: React.FormEvent) => {
+    e.preventDefault();
+    proceedToPlayerSlot(selectedSlot, playerName, schoolName);
   };
 
   return (
@@ -86,7 +93,7 @@ function JoinForm() {
           KẾT NỐI MÁY THÍ SINH
         </CardTitle>
         <p className="text-xs text-slate-400 font-medium">
-          Nhập mã bảo mật do Ban Giám Khảo cấp để vào thi đấu
+          Chọn vị trí bục thi đấu và nhập họ tên để vào thi ngay
         </p>
       </CardHeader>
 
@@ -102,9 +109,9 @@ function JoinForm() {
                   key={slot}
                   type="button"
                   onClick={() => setSelectedSlot(slot)}
-                  className={`h-11 rounded-xl font-bold text-sm transition-all border ${
+                  className={`h-11 rounded-xl font-bold text-sm transition-all border cursor-pointer ${
                     selectedSlot === slot
-                      ? "bg-blue-600 border-blue-400 text-white shadow-sm"
+                      ? "bg-blue-600 border-blue-400 text-white shadow-sm scale-105"
                       : "bg-[#070a12] border-slate-800 text-slate-400 hover:border-slate-700"
                   }`}
                 >
@@ -112,19 +119,6 @@ function JoinForm() {
                 </button>
               ))}
             </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-slate-400 block mb-1 uppercase">
-              MÃ BẢO MẬT (CHỮ & SỐ):
-            </label>
-            <input
-              type="text"
-              value={pinCode}
-              onChange={(e) => setPinCode(e.target.value.toUpperCase())}
-              placeholder="Ví dụ: A8K2F..."
-              className="w-full bg-[#070a12] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white font-mono uppercase placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
-            />
           </div>
 
           <div>
@@ -149,29 +143,23 @@ function JoinForm() {
               value={schoolName}
               onChange={(e) => setSchoolName(e.target.value)}
               placeholder="Ví dụ: THPT Chuyên..."
-              className="w-full bg-[#070a12] border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
+              className="w-full bg-[#070a12] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
             />
           </div>
 
-          {errorMsg && (
-            <p className="text-xs font-semibold text-red-400 bg-red-950/40 p-2.5 rounded-lg border border-red-800/60 text-center">
-              {errorMsg}
-            </p>
-          )}
-
           <Button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-11 rounded-xl uppercase tracking-wider cursor-pointer"
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-11 uppercase tracking-wider rounded-xl cursor-pointer shadow-lg shadow-blue-600/20"
           >
-            Xác Nhận Vào Thi Đấu <ArrowRight className="w-4 h-4 ml-1" />
+            VÀO PHÒNG THI ĐẤU (MÁY {selectedSlot}) <ArrowRight className="w-4 h-4 ml-1.5" />
           </Button>
-        </form>
 
-        <div className="pt-4 mt-2 border-t border-slate-800/80 text-center">
-          <Link href="/" className="text-xs text-slate-400 hover:text-white font-semibold">
-            ← Quay Lại Trang Chủ
-          </Link>
-        </div>
+          <div className="pt-2 text-center">
+            <Link href="/" className="text-xs text-slate-500 hover:text-slate-300">
+              ← Quay lại Trang Chủ
+            </Link>
+          </div>
+        </form>
       </CardContent>
     </Card>
   );
@@ -179,8 +167,8 @@ function JoinForm() {
 
 export default function JoinPage() {
   return (
-    <div className="min-h-screen bg-[#070a12] text-white flex items-center justify-center p-4 font-sans">
-      <Suspense fallback={<div className="text-xs text-slate-500">Đang tải...</div>}>
+    <div className="min-h-screen bg-[#070a12] text-slate-100 flex items-center justify-center p-4 font-sans select-none">
+      <Suspense fallback={<div className="text-white text-xs">Đang tải...</div>}>
         <JoinForm />
       </Suspense>
     </div>
