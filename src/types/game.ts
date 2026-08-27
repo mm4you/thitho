@@ -1,25 +1,9 @@
-export type RoundType = "khoi_dong" | "vcnv" | "tang_toc" | "ve_dich" | "custom";
-export type QuestionType = "multiple_choice" | "text_input" | "buzzer";
-
-export interface Player {
-  id: string;
-  match_id?: string;
-  slot_number: 1 | 2 | 3 | 4;
-  name: string;
-  school_name?: string;
-  avatar_url?: string;
-  score: number;
-  pin_code?: string; // Mã bí mật random do Admin cấp
-  is_connected?: boolean;
-}
+﻿export type QuestionType = "multiple_choice" | "text_input" | "buzzer";
 
 export interface Question {
   id: string;
-  round_id?: string;
   order_index: number;
   question_text: string;
-  media_url?: string;
-  media_type?: "none" | "image" | "audio" | "video";
   question_type: QuestionType;
   options?: string[];
   correct_answer: string;
@@ -31,32 +15,32 @@ export interface Question {
 
 export interface Round {
   id: string;
-  match_id?: string;
-  round_type: RoundType;
+  round_type: "khoi_dong" | "vchv" | "tang_toc" | "ve_dich";
   title: string;
-  order_index: number;
-  description?: string;
+  description: string;
   questions: Question[];
-  config?: {
-    cnv_keyword?: string;
-    cnv_image_url?: string;
-    obstacle_clues?: string[];
-  };
+}
+
+export interface Player {
+  slot_number: number;
+  name: string;
+  school_name?: string;
+  score: number;
+  pin_code?: string;
 }
 
 export interface PlayerResponse {
-  slot_number: 1 | 2 | 3 | 4;
+  slot_number: number;
   answer_text: string;
   response_time_ms: number;
-  is_correct?: boolean | null;
+  is_correct?: boolean;
   points_awarded?: number;
-  submitted_at?: number;
 }
 
 export interface MatchState {
   id: string;
   title: string;
-  status: "draft" | "active" | "finished";
+  is_standby: boolean; // Màn hình chờ sân khấu
   current_round_index: number;
   current_question_index: number;
   is_timer_running: boolean;
@@ -69,21 +53,18 @@ export interface MatchState {
   players: Player[];
   rounds: Round[];
   current_responses: Record<number, PlayerResponse>;
-  timestamp?: number;
 }
 
 export type RealtimeEventPayload =
   | { type: "SYNC_STATE"; state: MatchState }
+  | { type: "TOGGLE_STANDBY"; is_standby: boolean }
   | { type: "START_TIMER"; time_limit: number; start_time: number }
-  | { type: "PAUSE_TIMER" }
   | { type: "LOCK_ANSWERS" }
   | { type: "REVEAL_ANSWERS" }
-  | { type: "SUBMIT_ANSWER"; slot_number: 1 | 2 | 3 | 4; answer_text: string; response_time_ms: number }
-  | { type: "PRESS_BUZZER"; slot_number: 1 | 2 | 3 | 4; press_time_ms: number }
-  | { type: "RESET_BUZZER" }
   | { type: "GRADE_ANSWERS"; results: Record<number, { is_correct: boolean; points_awarded: number }> }
-  | { type: "OVERRIDE_SCORE"; slot_number: 1 | 2 | 3 | 4; delta: number }
   | { type: "CHANGE_QUESTION"; round_index: number; question_index: number }
-  | { type: "UPDATE_PLAYER_INFO"; slot_number: 1 | 2 | 3 | 4; name: string; school_name: string }
-  | { type: "SET_PLAYER_PINS"; pins: Record<number, string> }
-  | { type: "PLAY_SFX"; sfx: "correct" | "wrong" | "buzzer" | "tick" | "timeup" | "reveal" | "victory" };
+  | { type: "SUBMIT_ANSWER"; slot_number: number; answer_text: string; response_time_ms: number }
+  | { type: "PRESS_BUZZER"; slot_number: number; press_time_ms: number }
+  | { type: "RESET_BUZZER" }
+  | { type: "OVERRIDE_SCORE"; slot_number: 1 | 2 | 3 | 4; delta: number }
+  | { type: "UPDATE_PLAYER_INFO"; slot_number: 1 | 2 | 3 | 4; name: string; school_name?: string };
