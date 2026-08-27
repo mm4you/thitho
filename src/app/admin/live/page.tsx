@@ -6,9 +6,10 @@ import {
   sendGameEvent,
   loadSavedMatchState,
   saveMatchStateLocally,
+  syncMatchStateToCloud,
 } from "@/lib/supabase";
 import { sound } from "@/lib/sounds";
-import { MatchState, RealtimeEventPayload } from "@/types/game";
+import { MatchState, RealtimeEventPayload, Question } from "@/types/game";
 import {
   Play,
   CheckCircle2,
@@ -24,6 +25,10 @@ import {
   Bell,
   CheckCheck,
   XCircle,
+  Edit3,
+  Plus,
+  Save,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -35,6 +40,11 @@ export default function AdminLivePage() {
   const [customTimeInput, setCustomTimeInput] = useState<string>("15");
   const [savedTimeAlert, setSavedTimeAlert] = useState<string>("");
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
+
+  // Edit Question Modal State
+  const [isEditingCurrentQuestion, setIsEditingCurrentQuestion] = useState<boolean>(false);
+  const [editQuestionText, setEditQuestionText] = useState<string>("");
+  const [editCorrectAnswer, setEditCorrectAnswer] = useState<string>("");
 
   useEffect(() => {
     saveMatchStateLocally(matchState);
@@ -49,7 +59,6 @@ export default function AdminLivePage() {
     }
   }, [matchState.current_round_index, matchState.current_question_index, currentQuestion?.time_limit]);
 
-  // Ham tu dong cham diem 100% cho 4 thi sinh
   const executeAutoGrade = (currentState: MatchState) => {
     const round = currentState.rounds[currentState.current_round_index] || currentState.rounds[0];
     const question = round?.questions[currentState.current_question_index] || round?.questions[0];
@@ -122,7 +131,7 @@ export default function AdminLivePage() {
     };
 
     setMatchState(newState);
-    saveMatchStateLocally(newState);
+    syncMatchStateToCloud(newState);
 
     sendGameEvent({ type: "LOCK_ANSWERS" });
     sendGameEvent({ type: "REVEAL_ANSWERS" });
@@ -194,7 +203,7 @@ export default function AdminLivePage() {
     const newStandby = !matchState.is_standby;
     const newState = { ...matchState, is_standby: newStandby };
     setMatchState(newState);
-    saveMatchStateLocally(newState);
+    syncMatchStateToCloud(newState);
     sendGameEvent({ type: "TOGGLE_STANDBY", is_standby: newStandby });
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
@@ -220,7 +229,7 @@ export default function AdminLivePage() {
 
     const newState = { ...matchState, rounds: updatedRounds };
     setMatchState(newState);
-    saveMatchStateLocally(newState);
+    syncMatchStateToCloud(newState);
     sendGameEvent({ type: "SYNC_STATE", state: newState });
 
     setSavedTimeAlert(applyAllInRound ? `Đã chỉnh ${validSec}s cho cả vòng!` : `Đã chỉnh ${validSec}s cho câu này!`);
@@ -280,6 +289,42 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "CHANGE_QUESTION", round_index: roundIdx, question_index: questionIdx });
   };
 
+  // Ban Giam Khao sua nhanh cau hoi truc tiep
+  const handleOpenEditQuestion = () => {
+    setEditQuestionText(currentQuestion?.question_text || "");
+    setEditCorrectAnswer(currentQuestion?.correct_answer || "");
+    setIsEditingCurrentQuestion(true);
+  };
+
+  const handleSaveEditedQuestion = () => {
+    if (!editQuestionText.trim()) return;
+
+    const updatedRounds = matchState.rounds.map((r, rIdx) => {
+      if (rIdx === matchState.current_round_index) {
+        return {
+          ...r,
+          questions: r.questions.map((q, qIdx) => {
+            if (qIdx === matchState.current_question_index) {
+              return {
+                ...q,
+                question_text: editQuestionText.trim(),
+                correct_answer: editCorrectAnswer.trim(),
+              };
+            }
+            return q;
+          }),
+        };
+      }
+      return r;
+    });
+
+    const newState = { ...matchState, rounds: updatedRounds };
+    setMatchState(newState);
+    syncMatchStateToCloud(newState);
+    sendGameEvent({ type: "SYNC_STATE", state: newState });
+    setIsEditingCurrentQuestion(false);
+  };
+
   const handleScoreOverride = (slot: number, delta: number) => {
     const newState = {
       ...matchState,
@@ -307,6 +352,58 @@ export default function AdminLivePage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-sans select-none">
+      {/* Modal Ban Giam Khao Sua Nhanh Cau Hoi */}
+      {isEditingCurrentQuestion && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-[#0d121f] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 className="text-sm font-bold uppercase text-white flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-amber-400" />
+                SỬA CÂU HỎI {matchState.current_question_index + 1} ({currentRound?.title})
+              </h2>
+              <button onClick={() => setIsEditingCurrentQuestion(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">
+                  NỘI DUNG CÂU HỎI:
+                </label>
+                <textarea
+                  rows={3}
+                  value={editQuestionText}
+                  onChange={(e) => setEditQuestionText(e.target.value)}
+                  className="w-full bg-[#070a12] border border-slate-800 rounded-xl p-3 text-sm text-white font-medium focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-emerald-400 uppercase block mb-1">
+                  ĐÁP ÁN ĐÚNG CHUẨN:
+                </label>
+                <input
+                  type="text"
+                  value={editCorrectAnswer}
+                  onChange={(e) => setEditCorrectAnswer(e.target.value)}
+                  className="w-full bg-[#070a12] border border-emerald-500/50 rounded-xl px-3 py-2 text-sm font-bold text-emerald-300 focus:outline-none focus:border-emerald-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <Button variant="ghost" size="sm" onClick={() => setIsEditingCurrentQuestion(false)} className="text-xs text-slate-400">
+                Hủy
+              </Button>
+              <Button size="sm" onClick={handleSaveEditedQuestion} className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 px-4 gap-1.5 rounded-xl cursor-pointer">
+                <Save className="w-3.5 h-3.5" /> Lưu Thay Đổi
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tiêu đề Bàn Giám Khảo */}
       <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-4">
         <div>
@@ -528,11 +625,19 @@ export default function AdminLivePage() {
         </div>
       </div>
 
-      {/* Câu Hỏi & Đáp Án Chuẩn */}
+      {/* Câu Hỏi & Đáp Án Chuẩn - Cho phép Ban Giam Khao sua nhanh */}
       <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 space-y-3">
         <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
           <span className="font-bold uppercase text-blue-400">NỘI DUNG CÂU HỎI</span>
-          <span>+{currentQuestion?.points_correct}đ đúng / -{currentQuestion?.points_wrong}đ sai</span>
+          <div className="flex items-center gap-3">
+            <span>+{currentQuestion?.points_correct}đ đúng / -{currentQuestion?.points_wrong}đ sai</span>
+            <button
+              onClick={handleOpenEditQuestion}
+              className="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 underline cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5" /> Sửa câu này
+            </button>
+          </div>
         </div>
         <p className="text-base font-bold text-white leading-relaxed">
           {currentQuestion?.question_text}

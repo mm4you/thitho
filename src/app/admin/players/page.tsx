@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   loadSavedMatchState,
   saveMatchStateLocally,
@@ -12,19 +13,17 @@ import {
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import {
   Users,
+  KeyRound,
   RefreshCw,
   Copy,
   Check,
-  Edit2,
-  RotateCcw,
-  ExternalLink,
-  ShieldCheck,
-  KeyRound,
   Eye,
   EyeOff,
   Save,
+  RotateCcw,
+  Sliders,
+  ExternalLink,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 function generateAlphanumericCode(length = 6, prefix = ""): string {
@@ -36,21 +35,17 @@ function generateAlphanumericCode(length = 6, prefix = ""): string {
   return result;
 }
 
-export default function AdminPlayersPage() {
+export default function AdminPlayersManagementPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
-  const [copiedSlot, setCopiedSlot] = useState<number | null>(null);
-  const [copiedAdminPass, setCopiedAdminPass] = useState<boolean>(false);
-  const [editingSlot, setEditingSlot] = useState<number | null>(null);
-  const [tempName, setTempName] = useState<string>("");
-  const [tempSchool, setTempSchool] = useState<string>("");
   const [originUrl, setOriginUrl] = useState<string>("");
 
-  // MC Password State
-  const [currentAdminPass, setCurrentAdminPass] = useState<string>("MC-OLYMPIA-2026");
+  const [currentAdminPass, setCurrentAdminPass] = useState<string>("GK-OLYMPIA-2026");
   const [showAdminPass, setShowAdminPass] = useState<boolean>(false);
   const [isEditingAdminPass, setIsEditingAdminPass] = useState<boolean>(false);
   const [tempAdminPass, setTempAdminPass] = useState<string>("");
   const [adminPassSavedAlert, setAdminPassSavedAlert] = useState<boolean>(false);
+  const [copiedAdminPass, setCopiedAdminPass] = useState<boolean>(false);
+  const [copiedSlot, setCopiedSlot] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -78,7 +73,7 @@ export default function AdminPlayersPage() {
   }, []);
 
   const handleGenerateRandomAdminPass = () => {
-    const newPass = generateAlphanumericCode(6, "MC-");
+    const newPass = generateAlphanumericCode(6, "GK-");
     setTempAdminPass(newPass);
     setIsEditingAdminPass(true);
   };
@@ -111,40 +106,10 @@ export default function AdminPlayersPage() {
   };
 
   const handleCopyLink = (slot: number, code: string) => {
-    const joinUrl = `${originUrl || "http://localhost:3000"}/join?slot=${slot}&pin=${code}`;
+    const joinUrl = `${originUrl || "https://olymquiz.vercel.app"}/join?slot=${slot}&pin=${code}`;
     navigator.clipboard.writeText(joinUrl);
     setCopiedSlot(slot);
     setTimeout(() => setCopiedSlot(null), 2000);
-  };
-
-  const handleStartEdit = (slot: number, name: string, school: string) => {
-    setEditingSlot(slot);
-    setTempName(name);
-    setTempSchool(school || "");
-  };
-
-  const handleSavePlayer = (slot: number) => {
-    if (!tempName.trim()) return;
-
-    const updatedPlayers = matchState.players.map((p) =>
-      p.slot_number === slot
-        ? { ...p, name: tempName.trim(), school_name: tempSchool.trim() }
-        : p
-    );
-
-    const newState = { ...matchState, players: updatedPlayers };
-    setMatchState(newState);
-    saveMatchStateLocally(newState);
-
-    sendGameEvent({
-      type: "UPDATE_PLAYER_INFO",
-      slot_number: slot as 1 | 2 | 3 | 4,
-      name: tempName.trim(),
-      school_name: tempSchool.trim(),
-    });
-    sendGameEvent({ type: "SYNC_STATE", state: newState });
-
-    setEditingSlot(null);
   };
 
   const handleResetScores = () => {
@@ -158,78 +123,62 @@ export default function AdminPlayersPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto font-sans">
-      {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between border-b border-zinc-800 pb-4 gap-4">
+    <div className="space-y-8 max-w-5xl mx-auto font-sans select-none">
+      <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white uppercase flex items-center gap-2.5">
-            <Users className="w-6 h-6 text-blue-500" />
-            QUẢN LÝ MÃ BẢO MẬT MC & THÍ SINH
+          <h1 className="text-xl font-bold tracking-tight text-white uppercase flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-400" />
+            QUẢN LÝ MÃ BẢO MẬT BAN GIÁM KHẢO & THÍ SINH
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Tạo và lưu trữ lâu dài mã truy cập cho Ban Giám Khảo và 4 máy thi đấu
+            Sinh mã ngẫu nhiên cho Ban Giám Khảo và 4 máy thí sinh
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResetScores}
-            className="border-zinc-800 text-slate-400 hover:text-red-400 text-xs gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5" /> Reset Điểm Về 0
+        <Link href="/admin/live">
+          <Button className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 px-4 gap-1.5 cursor-pointer shadow">
+            <Sliders className="w-4 h-4" /> Bàn Ban Giám Khảo
           </Button>
-
-          <Button
-            size="sm"
-            onClick={handleGenerateRandomPlayerCodes}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs gap-1.5 cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Sinh Mã Mới 4 Thí Sinh
-          </Button>
-        </div>
+        </Link>
       </div>
 
-      {/* KHU VỰC 1: MẬT KHẨU MC SỬ DỤNG LÂU DÀI */}
-      <div className="bg-[#0b1329] border-2 border-blue-900 rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-900/60 pb-3">
-          <div className="flex items-center gap-2.5">
+      {/* KHU VỰC 1: MÃ BAN GIÁM KHẢO */}
+      <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-              <ShieldCheck className="w-5 h-5" />
+              <KeyRound className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-black uppercase text-white">MẬT KHẨU QUẢN TRỊ MC (LƯU LÂU DÀI)</h2>
-              <p className="text-xs text-slate-400 font-medium">Dùng để đăng nhập vào Bảng điều khiển trận đấu</p>
+              <h2 className="text-sm font-bold uppercase text-white">MÃ TRUY CẬP BAN GIÁM KHẢO</h2>
+              <p className="text-xs text-slate-400 font-medium">Cấp mã này cho Ban Giám Khảo để điều hành trận đấu</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleGenerateRandomAdminPass}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold gap-1.5 cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Sinh Mật Khẩu MC Mới
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            onClick={handleGenerateRandomAdminPass}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 px-3 gap-1.5 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Sinh Mã Mới
+          </Button>
         </div>
 
         {isEditingAdminPass ? (
-          <div className="flex flex-wrap items-center gap-3 bg-[#060a14] p-3 rounded-xl border border-blue-900">
+          <div className="flex flex-wrap items-center gap-3 bg-[#070a12] p-4 rounded-xl border border-slate-800">
             <input
               type="text"
               value={tempAdminPass}
               onChange={(e) => setTempAdminPass(e.target.value)}
-              placeholder="Nhập mật khẩu MC mới..."
-              className="flex-1 min-w-[200px] bg-[#0b1329] border border-slate-700 rounded-lg px-4 py-2 text-sm font-mono font-bold text-white focus:outline-none focus:border-blue-500 uppercase"
+              placeholder="Nhập mã Giám Khảo mới..."
+              className="flex-1 min-w-[200px] bg-[#0d121f] border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono font-bold text-white focus:outline-none focus:border-blue-500 uppercase"
             />
             <Button
               size="sm"
               onClick={handleSaveAdminPass}
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 gap-1.5 cursor-pointer"
             >
-              <Save className="w-4 h-4" /> Lưu Mật Khẩu Lâu Dài
+              <Save className="w-3.5 h-3.5" /> Lưu Mã
             </Button>
             <Button
               size="sm"
@@ -241,21 +190,18 @@ export default function AdminPlayersPage() {
             </Button>
           </div>
         ) : (
-          <div className="flex flex-wrap items-center justify-between bg-[#060a14] p-4 rounded-xl border border-blue-950 gap-4">
+          <div className="flex flex-wrap items-center justify-between bg-[#070a12] p-4 rounded-xl border border-slate-800 gap-3">
             <div className="flex items-center gap-3">
-              <KeyRound className="w-5 h-5 text-amber-400" />
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">MẬT KHẨU HIỆN TẠI:</span>
-                <span className="font-mono text-xl font-black text-amber-400 tracking-wider">
-                  {showAdminPass ? currentAdminPass : "••••••••••••"}
-                </span>
-              </div>
+              <span className="text-xs uppercase font-bold text-slate-400">MÃ ĐANG DÙNG:</span>
+              <span className="font-mono text-xl font-bold text-amber-400 tracking-wider">
+                {showAdminPass ? currentAdminPass : "••••••••••••"}
+              </span>
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowAdminPass(!showAdminPass)}
-                className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
                 title={showAdminPass ? "Ẩn" : "Hiện"}
               >
                 {showAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -264,7 +210,7 @@ export default function AdminPlayersPage() {
               <Button
                 size="sm"
                 onClick={handleCopyAdminPass}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 gap-1.5 cursor-pointer"
+                className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs h-9 px-3 gap-1.5 cursor-pointer"
               >
                 {copiedAdminPass ? (
                   <>
@@ -272,7 +218,7 @@ export default function AdminPlayersPage() {
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5" /> Copy Mật Khẩu MC
+                    <Copy className="w-3.5 h-3.5" /> Copy Mã Cấp Cho Giám Khảo
                   </>
                 )}
               </Button>
@@ -284,147 +230,107 @@ export default function AdminPlayersPage() {
                   setTempAdminPass(currentAdminPass);
                   setIsEditingAdminPass(true);
                 }}
-                className="border-slate-800 text-slate-300 text-xs h-9"
+                className="border-slate-700 text-slate-300 text-xs h-9 px-3 cursor-pointer"
               >
-                <Edit2 className="w-3.5 h-3.5 mr-1" /> Sửa
+                Sửa
               </Button>
             </div>
           </div>
         )}
 
         {adminPassSavedAlert && (
-          <p className="text-xs font-bold text-emerald-400 bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-800/60 text-center animate-in fade-in">
-            Đã lưu mật khẩu MC mới thành công! Bạn có thể sử dụng mật khẩu này để đăng nhập lâu dài.
+          <p className="text-xs font-bold text-emerald-400 bg-emerald-950/40 p-2.5 rounded-lg border border-emerald-800/60 text-center animate-in fade-in">
+            Đã lưu mã Giám Khảo mới thành công!
           </p>
         )}
       </div>
 
-      {/* KHU VỰC 2: 4 THẺ MÃ BẢO MẬT 4 MÁY THÍ SINH */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {matchState.players.map((player) => {
-          const code = player.pin_code || `${player.slot_number}${player.slot_number}${player.slot_number}${player.slot_number}`;
-          const isEditing = editingSlot === player.slot_number;
+      {/* KHU VỰC 2: MÃ 4 THÍ SINH */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold uppercase text-white">MÃ BẢO MẬT 4 THÍ SINH (CHỮ & SỐ)</h2>
+            <p className="text-xs text-slate-400 font-medium">Gửi link kèm mã cho 4 thí sinh đăng nhập trên laptop</p>
+          </div>
 
-          return (
-            <Card key={player.slot_number} className="border-2 border-blue-900/60 bg-[#0b1329] shadow-lg flex flex-col justify-between">
-              <CardHeader className="pb-3 border-b border-blue-900/60">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-black text-base text-white">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetScores}
+              className="border-slate-800 text-slate-400 hover:text-red-400 text-xs h-8 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3 mr-1" /> Reset Điểm
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleGenerateRandomPlayerCodes}
+              className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-8 px-3 gap-1.5 cursor-pointer shadow"
+            >
+              <RefreshCw className="w-3 h-3" /> Sinh Mã 4 Máy
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {matchState.players.map((player) => {
+            const code = player.pin_code || `${player.slot_number}${player.slot_number}${player.slot_number}${player.slot_number}`;
+
+            return (
+              <div
+                key={player.slot_number}
+                className="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 space-y-3 flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center font-bold text-xs text-white">
                       {player.slot_number}
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-bold text-white uppercase">
-                        MÁY THI ĐẤU {player.slot_number}
-                      </CardTitle>
-                      <span className="text-[11px] text-slate-400 font-mono">SLOT_{player.slot_number}</span>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">ĐIỂM SỐ</span>
-                    <span className="font-mono text-xl font-black text-amber-400">{player.score}</span>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-4 space-y-4">
-                {isEditing ? (
-                  <div className="space-y-2 p-3 bg-[#060a14] rounded-xl border border-blue-900">
-                    <div>
-                      <label className="text-[10px] text-slate-400 block mb-1 font-bold">HỌ VÀ TÊN:</label>
-                      <input
-                        type="text"
-                        value={tempName}
-                        onChange={(e) => setTempName(e.target.value)}
-                        className="w-full bg-[#0b1329] border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-white focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-slate-400 block mb-1 font-bold">TRƯỜNG / ĐƠN VỊ:</label>
-                      <input
-                        type="text"
-                        value={tempSchool}
-                        onChange={(e) => setTempSchool(e.target.value)}
-                        className="w-full bg-[#0b1329] border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2 pt-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditingSlot(null)}
-                        className="text-xs h-8 text-slate-400 hover:text-white"
-                      >
-                        Hủy
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleSavePlayer(player.slot_number)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-8 font-bold"
-                      >
-                        Lưu Thay Đổi
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between p-3 bg-[#060a14] rounded-xl border border-blue-950">
-                    <div>
-                      <div className="text-base font-bold text-white">{player.name}</div>
-                      <div className="text-xs text-slate-400">{player.school_name || "Chưa cập nhật đơn vị"}</div>
-                    </div>
-                    <button
-                      onClick={() => handleStartEdit(player.slot_number, player.name, player.school_name || "")}
-                      className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
-                      title="Sửa thông tin thí sinh"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Mã Ngẫu Nhiên Chữ & Số */}
-                <div className="grid grid-cols-2 gap-3 items-center">
-                  <div className="bg-[#060a14] border border-blue-900/80 rounded-xl p-3 text-center">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                      MÃ BẢO MẬT (CHỮ & SỐ)
                     </span>
-                    <span className="font-mono text-2xl font-black tracking-widest text-amber-400">
-                      {code}
-                    </span>
+                    <span className="font-bold text-xs text-white uppercase">MÁY {player.slot_number}</span>
                   </div>
-
-                  <div className="space-y-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleCopyLink(player.slot_number, code)}
-                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 gap-1.5 cursor-pointer"
-                    >
-                      {copiedSlot === player.slot_number ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" /> Đã Copy Link!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" /> Copy Link TS {player.slot_number}
-                        </>
-                      )}
-                    </Button>
-
-                    <a
-                      href={`/join?slot=${player.slot_number}&pin=${code}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1"
-                    >
-                      Vào máy bằng mã PIN này <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
+                  <span className="font-mono text-sm font-bold text-amber-400">{player.score} đ</span>
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+
+                <div className="space-y-0.5">
+                  <div className="font-bold text-xs text-white line-clamp-1">{player.name}</div>
+                  <div className="text-[11px] text-slate-400 line-clamp-1">{player.school_name || "Thí sinh"}</div>
+                </div>
+
+                <div className="bg-[#070a12] border border-slate-800 rounded-lg p-2.5 text-center">
+                  <span className="text-[9px] uppercase font-bold text-slate-500 block">MÃ BẢO MẬT:</span>
+                  <span className="font-mono text-xl font-bold text-amber-400 tracking-widest">{code}</span>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => handleCopyLink(player.slot_number, code)}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-8 gap-1 cursor-pointer"
+                  >
+                    {copiedSlot === player.slot_number ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-400" /> Đã Copy!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" /> Copy Link TS {player.slot_number}
+                      </>
+                    )}
+                  </Button>
+
+                  <a
+                    href={`/join?slot=${player.slot_number}&pin=${code}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] font-medium text-slate-400 hover:text-blue-400 flex items-center justify-center gap-1 py-0.5"
+                  >
+                    Mở kết nối máy này <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

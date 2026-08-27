@@ -25,10 +25,10 @@ export default function AdminLayout({
         return;
       }
 
-      // Neu la MC va co gang vao trang quan tri he thong (/admin, /admin/players, /admin/questions)
+      // Neu la Ban Giam Khao va co gang vao trang quan ly ma toi cao (/admin, /admin/players)
       // thi tu dong chuyen ve trang /admin/live
       const isSuperAdmin = email === SUPER_ADMIN_EMAIL || token.startsWith("SUPER_ADMIN_");
-      if (!isSuperAdmin && (pathname === "/admin" || pathname === "/admin/players" || pathname === "/admin/questions")) {
+      if (!isSuperAdmin && (pathname === "/admin" || pathname === "/admin/players")) {
         router.push("/admin/live");
         return;
       }

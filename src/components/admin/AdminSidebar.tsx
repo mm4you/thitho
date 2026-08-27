@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Sliders, Users, HelpCircle, Tv, LogOut, Home, LayoutDashboard, UserCheck, Mic } from "lucide-react";
+import { Sliders, Users, HelpCircle, Tv, LogOut, Home, LayoutDashboard, UserCheck, ShieldCheck } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { SUPER_ADMIN_EMAIL } from "@/lib/supabase";
 
@@ -25,7 +25,6 @@ export function AdminSidebar() {
     }
   }, []);
 
-  // Menu danh cho Super Admin (Ban) vs Menu danh rieng cho MC
   const navItems = isSuperAdmin
     ? [
         {
@@ -34,13 +33,13 @@ export function AdminSidebar() {
           icon: LayoutDashboard,
         },
         {
-          title: "Điều Khiển Trận Đấu",
+          title: "Điều Hành Trận Đấu",
           href: "/admin/live",
           icon: Sliders,
-          badge: "5 Bước",
+          badge: "Tự Động",
         },
         {
-          title: "Mã MC & 4 Thí Sinh",
+          title: "Mã Giám Khảo & Thí Sinh",
           href: "/admin/players",
           icon: Users,
         },
@@ -52,10 +51,15 @@ export function AdminSidebar() {
       ]
     : [
         {
-          title: "Điều Khiển Trận Đấu",
+          title: "Điều Hành Trận Đấu",
           href: "/admin/live",
           icon: Sliders,
-          badge: "5 Bước",
+          badge: "Tự Động",
+        },
+        {
+          title: "Soạn & Nhập Đề Thi",
+          href: "/admin/questions",
+          icon: HelpCircle,
         },
       ];
 
@@ -78,7 +82,7 @@ export function AdminSidebar() {
         {/* Navigation */}
         <nav className="p-3 space-y-1">
           <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            {isSuperAdmin ? "QUẢN TRỊ HỆ THỐNG" : "ĐIỀU PHỐI TRẬN ĐẤU"}
+            {isSuperAdmin ? "QUẢN TRỊ VIÊN HỆ THỐNG" : "BÀN BAN GIÁM KHẢO"}
           </div>
 
           {navItems.map((item) => {
@@ -134,7 +138,7 @@ export function AdminSidebar() {
         </nav>
       </div>
 
-      {/* Role Profile & Logout: Tach bach ro rang giua MC va Super Admin */}
+      {/* Role Profile & Logout */}
       <div className="p-3 border-t border-slate-800 space-y-2">
         <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center gap-2.5">
           {isSuperAdmin ? (
@@ -151,11 +155,11 @@ export function AdminSidebar() {
             </>
           ) : (
             <>
-              <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-                <Mic className="w-3.5 h-3.5" />
+              <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0">
+                <ShieldCheck className="w-3.5 h-3.5" />
               </div>
               <div className="overflow-hidden">
-                <span className="text-[10px] font-bold text-amber-400 uppercase block">MC ĐIỀU PHỐI</span>
+                <span className="text-[10px] font-bold text-blue-400 uppercase block">BAN GIÁM KHẢO</span>
                 <span className="text-[11px] font-semibold text-slate-300 block truncate">
                   Phiên Trực Tiếp Sân Khấu
                 </span>
