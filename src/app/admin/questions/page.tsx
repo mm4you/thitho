@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { loadSavedMatchState, saveMatchStateLocally, sendGameEvent } from "@/lib/supabase";
-import { MatchState, Round } from "@/types/game";
-import { HelpCircle, Save, Plus, Trash2, Clock, Check } from "lucide-react";
+import { MatchState, Round, Question } from "@/types/game";
+import { HelpCircle, Plus, Trash2, Clock, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function QuestionsManagePage() {
@@ -55,14 +55,15 @@ export default function QuestionsManagePage() {
 
   const handleAddQuestion = () => {
     const defaultTime = currentRound.questions[0]?.time_limit || 15;
-    const newQuestion = {
+    const newQuestion: Question = {
       id: "q_" + Date.now(),
+      order_index: currentRound.questions.length,
       question_text: "Câu hỏi mới...",
       correct_answer: "Đáp án",
       points_correct: 10,
       points_wrong: 0,
       time_limit: defaultTime,
-      question_type: currentRound.round_type === "khoi_dong" ? ("multiple_choice" as const) : ("text_input" as const),
+      question_type: currentRound.round_type === "khoi_dong" ? "multiple_choice" : "text_input",
     };
 
     const updatedRounds = matchState.rounds.map((r, rIdx) => {
@@ -101,7 +102,6 @@ export default function QuestionsManagePage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-sans select-none">
-      {/* Tiêu đề */}
       <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white uppercase flex items-center gap-2">
@@ -120,7 +120,6 @@ export default function QuestionsManagePage() {
         )}
       </div>
 
-      {/* 4 Tabs Vòng Thi */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-[#0d121f] p-1.5 rounded-2xl border border-slate-800">
         {matchState.rounds.map((round, idx) => (
           <button
@@ -140,7 +139,6 @@ export default function QuestionsManagePage() {
         ))}
       </div>
 
-      {/* CẤU HÌNH THỜI GIAN CHUẨN CHO VÒNG THI NÀY */}
       <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Clock className="w-5 h-5 text-amber-400" />
@@ -185,7 +183,6 @@ export default function QuestionsManagePage() {
         </div>
       </div>
 
-      {/* Danh Sách Câu Hỏi Trong Vòng */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold uppercase text-white">
