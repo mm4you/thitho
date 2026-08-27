@@ -7,6 +7,7 @@ import {
   loadSavedMatchState,
   saveMatchStateLocally,
 } from "@/lib/supabase";
+import { sound } from "@/lib/sounds";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import {
   Play,
@@ -18,6 +19,11 @@ import {
   Sparkles,
   Clock,
   Check,
+  Volume2,
+  VolumeX,
+  Bell,
+  CheckCheck,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -26,9 +32,9 @@ export default function AdminLivePage() {
   const stateRef = useRef<MatchState>(matchState);
   stateRef.current = matchState;
 
-  // Custom Time Input State
   const [customTimeInput, setCustomTimeInput] = useState<string>("15");
   const [savedTimeAlert, setSavedTimeAlert] = useState<string>("");
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
 
   useEffect(() => {
     saveMatchStateLocally(matchState);
@@ -124,7 +130,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
-  // Tu dong dem nguoc tren may MC va TU DONG CHAM DIEM khi het gio
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (matchState.is_timer_running && matchState.time_left > 0) {
@@ -194,7 +199,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
-  // Đổi thời gian tùy chỉnh nhập tay hoặc chọn nhanh
   const handleApplyCustomTime = (seconds: number, applyAllInRound = false) => {
     const validSec = Math.max(1, Math.min(300, seconds || 15));
     setCustomTimeInput(String(validSec));
@@ -293,35 +297,77 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "RESET_BUZZER" });
   };
 
+  const toggleAudio = () => {
+    const next = !isAudioMuted;
+    setIsAudioMuted(next);
+    sound.setMuted(next);
+  };
+
   const activeTimeLimit = Number(customTimeInput) || 15;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-sans select-none">
-      {/* Tiêu đề Bảng MC */}
+      {/* Tiêu đề Bàn Giám Khảo */}
       <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white uppercase flex items-center gap-2">
-            BẢNG ĐIỀU KHIỂN TRẬN ĐẤU (MC)
+            BÀN ĐIỀU HÀNH TRẬN ĐẤU (BAN GIÁM KHẢO)
           </h1>
           <p className="text-xs text-slate-400 font-medium">
             Tự động chấm điểm 100% • Tự do nhập & tùy chỉnh thời gian từng vòng
           </p>
         </div>
 
-        <Button
-          onClick={handleToggleStandby}
-          className={`font-semibold text-xs h-9 px-4 gap-2 transition-all ${
-            matchState.is_standby
-              ? "bg-amber-500 hover:bg-amber-400 text-black font-bold shadow-sm"
-              : "bg-blue-600 hover:bg-blue-500 text-white"
-          }`}
-        >
-          <Tv className="w-4 h-4" />
-          {matchState.is_standby ? "MÁY CHIẾU: MÀN HÌNH CHỜ" : "MÁY CHIẾU: ĐANG THI ĐẤU"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={toggleAudio}
+            variant="outline"
+            className="border-slate-800 text-slate-300 hover:text-white text-xs h-9 px-3 gap-1.5 cursor-pointer"
+            title="Bật / Tắt âm thanh"
+          >
+            {isAudioMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+            <span>{isAudioMuted ? "Đã Tắt Âm" : "Bật Âm Thanh"}</span>
+          </Button>
+
+          <Button
+            onClick={handleToggleStandby}
+            className={`font-semibold text-xs h-9 px-4 gap-2 transition-all ${
+              matchState.is_standby
+                ? "bg-amber-500 hover:bg-amber-400 text-black font-bold shadow-sm"
+                : "bg-blue-600 hover:bg-blue-500 text-white"
+            }`}
+          >
+            <Tv className="w-4 h-4" />
+            {matchState.is_standby ? "MÁY CHIẾU: MÀN HÌNH CHỜ" : "MÁY CHIẾU: ĐANG THI ĐẤU"}
+          </Button>
+        </div>
       </div>
 
-      {/* KHU VỰC TỰ DO NHẬP & CHỈNH THỜI GIAN TỪNG VÒNG */}
+      {/* THANH THỬ ÂM THANH STUDIO TRỰC TIẾP */}
+      <div className="bg-[#0d121f] border border-slate-800 rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="text-slate-400 font-semibold uppercase flex items-center gap-1.5">
+          <Volume2 className="w-3.5 h-3.5 text-amber-400" /> Nghe thử âm thanh Studio:
+        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button onClick={() => sound.playTick()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-white text-slate-300 cursor-pointer">
+            Gõ Đồng Hồ
+          </button>
+          <button onClick={() => sound.playBuzzer()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-amber-300 text-amber-400 font-bold flex items-center gap-1 cursor-pointer">
+            <Bell className="w-3 h-3" /> Chuông Giành Quyền
+          </button>
+          <button onClick={() => sound.playCorrect()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-emerald-300 text-emerald-400 font-bold flex items-center gap-1 cursor-pointer">
+            <CheckCheck className="w-3 h-3" /> Đúng (Fanfare)
+          </button>
+          <button onClick={() => sound.playWrong()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-red-300 text-red-400 flex items-center gap-1 cursor-pointer">
+            <XCircle className="w-3 h-3" /> Báo Sai
+          </button>
+          <button onClick={() => sound.playTimeUp()} className="px-2.5 py-1 rounded bg-[#070a12] border border-slate-800 hover:text-white text-slate-300 cursor-pointer">
+            Hết Giờ (Gong)
+          </button>
+        </div>
+      </div>
+
+      {/* KHU VỰC TÙY CHỈNH THỜI GIAN TỪNG VÒNG */}
       <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -332,7 +378,6 @@ export default function AdminLivePage() {
             </div>
           </div>
 
-          {/* Ô Nhập Số Giây Tự Do */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400 font-semibold uppercase">NHẬP GIÂY:</span>
             <input
@@ -368,7 +413,6 @@ export default function AdminLivePage() {
           </div>
         </div>
 
-        {/* Các Mốc Chọn Nhanh */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-800/80">
           <span className="text-[10px] text-slate-500 uppercase font-bold mr-1">Mốc nhanh:</span>
           {[5, 10, 15, 20, 30, 45, 60, 90, 120].map((sec) => (
@@ -394,14 +438,14 @@ export default function AdminLivePage() {
         </div>
       </div>
 
-      {/* KHU VỰC THAO TÁC MC */}
+      {/* KHU VỰC THAO TÁC BAN GIÁM KHẢO */}
       <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-6 space-y-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between border-b border-slate-800/80 pb-4 gap-3">
           <div className="flex items-center gap-3">
             <select
               value={matchState.current_round_index}
               onChange={(e) => handleChangeQuestion(Number(e.target.value), 0)}
-              className="bg-[#070a12] border border-slate-800 rounded-lg px-3 py-2 text-xs font-bold text-white focus:outline-none"
+              className="bg-[#070a12] border border-slate-800 rounded-lg px-3 py-2 text-xs font-bold text-white focus:outline-none cursor-pointer"
             >
               {matchState.rounds.map((r, idx) => (
                 <option key={r.id} value={idx}>

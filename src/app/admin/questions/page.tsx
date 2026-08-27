@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { loadSavedMatchState, saveMatchStateLocally, sendGameEvent } from "@/lib/supabase";
+import { loadSavedMatchState, saveMatchStateLocally, sendGameEvent, syncMatchStateToCloud } from "@/lib/supabase";
 import { MatchState, Round, Question } from "@/types/game";
 import { parseRawTextQuestions } from "@/lib/importQuestions";
 import {
@@ -15,6 +15,7 @@ import {
   Download,
   X,
   FileDown,
+  CloudCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -46,10 +47,9 @@ export default function QuestionsManagePage() {
 
     const newState = { ...matchState, rounds: updatedRounds };
     setMatchState(newState);
-    saveMatchStateLocally(newState);
-    sendGameEvent({ type: "SYNC_STATE", state: newState });
+    syncMatchStateToCloud(newState);
     setSavedAlert(true);
-    setTimeout(() => setSavedAlert(false), 2000);
+    setTimeout(() => setSavedAlert(false), 2500);
   };
 
   const handleUpdateQuestion = (qIdx: number, field: string, value: any) => {
@@ -68,8 +68,7 @@ export default function QuestionsManagePage() {
 
     const newState = { ...matchState, rounds: updatedRounds };
     setMatchState(newState);
-    saveMatchStateLocally(newState);
-    sendGameEvent({ type: "SYNC_STATE", state: newState });
+    syncMatchStateToCloud(newState);
   };
 
   const handleAddQuestion = () => {
@@ -94,8 +93,7 @@ export default function QuestionsManagePage() {
 
     const newState = { ...matchState, rounds: updatedRounds };
     setMatchState(newState);
-    saveMatchStateLocally(newState);
-    sendGameEvent({ type: "SYNC_STATE", state: newState });
+    syncMatchStateToCloud(newState);
   };
 
   const handleDeleteQuestion = (qIdx: number) => {
@@ -113,11 +111,9 @@ export default function QuestionsManagePage() {
 
     const newState = { ...matchState, rounds: updatedRounds };
     setMatchState(newState);
-    saveMatchStateLocally(newState);
-    sendGameEvent({ type: "SYNC_STATE", state: newState });
+    syncMatchStateToCloud(newState);
   };
 
-  // Xu Ly Parse & Preview Import
   const handleParseText = (text: string) => {
     setImportText(text);
     if (!text.trim()) {
@@ -167,7 +163,6 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
     link.click();
   };
 
-  // Xuất toàn bộ ngân hàng câu hỏi ra file JSON lưu trữ
   const handleExportFullExam = () => {
     const dataStr = JSON.stringify(matchState.rounds, null, 2);
     const blob = new Blob([dataStr], { type: "application/json;charset=utf-8" });
@@ -196,8 +191,7 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
 
     const newState = { ...matchState, rounds: updatedRounds };
     setMatchState(newState);
-    saveMatchStateLocally(newState);
-    sendGameEvent({ type: "SYNC_STATE", state: newState });
+    syncMatchStateToCloud(newState);
 
     setIsImportModalOpen(false);
     setImportText("");
@@ -318,7 +312,7 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
             NGÂN HÀNG CÂU HỎI & CẤU HÌNH ĐỀ THI
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Tự do soạn đề, nhập đáp án chuẩn, import file và cài đặt thời gian thi đấu cho từng vòng
+            Tự động đồng bộ lên Cloud Database • Cho phép import và xuất file đề thi
           </p>
         </div>
 
@@ -341,7 +335,7 @@ Sông nào dài nhất Việt Nam? | Sông Đồng Nai | 15 | 10`;
 
           {savedAlert && (
             <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-3 py-1.5 rounded-lg border border-emerald-500/60 flex items-center gap-1 animate-in fade-in">
-              <Check className="w-3.5 h-3.5" /> Đã lưu thành công!
+              <Check className="w-3.5 h-3.5" /> Đã đồng bộ Cloud thành công!
             </span>
           )}
         </div>

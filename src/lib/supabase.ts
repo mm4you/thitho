@@ -72,6 +72,18 @@ export async function sendGameEvent(event: RealtimeEventPayload) {
 const STORAGE_KEY = "olympia_current_match_state";
 const ADMIN_PASS_KEY = "custom_admin_password";
 
+// Dong bo len Cloud Supabase Database
+export async function syncMatchStateToCloud(state: MatchState) {
+  saveMatchStateLocally(state);
+
+  try {
+    // Broadcast cho tat ca thiet bi dang ket noi
+    sendGameEvent({ type: "SYNC_STATE", state });
+  } catch (err) {
+    console.warn("Loi dong bo cloud:", err);
+  }
+}
+
 export function loadSavedMatchState(): MatchState {
   if (typeof window === "undefined") return initialMatchState;
   try {
