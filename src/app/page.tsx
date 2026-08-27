@@ -133,10 +133,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="w-full max-w-5xl border-t border-zinc-800/80 pt-6 flex items-center justify-between text-xs text-zinc-500">
-        <p>Thi Thơ - Hệ Thống Gameshow Đấu Trí Trực Tiếp</p>
-      </footer>
+      {/* Footer sạch sẽ */}
+      <footer className="w-full max-w-5xl border-t border-zinc-800/80 pt-6"></footer>
     </main>
   );
 }
