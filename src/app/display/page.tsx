@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize } from "lucide-react";
+import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home } from "lucide-react";
 
 export default function DisplayPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
@@ -194,28 +195,37 @@ export default function DisplayPage() {
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
 
-  // -------------------------------------------------------------
-  // 1. MÀN HÌNH CHỜ SÂN KHẤU: TẬP TRUNG 100% VÀO 4 THÍ SINH
-  // -------------------------------------------------------------
+  // 1. MÀN HÌNH CHỜ SÂN KHẤU
   if (matchState.is_standby) {
     return (
       <div className="min-h-screen bg-[#070b14] text-white flex flex-col justify-between p-8 font-sans select-none relative">
         {/* Header Tinh Gọn */}
         <div className="flex items-center justify-between">
-          <div className="text-xl font-black uppercase tracking-wider text-slate-200">
-            {matchState.title || "ĐẤU TRÍ ARENA"}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-bold"
+              title="Về Trang Chủ"
+            >
+              <Home className="w-4 h-4" />
+              <span>Thoát Về Trang Chủ</span>
+            </Link>
+            <span className="text-xl font-black uppercase tracking-wider text-slate-200">
+              {matchState.title || "ĐẤU TRÍ ARENA"}
+            </span>
           </div>
+
           <div className="flex items-center gap-2">
             <button
               onClick={toggleFullscreen}
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
               title="Toàn màn hình"
             >
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
             <button
               onClick={toggleMute}
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
               title="Âm thanh"
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -274,9 +284,7 @@ export default function DisplayPage() {
     );
   }
 
-  // -------------------------------------------------------------
-  // 2. MÀN HÌNH THI ĐẤU: CÂU HỎI & 4 THÍ SINH
-  // -------------------------------------------------------------
+  // 2. MÀN HÌNH THI ĐẤU
   const timerPercent = timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 0;
 
   return (
@@ -284,6 +292,14 @@ export default function DisplayPage() {
       {/* Top Header Tinh Gọn */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-1 text-xs font-bold"
+            title="Về Trang Chủ"
+          >
+            <Home className="w-4 h-4" />
+            <span>Thoát</span>
+          </Link>
           <span className="px-3 py-1 rounded bg-blue-600 font-black text-xs uppercase">
             {currentRound?.title}
           </span>
@@ -295,14 +311,14 @@ export default function DisplayPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={toggleFullscreen}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
             title="Toàn màn hình"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </button>
           <button
             onClick={toggleMute}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
             title="Âm thanh"
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -381,7 +397,7 @@ export default function DisplayPage() {
         </div>
       </div>
 
-      {/* 4 Khung Thí Sinh Dưới Cùng: Tập Trung Tuyệt Đối Vào Thí Sinh */}
+      {/* 4 Khung Thí Sinh Dưới Cùng */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {matchState.players.map((player, idx) => {
           const theme = slotColors[idx] || slotColors[0];

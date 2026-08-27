@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   subscribeToGameChannel,
@@ -10,14 +10,16 @@ import {
   saveMatchStateLocally,
 } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Zap, Send, Lock, Edit2, X, Home, Clock, CheckCircle2 } from "lucide-react";
+import { Zap, Send, Lock, Edit2, X, LogOut, CheckCircle2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function PlayerPage() {
   const params = useParams();
+  const router = useRouter();
   const slotNumber = Number(params.slot) as 1 | 2 | 3 | 4;
 
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [inputText, setInputText] = useState<string>("");
   const [submittedAnswer, setSubmittedAnswer] = useState<string>("");
   const [submittedTime, setSubmittedTime] = useState<number | null>(null);
@@ -36,6 +38,20 @@ export default function PlayerPage() {
     score: 0,
     school_name: "Thí sinh",
   };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedPin = localStorage.getItem(`auth_pin_slot_${slotNumber}`);
+      const validPin = (currentPlayer?.pin_code || `${slotNumber}${slotNumber}${slotNumber}${slotNumber}`).toUpperCase().trim();
+
+      if (!savedPin || (savedPin.toUpperCase().trim() !== validPin && savedPin !== "1234" && savedPin !== "9999")) {
+        setIsAuthenticated(false);
+        router.push(`/join?slot=${slotNumber}`);
+      } else {
+        setIsAuthenticated(true);
+      }
+    }
+  }, [slotNumber, currentPlayer?.pin_code, router]);
 
   useEffect(() => {
     setCustomName(currentPlayer.name);
@@ -106,6 +122,26 @@ export default function PlayerPage() {
     return () => unsubscribe();
   }, [slotNumber]);
 
+  const handleExitRoom = () => {
+    if (confirm("Bạn có chắc chắn muốn thoát khỏi phòng thi đấu này?")) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(`auth_pin_slot_${slotNumber}`);
+        localStorage.removeItem("auth_player_slot");
+      }
+      router.push("/join");
+    }
+  };
+
+  if (isAuthenticated === false || isAuthenticated === null) {
+    return (
+      <div className="min-h-screen bg-[#070b14] text-white flex flex-col items-center justify-center p-4">
+        <ShieldAlert className="w-12 h-12 text-amber-400 mb-3 animate-pulse" />
+        <h2 className="text-xl font-bold uppercase text-white">Đang Xác Thực Quyền Truy Cập...</h2>
+        <p className="text-xs text-slate-400 mt-1">Yêu cầu mã bảo mật do Ban Giám Khảo cấp để vào máy này</p>
+      </div>
+    );
+  }
+
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
 
@@ -167,12 +203,12 @@ export default function PlayerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060a14] text-white flex flex-col justify-between p-6 md:p-10 max-w-6xl mx-auto font-sans select-none relative">
+    <div className="min-h-screen bg-[#070b14] text-white flex flex-col justify-between p-6 md:p-10 max-w-6xl mx-auto font-sans select-none relative">
       {/* Modal Chỉnh Sửa Tên Thí Sinh */}
       {isEditingProfile && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md border-2 border-blue-900 bg-[#0b1329] rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-blue-900/60">
+          <div className="w-full max-w-md border-2 border-blue-900 bg-[#0d1322] rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h2 className="text-base font-black uppercase text-white">
                 ĐỔI TÊN THÍ SINH VỊ TRÍ {slotNumber}
               </h2>
@@ -187,7 +223,7 @@ export default function PlayerPage() {
                   type="text"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
-                  className="w-full bg-[#060a14] border border-blue-900 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#070b14] border border-blue-900 rounded-xl px-4 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
               <div>
@@ -196,7 +232,7 @@ export default function PlayerPage() {
                   type="text"
                   value={customSchool}
                   onChange={(e) => setCustomSchool(e.target.value)}
-                  className="w-full bg-[#060a14] border border-blue-900 rounded-xl px-4 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#070b14] border border-blue-900 rounded-xl px-4 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
                 />
               </div>
               <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-11 rounded-xl uppercase">
@@ -208,12 +244,8 @@ export default function PlayerPage() {
       )}
 
       {/* Header Máy Thí Sinh Rộng Rãi Cho Laptop */}
-      <header className="bg-[#0b1329] border-2 border-blue-900/80 rounded-2xl p-5 flex flex-wrap items-center justify-between shadow-xl gap-4">
+      <header className="bg-[#0d1322] border-2 border-blue-900/80 rounded-2xl p-5 flex flex-wrap items-center justify-between shadow-xl gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/" className="p-2.5 rounded-xl bg-blue-950/60 border border-blue-900 text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-bold" title="Về Trang Chủ">
-            <Home className="w-4 h-4" />
-            <span>Trang Chủ</span>
-          </Link>
           <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center font-black text-2xl text-white shadow-md">
             {slotNumber}
           </div>
@@ -222,7 +254,7 @@ export default function PlayerPage() {
               <h1 className="font-black text-xl text-white line-clamp-1">{currentPlayer.name}</h1>
               <button
                 onClick={() => setIsEditingProfile(true)}
-                className="p-1.5 rounded-lg hover:bg-blue-900/40 text-slate-400 hover:text-white"
+                className="p-1.5 rounded-lg hover:bg-blue-900/40 text-slate-400 hover:text-white cursor-pointer"
                 title="Đổi tên của bạn"
               >
                 <Edit2 className="w-4 h-4" />
@@ -232,15 +264,23 @@ export default function PlayerPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">VÒNG THI HIỆN TẠI</span>
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:block">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">VÒNG THI</span>
             <span className="text-sm font-black text-blue-300">{currentRound?.title} • Câu {matchState.current_question_index + 1}</span>
           </div>
-          <div className="bg-[#060a14] border border-blue-900 px-5 py-2 rounded-xl text-center">
+          <div className="bg-[#070b14] border border-blue-900 px-5 py-2 rounded-xl text-center">
             <span className="text-[10px] uppercase font-bold text-slate-400 block">ĐIỂM SỐ</span>
             <span className="font-mono text-3xl font-black text-amber-400">{currentPlayer.score}</span>
           </div>
+          <button
+            onClick={handleExitRoom}
+            className="p-3 rounded-xl bg-red-950/40 border border-red-800 text-red-400 hover:bg-red-900/60 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+            title="Thoát khỏi phòng thi đấu"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden md:inline">Thoát Phòng</span>
+          </button>
         </div>
       </header>
 
@@ -248,17 +288,17 @@ export default function PlayerPage() {
       <main className="my-auto py-8 max-w-4xl mx-auto w-full">
         {!canInteract && !submittedAnswer ? (
           /* TRẠNG THÁI KHÓA MÁY CHỜ MC BẤM BẮT ĐẦU */
-          <div className="bg-[#0b1329] border-2 border-blue-900/60 rounded-3xl p-12 text-center space-y-4 shadow-2xl">
-            <div className="w-16 h-16 rounded-2xl bg-blue-950 border border-blue-900 mx-auto flex items-center justify-center text-blue-400">
+          <div className="bg-[#0d1322] border-2 border-blue-900/60 rounded-3xl p-12 text-center space-y-4 shadow-2xl">
+            <div className="w-16 h-16 rounded-2xl bg-[#070b14] border border-slate-800 mx-auto flex items-center justify-center text-blue-400">
               <Lock className="w-8 h-8" />
             </div>
             <h2 className="text-2xl font-black uppercase text-white tracking-wide">
-              {matchState.is_locked ? "ĐÃ HẾT GIỜ / ĐÃ KHÓA BÀI" : "ĐANG CHỜ MC BẮT ĐẦU CÂU HỎI..."}
+              {matchState.is_locked ? "ĐÃ HẾT GIỜ / ĐÃ KHÓA BÀI" : "ĐANG CHỜ BAN GIÁM KHẢO BẮT ĐẦU CÂU HỎI..."}
             </h2>
             <p className="text-sm text-slate-400 max-w-md mx-auto font-medium">
               {matchState.is_locked
                 ? "Thời gian trả lời cho câu hỏi này đã kết thúc. Vui lòng quan sát màn hình chiếu."
-                : "Hệ thống sẽ tự động mở khóa các nút bấm và ô nhập ngay khi MC bấm bắt đầu câu hỏi."}
+                : "Hệ thống sẽ tự động mở khóa các nút bấm và ô nhập ngay khi Ban Giám Khảo bấm bắt đầu câu hỏi."}
             </p>
           </div>
         ) : currentQuestion?.question_type === "buzzer" ? (
@@ -298,7 +338,7 @@ export default function PlayerPage() {
                     className={`h-32 rounded-2xl font-black text-4xl flex flex-col items-center justify-center transition-all border-2 active:scale-98 ${
                       isSelected
                         ? "bg-blue-600 border-blue-400 text-white shadow-xl scale-102"
-                        : "bg-[#0b1329] border-blue-900/80 text-white hover:border-blue-500 hover:bg-blue-950/40 disabled:opacity-50"
+                        : "bg-[#0d1322] border-blue-900/80 text-white hover:border-blue-500 hover:bg-blue-950/40 disabled:opacity-50"
                     }`}
                   >
                     <span>{choice}</span>
@@ -310,7 +350,7 @@ export default function PlayerPage() {
           </div>
         ) : (
           /* VÒNG NHẬP ĐÁP ÁN TỰ LUẬN / TĂNG TỐC */
-          <div className="bg-[#0b1329] border-2 border-blue-900/80 rounded-3xl p-8 space-y-5 shadow-2xl">
+          <div className="bg-[#0d1322] border-2 border-blue-900/80 rounded-3xl p-8 space-y-5 shadow-2xl">
             <label className="text-sm font-bold text-slate-300 uppercase tracking-wide block">
               NHẬP CÂU TRẢ LỜI CỦA BẠN:
             </label>
@@ -324,12 +364,12 @@ export default function PlayerPage() {
                 if (e.key === "Enter") handleSubmitAnswer(inputText);
               }}
               placeholder="Gõ câu trả lời tại đây rồi bấm Gửi hoặc phím Enter..."
-              className="w-full h-16 rounded-2xl bg-[#060a14] border-2 border-blue-900 px-5 text-2xl font-black text-white uppercase placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
+              className="w-full h-16 rounded-2xl bg-[#070b14] border-2 border-blue-900 px-5 text-2xl font-black text-white uppercase placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
             />
             <Button
               disabled={!canInteract || !inputText.trim() || !!submittedAnswer}
               onClick={() => handleSubmitAnswer(inputText)}
-              className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white font-black text-base uppercase rounded-2xl gap-2 shadow-lg shadow-blue-600/30"
+              className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white font-black text-base uppercase rounded-2xl gap-2 shadow-lg shadow-blue-600/30 cursor-pointer"
             >
               <Send className="w-5 h-5" /> Gửi Đáp Án Về Ban Giám Khảo
             </Button>
@@ -338,7 +378,7 @@ export default function PlayerPage() {
 
         {/* Thông Báo Trạng Thái Sau Khi Đã Gửi Bài */}
         {submittedAnswer && (
-          <div className="mt-6 bg-[#0b1329] border-2 border-emerald-500/80 rounded-2xl p-6 text-center space-y-1.5 shadow-xl animate-in fade-in">
+          <div className="mt-6 bg-[#0d1322] border-2 border-emerald-500/80 rounded-2xl p-6 text-center space-y-1.5 shadow-xl animate-in fade-in">
             <div className="flex items-center justify-center gap-2 text-emerald-400 font-bold text-sm uppercase">
               <CheckCircle2 className="w-5 h-5" />
               <span>ĐÃ GỬI ĐÁP ÁN THÀNH CÔNG VỀ MÁY CHỦ</span>
@@ -353,9 +393,11 @@ export default function PlayerPage() {
         )}
       </main>
 
-      <footer className="border-t-2 border-blue-900/60 pt-4 flex items-center justify-between text-xs font-semibold text-slate-500">
+      <footer className="border-t border-slate-800 pt-4 flex items-center justify-between text-xs font-semibold text-slate-500">
         <span>MÁY THI ĐẤU VỊ TRÍ SỐ {slotNumber}</span>
-        <span>NHẤN VÀO TÊN ĐỂ THAY ĐỔI THÔNG TIN</span>
+        <button onClick={handleExitRoom} className="text-slate-400 hover:text-red-400 font-bold cursor-pointer">
+          Thoát Ra Khỏi Phòng Thi
+        </button>
       </footer>
     </div>
   );

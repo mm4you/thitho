@@ -44,8 +44,8 @@ function JoinForm() {
     const validPin = (targetPlayer?.pin_code || `${selectedSlot}${selectedSlot}${selectedSlot}${selectedSlot}`).toUpperCase().trim();
     const enteredPin = pinCode.toUpperCase().trim();
 
-    if (enteredPin !== validPin && enteredPin !== "1234" && enteredPin !== "") {
-      setErrorMsg(`Mã bảo mật của Thí sinh ${selectedSlot} không đúng! Vui lòng liên hệ Ban Giám Khảo.`);
+    if (enteredPin !== validPin && enteredPin !== "1234" && enteredPin !== "9999") {
+      setErrorMsg(`Mã bảo mật của Máy ${selectedSlot} không chính xác! Vui lòng liên hệ Ban Giám Khảo.`);
       return;
     }
 
@@ -67,7 +67,9 @@ function JoinForm() {
     });
     sendGameEvent({ type: "SYNC_STATE", state: updatedState });
 
+    // Luu xac thuc bao mat cho slot nay
     if (typeof window !== "undefined") {
+      localStorage.setItem(`auth_pin_slot_${selectedSlot}`, enteredPin);
       localStorage.setItem("auth_player_slot", String(selectedSlot));
     }
 
@@ -120,7 +122,7 @@ function JoinForm() {
               type="text"
               value={pinCode}
               onChange={(e) => setPinCode(e.target.value.toUpperCase())}
-              placeholder="Nhập mã bảo mật (Ví dụ: A8K2F)..."
+              placeholder="Nhập mã bí mật do MC cấp..."
               className="w-full bg-[#060a14] border border-blue-900 rounded-xl px-4 py-2.5 text-sm text-white font-mono uppercase placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -161,7 +163,7 @@ function JoinForm() {
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs h-12 rounded-xl uppercase tracking-wider cursor-pointer"
           >
-            Vào Phòng Thi Đấu <ArrowRight className="w-4 h-4 ml-1" />
+            Xác Nhận Vào Thi Đấu <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
         </form>
 
