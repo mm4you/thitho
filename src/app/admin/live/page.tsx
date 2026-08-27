@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Sparkles,
   Clock,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -25,8 +26,9 @@ export default function AdminLivePage() {
   const stateRef = useRef<MatchState>(matchState);
   stateRef.current = matchState;
 
-  // Custom Time State
-  const [customTimeLimit, setCustomTimeLimit] = useState<number>(15);
+  // Custom Time Input State
+  const [customTimeInput, setCustomTimeInput] = useState<string>("15");
+  const [savedTimeAlert, setSavedTimeAlert] = useState<string>("");
 
   useEffect(() => {
     saveMatchStateLocally(matchState);
@@ -37,7 +39,7 @@ export default function AdminLivePage() {
 
   useEffect(() => {
     if (currentQuestion?.time_limit) {
-      setCustomTimeLimit(currentQuestion.time_limit);
+      setCustomTimeInput(String(currentQuestion.time_limit));
     }
   }, [matchState.current_round_index, matchState.current_question_index, currentQuestion?.time_limit]);
 
@@ -192,9 +194,10 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
-  // Đổi nhanh thời gian cho câu hiện tại hoặc toàn bộ vòng thi
-  const handleQuickSetTime = (seconds: number, applyAllInRound = false) => {
-    setCustomTimeLimit(seconds);
+  // Đổi thời gian tùy chỉnh nhập tay hoặc chọn nhanh
+  const handleApplyCustomTime = (seconds: number, applyAllInRound = false) => {
+    const validSec = Math.max(1, Math.min(300, seconds || 15));
+    setCustomTimeInput(String(validSec));
 
     const updatedRounds = matchState.rounds.map((r, rIdx) => {
       if (rIdx === matchState.current_round_index) {
@@ -202,7 +205,7 @@ export default function AdminLivePage() {
           ...r,
           questions: r.questions.map((q, qIdx) => {
             if (applyAllInRound || qIdx === matchState.current_question_index) {
-              return { ...q, time_limit: seconds };
+              return { ...q, time_limit: validSec };
             }
             return q;
           }),
@@ -215,10 +218,13 @@ export default function AdminLivePage() {
     setMatchState(newState);
     saveMatchStateLocally(newState);
     sendGameEvent({ type: "SYNC_STATE", state: newState });
+
+    setSavedTimeAlert(applyAllInRound ? `Đã chỉnh ${validSec}s cho cả vòng!` : `Đã chỉnh ${validSec}s cho câu này!`);
+    setTimeout(() => setSavedTimeAlert(""), 2500);
   };
 
   const handleStartQuestion = () => {
-    const timeLimit = customTimeLimit || currentQuestion?.time_limit || 15;
+    const timeLimit = Math.max(1, Number(customTimeInput) || currentQuestion?.time_limit || 15);
     const newState: MatchState = {
       ...matchState,
       is_standby: false,
@@ -252,7 +258,7 @@ export default function AdminLivePage() {
     const round = matchState.rounds[roundIdx] || matchState.rounds[0];
     const question = round?.questions[questionIdx] || round?.questions[0];
     const newLimit = question?.time_limit || 15;
-    setCustomTimeLimit(newLimit);
+    setCustomTimeInput(String(newLimit));
 
     const newState = {
       ...matchState,
@@ -287,6 +293,8 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "RESET_BUZZER" });
   };
 
+  const activeTimeLimit = Number(customTimeInput) || 15;
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto font-sans select-none">
       {/* Tiêu đề Bảng MC */}
@@ -296,7 +304,7 @@ export default function AdminLivePage() {
             BẢNG ĐIỀU KHIỂN TRẬN ĐẤU (MC)
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Tự động chấm điểm 100% • Tùy chỉnh thời gian nhanh cho từng vòng
+            Tự động chấm điểm 100% • Tự do nhập & tùy chỉnh thời gian từng vòng
           </p>
         </div>
 
@@ -313,25 +321,64 @@ export default function AdminLivePage() {
         </Button>
       </div>
 
-      {/* THANH CHỈNH THỜI GIAN NHANH CHO VÒNG THI */}
-      <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <Clock className="w-4 h-4 text-amber-400 shrink-0" />
-          <div>
-            <span className="text-xs font-bold text-white uppercase block">CHỈNH THỜI GIAN NHANH CHO VÒNG:</span>
-            <span className="text-[11px] text-slate-400 font-medium">{currentRound?.title}</span>
+      {/* KHU VỰC TỰ DO NHẬP & CHỈNH THỜI GIAN TỪNG VÒNG */}
+      <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+            <div>
+              <span className="text-xs font-bold text-white uppercase block">TÙY CHỈNH THỜI GIAN VÒNG:</span>
+              <span className="text-[11px] text-slate-400 font-medium">{currentRound?.title}</span>
+            </div>
+          </div>
+
+          {/* Ô Nhập Số Giây Tự Do */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-semibold uppercase">NHẬP GIÂY:</span>
+            <input
+              type="number"
+              min={1}
+              max={300}
+              disabled={matchState.is_timer_running}
+              value={customTimeInput}
+              onChange={(e) => setCustomTimeInput(e.target.value)}
+              onBlur={() => handleApplyCustomTime(Number(customTimeInput), false)}
+              className="w-16 h-9 rounded-lg bg-[#070a12] border border-slate-700 px-2 text-center font-mono font-bold text-sm text-amber-400 focus:outline-none focus:border-amber-500"
+            />
+            <span className="text-xs text-slate-400 font-mono">giây</span>
+
+            <Button
+              size="sm"
+              disabled={matchState.is_timer_running}
+              onClick={() => handleApplyCustomTime(Number(customTimeInput), false)}
+              className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-9 px-3 rounded-lg font-semibold cursor-pointer"
+            >
+              Lưu Câu Này
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={matchState.is_timer_running}
+              onClick={() => handleApplyCustomTime(Number(customTimeInput), true)}
+              className="border-slate-700 text-slate-300 hover:text-white text-xs h-9 px-3 rounded-lg font-semibold cursor-pointer"
+            >
+              Lưu Cả Vòng
+            </Button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {[5, 10, 15, 20, 30, 45, 60].map((sec) => (
+        {/* Các Mốc Chọn Nhanh */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-800/80">
+          <span className="text-[10px] text-slate-500 uppercase font-bold mr-1">Mốc nhanh:</span>
+          {[5, 10, 15, 20, 30, 45, 60, 90, 120].map((sec) => (
             <button
               key={sec}
               disabled={matchState.is_timer_running}
-              onClick={() => handleQuickSetTime(sec, false)}
-              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-colors cursor-pointer ${
-                customTimeLimit === sec
-                  ? "bg-amber-500 text-black shadow-sm"
+              onClick={() => handleApplyCustomTime(sec, false)}
+              className={`px-2.5 py-1 rounded-md font-mono text-xs font-bold transition-colors cursor-pointer ${
+                activeTimeLimit === sec
+                  ? "bg-amber-500 text-black"
                   : "bg-[#070a12] border border-slate-800 text-slate-300 hover:border-amber-500 hover:text-amber-400 disabled:opacity-40"
               }`}
             >
@@ -339,18 +386,15 @@ export default function AdminLivePage() {
             </button>
           ))}
 
-          <button
-            disabled={matchState.is_timer_running}
-            onClick={() => handleQuickSetTime(customTimeLimit, true)}
-            className="ml-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium cursor-pointer disabled:opacity-40"
-            title="Áp dụng số giây này cho tất cả các câu trong vòng thi này"
-          >
-            Áp Dụng Cho Cả Vòng
-          </button>
+          {savedTimeAlert && (
+            <span className="ml-auto text-xs font-bold text-emerald-400 flex items-center gap-1 animate-in fade-in">
+              <Check className="w-3.5 h-3.5" /> {savedTimeAlert}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* KHU VỰC THAO TÁC MC SIÊU TINH GỌN */}
+      {/* KHU VỰC THAO TÁC MC */}
       <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-6 space-y-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between border-b border-slate-800/80 pb-4 gap-3">
           <div className="flex items-center gap-3">
@@ -397,7 +441,7 @@ export default function AdminLivePage() {
                 <CheckCircle2 className="w-4 h-4" /> ĐÃ TỰ ĐỘNG CHẤM ĐIỂM
               </div>
             ) : (
-              <span className="text-xs text-slate-500 font-medium">Thời gian: {customTimeLimit}s</span>
+              <span className="text-xs text-slate-500 font-medium">Thời gian thi đấu: {activeTimeLimit}s</span>
             )}
           </div>
         </div>
@@ -410,7 +454,7 @@ export default function AdminLivePage() {
               className="h-16 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase flex items-center justify-center gap-2 shadow transition-colors cursor-pointer"
             >
               <Play className="w-5 h-5 fill-current" />
-              BẮT ĐẦU CÂU HỎI ({customTimeLimit} GIÂY)
+              BẮT ĐẦU CÂU HỎI ({activeTimeLimit} GIÂY)
             </button>
           ) : matchState.is_timer_running ? (
             <button
@@ -426,7 +470,7 @@ export default function AdminLivePage() {
               className="h-16 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-semibold text-xs uppercase flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              Chạy Lại Câu Này ({customTimeLimit}s)
+              Chạy Lại Câu Này ({activeTimeLimit}s)
             </button>
           )}
 
