@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Sliders, Users, HelpCircle, Tv, LogOut, Home, LayoutDashboard, UserCheck } from "lucide-react";
+import { Sliders, Users, HelpCircle, Tv, LogOut, Home, LayoutDashboard, UserCheck, Mic } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { SUPER_ADMIN_EMAIL } from "@/lib/supabase";
 
@@ -10,33 +11,58 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const navItems = [
-    {
-      title: "Tổng Quan Hệ Thống",
-      href: "/admin",
-      icon: LayoutDashboard,
-    },
-    {
-      title: "Điều Khiển Trận Đấu",
-      href: "/admin/live",
-      icon: Sliders,
-      badge: "5 Bước",
-    },
-    {
-      title: "Mã MC & 4 Thí Sinh",
-      href: "/admin/players",
-      icon: Users,
-    },
-    {
-      title: "Ngân Hàng Câu Hỏi",
-      href: "/admin/questions",
-      icon: HelpCircle,
-    },
-  ];
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("admin_email");
+      const token = localStorage.getItem("admin_auth_token");
+      if (email === SUPER_ADMIN_EMAIL || token?.startsWith("SUPER_ADMIN_")) {
+        setIsSuperAdmin(true);
+      } else {
+        setIsSuperAdmin(false);
+      }
+    }
+  }, []);
+
+  // Menu danh cho Super Admin (Ban) vs Menu danh rieng cho MC
+  const navItems = isSuperAdmin
+    ? [
+        {
+          title: "Tổng Quan Hệ Thống",
+          href: "/admin",
+          icon: LayoutDashboard,
+        },
+        {
+          title: "Điều Khiển Trận Đấu",
+          href: "/admin/live",
+          icon: Sliders,
+          badge: "5 Bước",
+        },
+        {
+          title: "Mã MC & 4 Thí Sinh",
+          href: "/admin/players",
+          icon: Users,
+        },
+        {
+          title: "Ngân Hàng Câu Hỏi",
+          href: "/admin/questions",
+          icon: HelpCircle,
+        },
+      ]
+    : [
+        {
+          title: "Điều Khiển Trận Đấu",
+          href: "/admin/live",
+          icon: Sliders,
+          badge: "5 Bước",
+        },
+      ];
 
   const handleLogout = () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("admin_auth_token");
+      localStorage.removeItem("admin_email");
       router.push("/login");
     }
   };
@@ -52,7 +78,7 @@ export function AdminSidebar() {
         {/* Navigation */}
         <nav className="p-3 space-y-1">
           <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            CHỨC NĂNG CHÍNH
+            {isSuperAdmin ? "QUẢN TRỊ HỆ THỐNG" : "ĐIỀU PHỐI TRẬN ĐẤU"}
           </div>
 
           {navItems.map((item) => {
@@ -108,18 +134,34 @@ export function AdminSidebar() {
         </nav>
       </div>
 
-      {/* Admin Profile & Logout */}
+      {/* Role Profile & Logout: Tach bach ro rang giua MC va Super Admin */}
       <div className="p-3 border-t border-slate-800 space-y-2">
         <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0">
-            <UserCheck className="w-3.5 h-3.5" />
-          </div>
-          <div className="overflow-hidden">
-            <span className="text-[10px] font-bold text-slate-500 uppercase block">QUẢN TRỊ VIÊN</span>
-            <span className="text-[11px] font-semibold text-slate-300 block truncate" title={SUPER_ADMIN_EMAIL}>
-              {SUPER_ADMIN_EMAIL}
-            </span>
-          </div>
+          {isSuperAdmin ? (
+            <>
+              <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0">
+                <UserCheck className="w-3.5 h-3.5" />
+              </div>
+              <div className="overflow-hidden">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">QUẢN TRỊ VIÊN</span>
+                <span className="text-[11px] font-semibold text-slate-300 block truncate" title={SUPER_ADMIN_EMAIL}>
+                  {SUPER_ADMIN_EMAIL}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                <Mic className="w-3.5 h-3.5" />
+              </div>
+              <div className="overflow-hidden">
+                <span className="text-[10px] font-bold text-amber-400 uppercase block">MC ĐIỀU PHỐI</span>
+                <span className="text-[11px] font-semibold text-slate-300 block truncate">
+                  Phiên Trực Tiếp Sân Khấu
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         <button

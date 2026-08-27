@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { SUPER_ADMIN_EMAIL } from "@/lib/supabase";
 
 export default function AdminLayout({
   children,
@@ -10,31 +11,50 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const pathname = usePathname();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("admin_auth_token");
-      if (!token) {
-        router.push("/login?redirect=/admin/live");
-      } else {
-        setIsAuthenticated(true);
-      }
-    }
-  }, [router]);
+      const email = localStorage.getItem("admin_email");
 
-  if (!isAuthenticated) {
+      if (!token) {
+        setIsAuthorized(false);
+        router.push("/login?redirect=" + encodeURIComponent(pathname));
+        return;
+      }
+
+      // Neu la MC va co gang vao trang quan tri he thong (/admin, /admin/players, /admin/questions)
+      // thi tu dong chuyen ve trang /admin/live
+      const isSuperAdmin = email === SUPER_ADMIN_EMAIL || token.startsWith("SUPER_ADMIN_");
+      if (!isSuperAdmin && (pathname === "/admin" || pathname === "/admin/players" || pathname === "/admin/questions")) {
+        router.push("/admin/live");
+        return;
+      }
+
+      setIsAuthorized(true);
+    }
+  }, [router, pathname]);
+
+  if (isAuthorized === null) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-500 flex items-center justify-center text-xs">
-        Đang kiểm tra quyền truy cập...
+      <div className="min-h-screen bg-[#070a12] text-white flex items-center justify-center p-4">
+        <div className="text-xs font-semibold text-slate-500 animate-pulse">
+          Đang xác thực quyền truy cập...
+        </div>
       </div>
     );
   }
 
+  if (isAuthorized === false) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex font-sans">
+    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col md:flex-row font-sans">
       <AdminSidebar />
-      <main className="flex-1 overflow-y-auto min-h-screen bg-zinc-950 p-6 md:p-8">
+      <main className="flex-1 p-6 md:p-8 overflow-y-auto max-h-screen">
         {children}
       </main>
     </div>
