@@ -15,7 +15,7 @@ import {
   Download,
   X,
   FileDown,
-  CloudCheck,
+  Cloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
