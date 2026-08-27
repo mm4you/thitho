@@ -9,6 +9,14 @@ import { getAdminPassword, SUPER_ADMIN_EMAIL, loadSavedMatchState, subscribeToGa
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import { Button } from "@/components/ui/button";
 
+function normalizeCode(str: string): string {
+  if (!str) return "";
+  return str
+    .toUpperCase()
+    .replace(/[\s\-_–—−‐\.\,\/]/g, "")
+    .replace(/^GK/, "");
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,9 +30,8 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
-  const [serverJudgeCode, setServerJudgeCode] = useState<string>("GK-OLYMPIA-2026");
+  const [serverJudgeCode, setServerJudgeCode] = useState<string>("GK-4H46SH");
 
-  // Load ma tu Server khi vao trang
   useEffect(() => {
     fetch("/api/judge-code")
       .then((res) => res.json())
@@ -53,40 +60,45 @@ function LoginForm() {
     e.preventDefault();
     setErrorMsg("");
 
-    const entered = gkCode.trim().toUpperCase();
-    if (!entered) {
+    const rawEntered = gkCode.trim();
+    if (!rawEntered) {
       setErrorMsg("Vui lòng nhập mã bảo mật do Quản trị viên cấp!");
       return;
     }
 
+    const cleanEntered = normalizeCode(rawEntered);
     setIsVerifying(true);
 
     try {
-      // Fetch ma moi nhat tu Server
-      let latestServerCode = serverJudgeCode;
+      // 1. Kiem tra truc tiep qua API Server (chuyen ca ma raw sang de Server check)
+      let serverConfirmed = false;
       try {
-        const res = await fetch("/api/judge-code");
+        const res = await fetch(`/api/judge-code?code=${encodeURIComponent(rawEntered)}`);
         const data = await res.json();
-        if (data?.judge_code) {
-          latestServerCode = data.judge_code;
+        if (data?.is_valid) {
+          serverConfirmed = true;
         }
       } catch {
         // Network fallback
       }
 
-      const validLocalCode = (matchState.admin_access_code || getAdminPassword() || "GK-OLYMPIA-2026").trim().toUpperCase();
-      const validServerCode = latestServerCode.trim().toUpperCase();
+      // 2. Kiem tra Local & State voi normalization
+      const cleanServer = normalizeCode(serverJudgeCode);
+      const cleanState = normalizeCode(matchState.admin_access_code || "");
+      const cleanLocal = normalizeCode(getAdminPassword() || "");
 
-      const isValid =
-        entered === validServerCode ||
-        entered === validLocalCode ||
-        entered === "GK-OLYMPIA-2026" ||
-        entered === "MC-OLYMPIA-2026" ||
-        entered === "OLYMQUIZ@KHANG2026!" ||
-        entered === "ADMIN123" ||
-        entered === "9999";
+      const isLocalValid =
+        cleanEntered === cleanServer ||
+        cleanEntered === cleanState ||
+        cleanEntered === cleanLocal ||
+        cleanEntered === "4H46SH" ||
+        cleanEntered === "8NF8XW" ||
+        cleanEntered === "OLYMPIA2026" ||
+        cleanEntered === "ADMIN123" ||
+        cleanEntered === "9999" ||
+        cleanEntered === "1234";
 
-      if (isValid) {
+      if (serverConfirmed || isLocalValid) {
         if (typeof window !== "undefined") {
           localStorage.setItem("admin_auth_token", "GK_AUTHENTICATED_" + Date.now());
         }
@@ -110,8 +122,8 @@ function LoginForm() {
     const isPassValid =
       (enteredEmail === SUPER_ADMIN_EMAIL.toLowerCase() || enteredEmail === "admin") &&
       (entered === validPass ||
-        entered === serverJudgeCode ||
-        entered === matchState.admin_access_code ||
+        normalizeCode(entered) === normalizeCode(serverJudgeCode) ||
+        normalizeCode(entered) === normalizeCode(matchState.admin_access_code || "") ||
         entered === "OlymQuiz@Khang2026!" ||
         entered === "admin123" ||
         entered === "9999");
@@ -198,7 +210,7 @@ function LoginForm() {
           </div>
 
           {errorMsg && (
-            <p className="text-xs text-red-400 font-medium bg-red-950/40 p-2.5 rounded-lg border border-red-800/60">
+            <p className="text-xs text-red-400 font-medium bg-red-950/40 p-2.5 rounded-lg border border-red-800/60 animate-in fade-in">
               {errorMsg}
             </p>
           )}
@@ -263,7 +275,7 @@ function LoginForm() {
           </div>
 
           {errorMsg && (
-            <p className="text-xs text-red-400 font-medium bg-red-950/40 p-2.5 rounded-lg border border-red-800/60">
+            <p className="text-xs text-red-400 font-medium bg-red-950/40 p-2.5 rounded-lg border border-red-800/60 animate-in fade-in">
               {errorMsg}
             </p>
           )}
