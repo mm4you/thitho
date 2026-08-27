@@ -16,7 +16,7 @@ import {
   Tv,
   RotateCcw,
   Sparkles,
-  Zap,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -25,9 +25,21 @@ export default function AdminLivePage() {
   const stateRef = useRef<MatchState>(matchState);
   stateRef.current = matchState;
 
+  // Custom Time State
+  const [customTimeLimit, setCustomTimeLimit] = useState<number>(15);
+
   useEffect(() => {
     saveMatchStateLocally(matchState);
   }, [matchState]);
+
+  const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
+  const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
+
+  useEffect(() => {
+    if (currentQuestion?.time_limit) {
+      setCustomTimeLimit(currentQuestion.time_limit);
+    }
+  }, [matchState.current_round_index, matchState.current_question_index, currentQuestion?.time_limit]);
 
   // Ham tu dong cham diem 100% cho 4 thi sinh
   const executeAutoGrade = (currentState: MatchState) => {
@@ -104,7 +116,6 @@ export default function AdminLivePage() {
     setMatchState(newState);
     saveMatchStateLocally(newState);
 
-    // Broadcast tu dong mo dap an va cham diem sang man hinh may chieu & may thi sinh
     sendGameEvent({ type: "LOCK_ANSWERS" });
     sendGameEvent({ type: "REVEAL_ANSWERS" });
     sendGameEvent({ type: "GRADE_ANSWERS", results });
@@ -119,7 +130,6 @@ export default function AdminLivePage() {
         setMatchState((prev) => {
           const nextTime = prev.time_left - 1;
           if (nextTime <= 0) {
-            // HET GIO -> KICH HOAT TU DONG CHAM DIEM 100%
             setTimeout(() => {
               executeAutoGrade(stateRef.current);
             }, 100);
@@ -173,9 +183,6 @@ export default function AdminLivePage() {
     return () => unsubscribe();
   }, []);
 
-  const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
-  const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
-
   const handleToggleStandby = () => {
     const newStandby = !matchState.is_standby;
     const newState = { ...matchState, is_standby: newStandby };
@@ -185,8 +192,33 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
+  // Đổi nhanh thời gian cho câu hiện tại hoặc toàn bộ vòng thi
+  const handleQuickSetTime = (seconds: number, applyAllInRound = false) => {
+    setCustomTimeLimit(seconds);
+
+    const updatedRounds = matchState.rounds.map((r, rIdx) => {
+      if (rIdx === matchState.current_round_index) {
+        return {
+          ...r,
+          questions: r.questions.map((q, qIdx) => {
+            if (applyAllInRound || qIdx === matchState.current_question_index) {
+              return { ...q, time_limit: seconds };
+            }
+            return q;
+          }),
+        };
+      }
+      return r;
+    });
+
+    const newState = { ...matchState, rounds: updatedRounds };
+    setMatchState(newState);
+    saveMatchStateLocally(newState);
+    sendGameEvent({ type: "SYNC_STATE", state: newState });
+  };
+
   const handleStartQuestion = () => {
-    const timeLimit = currentQuestion?.time_limit || 15;
+    const timeLimit = customTimeLimit || currentQuestion?.time_limit || 15;
     const newState: MatchState = {
       ...matchState,
       is_standby: false,
@@ -217,6 +249,11 @@ export default function AdminLivePage() {
   };
 
   const handleChangeQuestion = (roundIdx: number, questionIdx: number) => {
+    const round = matchState.rounds[roundIdx] || matchState.rounds[0];
+    const question = round?.questions[questionIdx] || round?.questions[0];
+    const newLimit = question?.time_limit || 15;
+    setCustomTimeLimit(newLimit);
+
     const newState = {
       ...matchState,
       current_round_index: roundIdx,
@@ -259,7 +296,7 @@ export default function AdminLivePage() {
             BẢNG ĐIỀU KHIỂN TRẬN ĐẤU (MC)
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Hệ thống tự động chấm điểm và xếp hạng mili-giây 100% khi hết giờ
+            Tự động chấm điểm 100% • Tùy chỉnh thời gian nhanh cho từng vòng
           </p>
         </div>
 
@@ -276,7 +313,44 @@ export default function AdminLivePage() {
         </Button>
       </div>
 
-      {/* KHU VỰC THAO TÁC MC SIÊU TINH GỌN (CHỈ CẦN 2 NÚT) */}
+      {/* THANH CHỈNH THỜI GIAN NHANH CHO VÒNG THI */}
+      <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+          <div>
+            <span className="text-xs font-bold text-white uppercase block">CHỈNH THỜI GIAN NHANH CHO VÒNG:</span>
+            <span className="text-[11px] text-slate-400 font-medium">{currentRound?.title}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[5, 10, 15, 20, 30, 45, 60].map((sec) => (
+            <button
+              key={sec}
+              disabled={matchState.is_timer_running}
+              onClick={() => handleQuickSetTime(sec, false)}
+              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-colors cursor-pointer ${
+                customTimeLimit === sec
+                  ? "bg-amber-500 text-black shadow-sm"
+                  : "bg-[#070a12] border border-slate-800 text-slate-300 hover:border-amber-500 hover:text-amber-400 disabled:opacity-40"
+              }`}
+            >
+              {sec}s
+            </button>
+          ))}
+
+          <button
+            disabled={matchState.is_timer_running}
+            onClick={() => handleQuickSetTime(customTimeLimit, true)}
+            className="ml-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium cursor-pointer disabled:opacity-40"
+            title="Áp dụng số giây này cho tất cả các câu trong vòng thi này"
+          >
+            Áp Dụng Cho Cả Vòng
+          </button>
+        </div>
+      </div>
+
+      {/* KHU VỰC THAO TÁC MC SIÊU TINH GỌN */}
       <div className="bg-[#0d121f] border border-slate-800 rounded-2xl p-6 space-y-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between border-b border-slate-800/80 pb-4 gap-3">
           <div className="flex items-center gap-3">
@@ -323,7 +397,7 @@ export default function AdminLivePage() {
                 <CheckCircle2 className="w-4 h-4" /> ĐÃ TỰ ĐỘNG CHẤM ĐIỂM
               </div>
             ) : (
-              <span className="text-xs text-slate-500 font-medium">Sẵn sàng bắt đầu</span>
+              <span className="text-xs text-slate-500 font-medium">Thời gian: {customTimeLimit}s</span>
             )}
           </div>
         </div>
@@ -336,7 +410,7 @@ export default function AdminLivePage() {
               className="h-16 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase flex items-center justify-center gap-2 shadow transition-colors cursor-pointer"
             >
               <Play className="w-5 h-5 fill-current" />
-              BẮT ĐẦU CÂU HỎI ({currentQuestion?.time_limit || 15} GIÂY)
+              BẮT ĐẦU CÂU HỎI ({customTimeLimit} GIÂY)
             </button>
           ) : matchState.is_timer_running ? (
             <button
@@ -352,7 +426,7 @@ export default function AdminLivePage() {
               className="h-16 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-semibold text-xs uppercase flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              Chạy Lại Câu Này
+              Chạy Lại Câu Này ({customTimeLimit}s)
             </button>
           )}
 
