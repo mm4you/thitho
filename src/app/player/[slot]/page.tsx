@@ -506,7 +506,7 @@ export default function PlayerPodiumPage() {
         )}
 
         {/* NÚT BẤM CHUÔNG CƯỚP ĐIỂM & SAO HY VỌNG (CHỈ HIỆN Ở VÒNG 4 VỀ ĐÍCH HOẶC VÒNG 2 VCNV) */}
-        {(isRound4VeDich || currentRoundIndex === 1) && (
+        {(isRound4VeDich || isRound2VCNV) && (
           <div className={`grid gap-3 pt-2 ${isRound4VeDich ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
             {/* NÚT CHUÔNG CƯỚP ĐIỂM */}
             <button
