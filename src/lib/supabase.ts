@@ -17,13 +17,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 const CHANNEL_NAME = "olympia_match_room";
-let broadcastChannel: BroadcastChannel | null = null;
-if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-  broadcastChannel = new BroadcastChannel("olympia_local_bus");
-}
 
+/**
+ * ĐĂNG KÝ LẮNG NGHE SỰ KIỆN TỪ SUPABASE CHANNEL
+ * - Không gây vòng lặp (No echo loops)
+ * - Tự động tải state mới nhất từ Server khi khởi tạo
+ */
 export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) => void) {
-  // 1. Tự động kéo state mới nhất từ Server khi vừa mở trang trên bất kỳ máy nào
+  // 1. Tải state mới nhất từ Server 1 lần duy nhất khi mở trang
   if (typeof window !== "undefined") {
     fetch("/api/sync-match")
       .then((res) => res.json())
@@ -36,6 +37,7 @@ export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) =>
       .catch(() => {});
   }
 
+  // 2. Lắng nghe WebSocket Realtime từ Supabase
   const channel = supabase.channel(CHANNEL_NAME, {
     config: { broadcast: { self: false } },
   });
@@ -44,49 +46,21 @@ export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) =>
     .on("broadcast", { event: "game_action" }, (payload) => {
       if (payload?.payload) {
         const ev = payload.payload as RealtimeEventPayload;
-        if (ev.type === "REQUEST_SYNC") {
-          const currentState = loadSavedMatchState();
-          sendGameEvent({ type: "SYNC_STATE", state: currentState });
-        } else {
-          onEvent(ev);
-        }
-      }
-    })
-    .subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        sendGameEvent({ type: "REQUEST_SYNC" });
-      }
-    });
-
-  const handleLocal = (e: MessageEvent) => {
-    if (e.data) {
-      const ev = e.data as RealtimeEventPayload;
-      if (ev.type === "REQUEST_SYNC") {
-        const currentState = loadSavedMatchState();
-        sendGameEvent({ type: "SYNC_STATE", state: currentState });
-      } else {
+        // Chỉ chuyển tiếp sự kiện cho UI, không phản hồi tự động để tránh Broadcast Storm
         onEvent(ev);
       }
-    }
-  };
-
-  if (broadcastChannel) {
-    broadcastChannel.addEventListener("message", handleLocal);
-  }
+    })
+    .subscribe();
 
   return () => {
     supabase.removeChannel(channel);
-    if (broadcastChannel) {
-      broadcastChannel.removeEventListener("message", handleLocal);
-    }
   };
 }
 
+/**
+ * PHÁT SỰ KIỆN TỚI TẤT CẢ CÁC THIẾT BỊ
+ */
 export async function sendGameEvent(event: RealtimeEventPayload) {
-  if (broadcastChannel) {
-    broadcastChannel.postMessage(event);
-  }
-
   try {
     const channel = supabase.channel(CHANNEL_NAME);
     await channel.send({
@@ -102,6 +76,9 @@ export async function sendGameEvent(event: RealtimeEventPayload) {
 const STORAGE_KEY = "olympia_current_match_state";
 const ADMIN_PASS_KEY = "custom_admin_password";
 
+/**
+ * ĐỒNG BỘ TRẠNG THÁI TRẬN ĐẤU LÊN CLOUD SERVER VÀ PHÁT BROADCAST
+ */
 export async function syncMatchStateToCloud(state: MatchState) {
   saveMatchStateLocally(state);
 

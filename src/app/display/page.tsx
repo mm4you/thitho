@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
@@ -16,12 +16,18 @@ function countLettersOnly(str: string): number {
 
 export default function DisplayPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
-  const [timeLeft, setTimeLeft] = useState<number>(15);
-  const [isTimerActive, setIsTimerActive] = useState<boolean>(false);
+
+  // PRECISION TIMESTAMP-BASED MASTER TIMER
+  const [timerStartTime, setTimerStartTime] = useState<number>(0);
   const [timeLimit, setTimeLimit] = useState<number>(15);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const [timeLeft, setTimeLeft] = useState<number>(15);
+
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [starOfHopeBanner, setStarOfHopeBanner] = useState<{ slot: number; name: string } | null>(null);
+
+  const lastTickSecondRef = useRef<number>(15);
 
   // 4 Bục Thí Sinh Nobel Academic
   const slotThemes = [
@@ -54,38 +60,46 @@ export default function DisplayPage() {
     return () => document.removeEventListener("fullscreenchange", handleFs);
   }, []);
 
+  // CHẠY ĐỒNG HỒ ĐẾM LÙI TỪNG GIÂY
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (isTimerActive) {
+    if (isTimerRunning && timerStartTime > 0) {
       interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            sound.playTimeUp();
-            setIsTimerActive(false);
-            return 0;
-          }
+        const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+        const rem = Math.max(0, timeLimit - elapsed);
+        setTimeLeft(rem);
+
+        if (rem !== lastTickSecondRef.current && rem > 0) {
+          lastTickSecondRef.current = rem;
           sound.playTick();
-          return prev - 1;
-        });
-      }, 1000);
+        }
+
+        if (rem <= 0) {
+          sound.playTimeUp();
+          setIsTimerRunning(false);
+        }
+      }, 250);
     }
+
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isTimerActive]);
+  }, [isTimerRunning, timerStartTime, timeLimit]);
 
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
       if (event.type === "SYNC_STATE") {
         setMatchState(event.state);
-        setTimeLeft(event.state.time_left);
-        setIsTimerActive(event.state.is_timer_running);
       } else if (event.type === "TOGGLE_STANDBY") {
         setMatchState((prev) => ({ ...prev, is_standby: event.is_standby }));
       } else if (event.type === "START_TIMER") {
-        setTimeLimit(event.time_limit);
-        setTimeLeft(event.time_limit);
-        setIsTimerActive(true);
+        const start = event.start_time || Date.now();
+        const limit = event.time_limit || 15;
+        setTimerStartTime(start);
+        setTimeLimit(limit);
+        setTimeLeft(limit);
+        lastTickSecondRef.current = limit;
+        setIsTimerRunning(true);
         sound.playTick();
         setMatchState((prev) => ({
           ...prev,
@@ -110,7 +124,7 @@ export default function DisplayPage() {
           },
         }));
       } else if (event.type === "LOCK_ANSWERS") {
-        setIsTimerActive(false);
+        setIsTimerRunning(false);
         setMatchState((prev) => ({ ...prev, is_locked: true, is_timer_running: false }));
       } else if (event.type === "REVEAL_ANSWERS") {
         setMatchState((prev) => ({ ...prev, is_revealed: true }));
@@ -188,6 +202,10 @@ export default function DisplayPage() {
           ),
         }));
       } else if (event.type === "CHANGE_QUESTION") {
+        setIsTimerRunning(false);
+        const qLimit = matchState.rounds[event.round_index]?.questions[event.question_index]?.time_limit || 15;
+        setTimeLimit(qLimit);
+        setTimeLeft(qLimit);
         setMatchState((prev) => ({
           ...prev,
           current_round_index: event.round_index,
@@ -211,16 +229,15 @@ export default function DisplayPage() {
   const isRound4VeDich = matchState.current_round_index === 3;
   const activePlayer = matchState.players.find((p) => p.slot_number === matchState.active_player_slot);
 
-  // Tính phần trăm thanh Laser Timer
   const progressPercent = timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 0;
 
   return (
     <div className="h-screen w-screen bg-[#060c1a] text-slate-100 flex flex-col justify-between overflow-hidden relative font-sans select-none">
       {/* THANH LASER TIMER PROGRESS BAR RÚT DẦN TRÊN ĐỈNH MÀN HÌNH */}
-      <div className="w-full h-1.5 bg-slate-900 absolute top-0 left-0 z-50 overflow-hidden">
+      <div className="w-full h-2 bg-slate-900 absolute top-0 left-0 z-50 overflow-hidden">
         <div
-          className={`h-full transition-all duration-1000 ease-linear ${
-            timeLeft <= 3 ? "bg-rose-500 shadow-lg shadow-rose-500/80 animate-pulse" : "bg-gradient-to-r from-[#c5a059] via-[#e0c588] to-[#f4e5be] shadow-lg shadow-[#e0c588]/50"
+          className={`h-full transition-all duration-300 ease-linear ${
+            timeLeft <= 3 && isTimerRunning ? "bg-rose-500 shadow-lg shadow-rose-500/80 animate-pulse" : "bg-gradient-to-r from-[#c5a059] via-[#e0c588] to-[#f4e5be] shadow-lg shadow-[#e0c588]/50"
           }`}
           style={{ width: `${progressPercent}%` }}
         />
@@ -248,7 +265,7 @@ export default function DisplayPage() {
         <div className="flex items-center gap-5">
           <div className="flex items-center gap-3 bg-[#091326] border border-[#e0c588]/30 px-5 py-1.5 rounded-2xl shadow-lg">
             <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">THỜI GIAN:</span>
-            <span className={`font-mono text-2xl md:text-3xl font-black tabular-nums transition-colors ${timeLeft <= 3 ? "text-rose-500 animate-pulse" : "text-[#e0c588]"}`}>
+            <span className={`font-mono text-2xl md:text-3xl font-black tabular-nums transition-colors ${timeLeft <= 3 && isTimerRunning ? "text-rose-500 animate-pulse" : "text-[#e0c588]"}`}>
               {String(timeLeft).padStart(2, "0")}s
             </span>
           </div>
@@ -281,7 +298,7 @@ export default function DisplayPage() {
 
       {/* POPUP STAR OF HOPE BANNER */}
       {starOfHopeBanner && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md animate-in zoom-in-95 duration-300">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md">
           <div className="bg-[#091326] border-2 border-[#e0c588] rounded-3xl p-10 max-w-xl text-center space-y-4 shadow-2xl shadow-[#e0c588]/30">
             <div className="flex justify-center">
               <div className="p-4 rounded-full bg-[#e0c588]/20 border border-[#e0c588] animate-bounce">
@@ -303,7 +320,7 @@ export default function DisplayPage() {
 
       {/* BUZZER WINNER BANNER */}
       {matchState.buzzer_winner_slot && (
-        <div className="absolute top-18 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-4 duration-300">
+        <div className="absolute top-18 left-1/2 -translate-x-1/2 z-40">
           <div className="bg-gradient-to-r from-rose-600 to-rose-700 border border-white/60 rounded-2xl px-6 py-2.5 shadow-2xl shadow-rose-600/40 flex items-center gap-3 animate-pulse">
             <Zap className="w-6 h-6 text-yellow-300 fill-yellow-300" />
             <div>
@@ -320,7 +337,7 @@ export default function DisplayPage() {
       <main className="flex-1 flex flex-col justify-center px-8 md:px-12 py-4 max-w-6xl mx-auto w-full relative z-10">
         {matchState.is_standby ? (
           /* MÀN HÌNH CHỜ STANDBY */
-          <div className="text-center space-y-6 animate-pulse-subtle">
+          <div className="text-center space-y-6">
             <div className="flex justify-center">
               <BrandLogo size="xl" showWordmark={false} />
             </div>
@@ -428,7 +445,7 @@ export default function DisplayPage() {
 
             {/* ĐÁP ÁN CÔNG BỐ (CHO TỰ LUẬN) */}
             {matchState.is_revealed && !isMultipleChoice && currentQuestion?.correct_answer && (
-              <div className="bg-[#081814] border border-emerald-500/60 rounded-2xl p-3.5 text-center shadow-xl animate-in zoom-in-95">
+              <div className="bg-[#081814] border border-emerald-500/60 rounded-2xl p-3.5 text-center shadow-xl">
                 <span className="text-[10px] font-bold text-emerald-400 uppercase block">ĐÁP ÁN CHÍNH XÁC:</span>
                 <span className="text-xl font-black text-white uppercase tracking-widest">{currentQuestion.correct_answer}</span>
               </div>
