@@ -1,5 +1,7 @@
 export type QuestionType = "multiple_choice" | "text_input" | "buzzer";
 
+export type DisplaySlideMode = "question" | "intro_players" | "rules" | "leaderboard" | "standby";
+
 export interface Question {
   id: string;
   order_index: number;
@@ -43,6 +45,7 @@ export interface MatchState {
   id: string;
   title: string;
   is_standby: boolean;
+  display_slide_mode?: DisplaySlideMode;
   current_round_index: number;
   current_question_index: number;
   is_timer_running: boolean;
@@ -65,6 +68,7 @@ export type RealtimeEventPayload =
   | { type: "REQUEST_SYNC" }
   | { type: "UPDATE_JUDGE_ACCESS_CODE"; code: string }
   | { type: "TOGGLE_STANDBY"; is_standby: boolean }
+  | { type: "CHANGE_DISPLAY_MODE"; mode: DisplaySlideMode }
   | { type: "START_TIMER"; time_limit: number; start_time: number }
   | { type: "SUBMIT_ANSWER"; slot_number: number; answer_text: string; response_time_ms: number }
   | { type: "LOCK_ANSWERS" }

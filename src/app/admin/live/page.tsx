@@ -11,7 +11,7 @@ import {
 } from "@/lib/supabase";
 import { sound } from "@/lib/sounds";
 import { checkAnswerCorrectness } from "@/lib/grading";
-import { MatchState, RealtimeEventPayload } from "@/types/game";
+import { MatchState, RealtimeEventPayload, DisplaySlideMode } from "@/types/game";
 import {
   Play,
   Pause,
@@ -35,6 +35,10 @@ import {
   Crown,
   AlertCircle,
   Radio,
+  Users,
+  BookOpen,
+  Trophy,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -167,6 +171,19 @@ export default function AdminLivePage() {
     return () => unsubscribe();
   }, []);
 
+  // CHUYỂN ĐỔI CHẾ ĐỘ SLIDE TRÊN MÀN HÌNH MÁY CHIẾU
+  const handleSetDisplaySlideMode = (mode: DisplaySlideMode) => {
+    const newState: MatchState = {
+      ...matchState,
+      is_standby: mode === "standby",
+      display_slide_mode: mode,
+    };
+    setMatchState(newState);
+    syncMatchStateToCloud(newState);
+    sendGameEvent({ type: "CHANGE_DISPLAY_MODE", mode });
+    showToast(`Màn máy chiếu: Đã chuyển sang Slide "${mode.toUpperCase()}"`);
+  };
+
   // BẮT ĐẦU ĐẾM GIỜ
   const handleStartTimer = (seconds?: number) => {
     const duration = seconds || Number(customTimeInput) || currentQuestion?.time_limit || 15;
@@ -180,6 +197,7 @@ export default function AdminLivePage() {
     const newState: MatchState = {
       ...matchState,
       is_standby: false,
+      display_slide_mode: "question",
       is_timer_running: true,
       time_left: duration,
       is_locked: false,
@@ -267,16 +285,6 @@ export default function AdminLivePage() {
     showToast(nextReveal ? "Đã công bố đáp án" : "Đã ẩn đáp án");
   };
 
-  // BẬT / TẮT STANDBY
-  const handleToggleStandby = () => {
-    const next = !matchState.is_standby;
-    const newState: MatchState = { ...matchState, is_standby: next };
-    setMatchState(newState);
-    syncMatchStateToCloud(newState);
-    sendGameEvent({ type: "TOGGLE_STANDBY", is_standby: next });
-    showToast(next ? "Đã bật màn hình chờ Standby" : "Đã vào trận đấu");
-  };
-
   // RESET CHUÔNG
   const handleResetBuzzer = () => {
     const newState: MatchState = {
@@ -333,6 +341,7 @@ export default function AdminLivePage() {
     const newState: MatchState = {
       ...matchState,
       current_question_index: qIndex,
+      display_slide_mode: "question",
       is_timer_running: false,
       time_left: newTime,
       is_locked: false,
@@ -365,6 +374,7 @@ export default function AdminLivePage() {
       ...matchState,
       current_round_index: rIndex,
       current_question_index: 0,
+      display_slide_mode: "question",
       is_timer_running: false,
       time_left: newTime,
       is_locked: false,
@@ -454,6 +464,8 @@ export default function AdminLivePage() {
     showToast("Đã tự động chấm điểm xong");
   };
 
+  const activeDisplayMode = matchState.is_standby ? "standby" : matchState.display_slide_mode || "question";
+
   return (
     <div className="min-h-screen bg-[#060c1a] text-slate-100 flex flex-col font-sans select-none pb-8">
       {/* TOP HEADER */}
@@ -476,19 +488,6 @@ export default function AdminLivePage() {
             <span>Phím tắt: <kbd className="px-1 bg-black/40 rounded font-mono">Space</kbd> Đếm giờ • <kbd className="px-1 bg-black/40 rounded font-mono">L</kbd> Khóa • <kbd className="px-1 bg-black/40 rounded font-mono">G</kbd> Chấm</span>
           </div>
 
-          {/* NÚT STANDBY */}
-          <Button
-            onClick={handleToggleStandby}
-            className={`text-xs font-bold h-9 px-3.5 rounded-xl cursor-pointer transition-all ${
-              matchState.is_standby
-                ? "bg-[#e0c588] text-black shadow-lg shadow-[#e0c588]/30 font-black scale-102"
-                : "bg-[#091326] hover:bg-slate-800 text-slate-300 border border-slate-700"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-            {matchState.is_standby ? "ĐANG BẬT STANDBY" : "BẬT STANDBY"}
-          </Button>
-
           <Link href="/display" target="_blank">
             <Button variant="outline" className="border-slate-800 text-slate-300 hover:text-white text-xs h-9 px-3 rounded-xl cursor-pointer">
               <Tv className="w-3.5 h-3.5 mr-1" /> Màn Máy Chiếu
@@ -505,9 +504,80 @@ export default function AdminLivePage() {
         </div>
       </header>
 
+      {/* THANH ĐIỀU PHỐI 5 CHẾ ĐỘ SLIDES MÀN MÁY CHIẾU (SLIDE SWITCHER) */}
+      <div className="bg-[#091326] border-b border-slate-800/80 px-6 py-2.5">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs font-mono font-bold text-[#e0c588] uppercase flex items-center gap-1.5">
+            <Tv className="w-4 h-4" /> CHẾ ĐỘ MÀN HÌNH MÁY CHIẾU:
+          </span>
+
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              size="sm"
+              onClick={() => handleSetDisplaySlideMode("question")}
+              className={`text-xs font-bold h-8 px-3 rounded-xl cursor-pointer transition-all ${
+                activeDisplayMode === "question"
+                  ? "bg-[#c5a059] text-black font-black shadow-md scale-102"
+                  : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
+              }`}
+            >
+              <HelpCircle className="w-3.5 h-3.5 mr-1" /> 1. Câu Hỏi Thi Đấu
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => handleSetDisplaySlideMode("intro_players")}
+              className={`text-xs font-bold h-8 px-3 rounded-xl cursor-pointer transition-all ${
+                activeDisplayMode === "intro_players"
+                  ? "bg-blue-600 text-white font-black shadow-md scale-102"
+                  : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
+              }`}
+            >
+              <Users className="w-3.5 h-3.5 mr-1" /> 2. Giới Thiệu 4 Thí Sinh
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => handleSetDisplaySlideMode("rules")}
+              className={`text-xs font-bold h-8 px-3 rounded-xl cursor-pointer transition-all ${
+                activeDisplayMode === "rules"
+                  ? "bg-amber-600 text-white font-black shadow-md scale-102"
+                  : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 mr-1" /> 3. Luật Thi Vòng
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => handleSetDisplaySlideMode("leaderboard")}
+              className={`text-xs font-bold h-8 px-3 rounded-xl cursor-pointer transition-all ${
+                activeDisplayMode === "leaderboard"
+                  ? "bg-emerald-600 text-white font-black shadow-md scale-102"
+                  : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5 mr-1" /> 4. Bảng Vàng Trao Giải
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => handleSetDisplaySlideMode("standby")}
+              className={`text-xs font-bold h-8 px-3 rounded-xl cursor-pointer transition-all ${
+                activeDisplayMode === "standby"
+                  ? "bg-[#e0c588] text-black font-black shadow-md scale-102"
+                  : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1" /> 5. Màn Hình Chờ
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* TOAST THÔNG BÁO TRẠNG THÁI */}
       {toastMessage && (
-        <div className="fixed top-16 right-6 z-50 bg-[#091326] border-2 border-[#e0c588] text-[#f4e5be] px-4 py-2.5 rounded-2xl shadow-2xl font-bold text-xs flex items-center gap-2 animate-in slide-in-from-top-3">
+        <div className="fixed top-24 right-6 z-50 bg-[#091326] border-2 border-[#e0c588] text-[#f4e5be] px-4 py-2.5 rounded-2xl shadow-2xl font-bold text-xs flex items-center gap-2 animate-in slide-in-from-top-3">
           <Check className="w-4 h-4 text-[#e0c588]" />
           <span>{toastMessage}</span>
         </div>
@@ -621,13 +691,12 @@ export default function AdminLivePage() {
         {/* CỘT 2: CHI TIẾT CÂU HỎI & BỘ NÚT ĐIỀU PHỐI (5/12) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-[#091326] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-xl">
-            {/* THANH LIVE HUD TRẠNG THÁI CÂU HỎI HIỆN TẠI (NO EMOJIS) */}
+            {/* THANH LIVE HUD TRẠNG THÁI */}
             <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
               <span className="text-xs font-bold text-[#e0c588] uppercase">
                 CÂU {matchState.current_question_index + 1} (+{currentQuestion?.points_correct}đ)
               </span>
 
-              {/* 3 BADGE TRẠNG THÁI SVG */}
               <div className="flex items-center gap-1.5">
                 <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded border flex items-center gap-1 ${
                   matchState.is_locked
