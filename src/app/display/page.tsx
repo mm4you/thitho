@@ -733,25 +733,89 @@ export default function DisplayPage() {
               )}
             </div>
 
-            {/* VÒNG 2: BẢNG Ô CHỮ CHƯỚNG NGẠI VẬT */}
-            {isRound2VCNV && (
-              <div className="bg-[#091326] border border-slate-800/80 rounded-2xl p-4 space-y-2.5 shadow-lg">
-                <div className="text-center">
-                  <span className="text-xs font-bold text-[#e0c588] uppercase tracking-wider">CHƯỚNG NGẠI VẬT BÍ MẬT (8 CHỮ CÁI)</span>
-                  <div className="flex justify-center gap-2 mt-2">
-                    {Array.from({ length: 8 }).map((_, i) => (
+            {/* VÒNG 2: BẢNG Ô CHỮ VƯỢT CHƯỚNG NGẠI VẬT TOÀN DIỆN (OLYMPIA MATRIX) */}
+            {isRound2VCNV && currentRound && (
+              <div className="bg-[#091326] border-2 border-[#e0c588]/40 rounded-3xl p-5 space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="w-5 h-5 text-[#e0c588]" />
+                    <span className="text-sm font-black text-[#e0c588] uppercase tracking-wider">
+                      BẢNG Ô CHỮ VƯỢT CHƯỚNG NGẠI VẬT
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-slate-400">
+                    ĐANG Ở HÀNG NGANG SỐ {matchState.current_question_index + 1} / {currentRound.questions.length}
+                  </span>
+                </div>
+
+                {/* DANH SÁCH CÁC HÀNG NGANG */}
+                <div className="space-y-2.5">
+                  {currentRound.questions.map((q, qIdx) => {
+                    const cleanAnswer = (q.correct_answer || "OLYMPIA")
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9À-Ỹ]/g, "");
+                    const isCurrentQuestion = qIdx === matchState.current_question_index;
+                    const isRowRevealed = (qIdx < matchState.current_question_index) || (isCurrentQuestion && matchState.is_revealed);
+
+                    return (
                       <div
-                        key={i}
-                        className={`w-11 h-12 rounded-xl border font-black text-lg flex items-center justify-center transition-all ${
-                          matchState.is_revealed
-                            ? "bg-[#e0c588] border-[#f4e5be] text-black"
-                            : "bg-[#060c1a] border-slate-700 text-slate-500"
+                        key={qIdx}
+                        className={`p-2.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                          isCurrentQuestion
+                            ? "bg-[#060c1a] border-[#e0c588] ring-2 ring-[#e0c588]/30 shadow-lg scale-[1.01]"
+                            : isRowRevealed
+                            ? "bg-[#081814] border-emerald-500/40"
+                            : "bg-[#060c1a]/80 border-slate-800 opacity-70"
                         }`}
                       >
-                        {matchState.is_revealed ? "OLYMPIA"[i] || "?" : "?"}
+                        {/* NHÃN HÀNG NGANG */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`w-8 h-8 rounded-xl font-mono font-black text-xs flex items-center justify-center ${
+                              isCurrentQuestion
+                                ? "bg-[#e0c588] text-black"
+                                : isRowRevealed
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                : "bg-slate-800 text-slate-400"
+                            }`}
+                          >
+                            #{qIdx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-slate-300 hidden md:inline">
+                            Hàng ngang {qIdx + 1}:
+                          </span>
+                        </div>
+
+                        {/* CÁC Ô CHỮ VUÔNG */}
+                        <div className="flex items-center gap-1.5 flex-wrap justify-center flex-1">
+                          {Array.from({ length: cleanAnswer.length || 6 }).map((_, charIdx) => {
+                            const char = cleanAnswer[charIdx] || "";
+                            return (
+                              <div
+                                key={charIdx}
+                                className={`w-9 h-10 md:w-11 md:h-12 rounded-xl border font-black text-base md:text-lg flex items-center justify-center font-mono transition-all shadow-md ${
+                                  isRowRevealed
+                                    ? "bg-gradient-to-b from-emerald-500 to-teal-700 border-emerald-300 text-white shadow-emerald-500/30 scale-105"
+                                    : isCurrentQuestion
+                                    ? "bg-[#091326] border-[#e0c588]/60 text-[#e0c588] animate-pulse"
+                                    : "bg-[#060c1a] border-slate-700/80 text-slate-600"
+                                }`}
+                              >
+                                {isRowRevealed ? char : "?"}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* SỐ LƯỢNG CHỮ CÁI */}
+                        <div className="shrink-0 text-right">
+                          <span className="text-[11px] font-mono font-bold text-slate-400">
+                            {cleanAnswer.length} chữ cái
+                          </span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
