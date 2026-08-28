@@ -5,6 +5,7 @@ import Link from "next/link";
 import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
+import { checkAnswerCorrectness } from "@/lib/grading";
 import { MatchState, RealtimeEventPayload, DisplaySlideMode } from "@/types/game";
 import {
   Zap,
@@ -181,6 +182,7 @@ export default function DisplayPage() {
             players: updatedPlayers,
             current_responses: updatedResponses,
             is_scored: true,
+            is_revealed: true,
           };
         });
       } else if (event.type === "PRESS_BUZZER") {
@@ -702,14 +704,17 @@ export default function DisplayPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-5 mt-4 border-t border-slate-800">
                   {currentQuestion.options.map((opt, idx) => {
                     const label = ["A", "B", "C", "D"][idx] || String(idx + 1);
-                    const isCorrectOpt = matchState.is_revealed && (opt === currentQuestion.correct_answer || opt.startsWith(currentQuestion.correct_answer[0]));
+                    const isCorrectOpt = matchState.is_revealed && (
+                      checkAnswerCorrectness(opt, currentQuestion.correct_answer) ||
+                      (currentQuestion.correct_answer.startsWith(label) && currentQuestion.correct_answer.length <= 3)
+                    );
 
                     return (
                       <div
                         key={idx}
                         className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
                           isCorrectOpt
-                            ? "bg-emerald-950/90 border-emerald-400 text-white shadow-lg shadow-emerald-500/30"
+                            ? "bg-emerald-950/90 border-emerald-400 text-white shadow-lg shadow-emerald-500/30 scale-102 ring-2 ring-emerald-500/40"
                             : "bg-[#060c1a] border-slate-700/80 text-slate-200"
                         }`}
                       >
@@ -762,7 +767,7 @@ export default function DisplayPage() {
         )}
       </main>
 
-      {/* BOTTOM 4 THÍ SINH PODIUM */}
+      {/* BOTTOM 4 THÍ SINH PODIUM (AUTOMATIC REALTIME FIT & ACCURATE STATE) */}
       {currentMode === "question" && (
         <footer className="relative z-10 px-8 py-3.5 bg-[#060c1a] border-t border-slate-800/80 shrink-0">
           <div className="grid grid-cols-4 gap-3.5 max-w-6xl mx-auto">
@@ -773,13 +778,28 @@ export default function DisplayPage() {
               const isStar = matchState.star_of_hope_slot === player.slot_number;
               const isMainPlayer = isRound4VeDich && matchState.active_player_slot === player.slot_number;
 
+              // TỰ ĐỘNG XÁC ĐỊNH CHÍNH XÁC ĐÚNG/SAI NGAY KHI MỞ ĐÁP ÁN
+              const isAnswerCorrect = response
+                ? response.is_correct !== undefined
+                  ? response.is_correct
+                  : currentQuestion
+                  ? checkAnswerCorrectness(response.answer_text, currentQuestion.correct_answer)
+                  : false
+                : false;
+
               return (
                 <div
                   key={player.slot_number}
                   className={`rounded-2xl border p-3.5 flex flex-col justify-between transition-all ${theme.bg} ${
-                    isBuzzerWinner ? "border-rose-500 shadow-xl shadow-rose-500/30" :
-                    isMainPlayer ? "border-[#e0c588] shadow-xl shadow-[#e0c588]/30" :
-                    theme.border
+                    matchState.is_revealed && response
+                      ? isAnswerCorrect
+                        ? "border-emerald-500/90 shadow-xl shadow-emerald-500/30 ring-1 ring-emerald-400/60"
+                        : "border-rose-500/80 shadow-lg shadow-rose-500/20"
+                      : isBuzzerWinner
+                      ? "border-rose-500 shadow-xl shadow-rose-500/30"
+                      : isMainPlayer
+                      ? "border-[#e0c588] shadow-xl shadow-[#e0c588]/30"
+                      : theme.border
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -798,12 +818,22 @@ export default function DisplayPage() {
                     <p className="text-[10px] text-slate-400 font-medium truncate">{player.school_name || "Trường..."}</p>
                   </div>
 
-                  {/* Trạng thái trả lời */}
-                  <div className="min-h-[28px] flex items-center justify-center rounded-xl bg-black/40 border border-slate-800/80 px-2 py-0.5">
+                  {/* TRẠNG THÁI TRẢ LỜI: SO KHỚP CHÍNH XÁC 100% */}
+                  <div className={`min-h-[28px] flex items-center justify-center rounded-xl border px-2 py-0.5 transition-colors ${
+                    matchState.is_revealed && response
+                      ? isAnswerCorrect
+                        ? "bg-emerald-950/80 border-emerald-500/60 text-emerald-200"
+                        : "bg-rose-950/80 border-rose-500/60 text-rose-200"
+                      : "bg-black/40 border-slate-800/80"
+                  }`}>
                     {matchState.is_revealed && response ? (
-                      <div className="flex items-center gap-1 truncate">
-                        {response.is_correct ? <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <X className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
-                        <span className="text-xs font-bold text-white truncate">{response.answer_text}</span>
+                      <div className="flex items-center gap-1.5 truncate">
+                        {isAnswerCorrect ? (
+                          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <X className="w-4 h-4 text-rose-400 shrink-0" />
+                        )}
+                        <span className="text-xs font-black truncate">{response.answer_text}</span>
                       </div>
                     ) : response ? (
                       <span className="text-[11px] font-bold text-[#e0c588] flex items-center gap-1">

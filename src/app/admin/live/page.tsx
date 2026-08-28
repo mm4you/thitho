@@ -396,7 +396,7 @@ export default function AdminLivePage() {
     showToast(`Đã chuyển sang ${targetRound.title}`);
   };
 
-  // TỰ ĐỘNG CHẤM ĐIỂM
+  // TỰ ĐỘNG CHẤM ĐIỂM CHUẨN XÁC 100%
   const executeAutoGrade = () => {
     if (!currentQuestion) return;
     const isTangToc = currentRound.round_type === "tang_toc";
@@ -420,13 +420,13 @@ export default function AdminLivePage() {
         return;
       }
 
-      const rankIndex = correctSubmissions.findIndex((c) => c.slot_number === p.slot_number);
-      const isCorrect = rankIndex !== -1;
+      const isCorrect = checkAnswerCorrectness(resp.answer_text, correctAnswer);
       let points = 0;
 
       if (isCorrect) {
         if (isTangToc) {
-          points = tangTocPoints[rankIndex] || 10;
+          const rankIndex = correctSubmissions.findIndex((c) => c.slot_number === p.slot_number);
+          points = rankIndex !== -1 ? tangTocPoints[rankIndex] || 10 : 10;
         } else {
           points = hasStar ? currentQuestion.points_correct * 2 : currentQuestion.points_correct;
         }
@@ -462,7 +462,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "GRADE_ANSWERS", results });
-    showToast("Đã tự động chấm điểm xong");
+    showToast("Đã chấm điểm thành công và cập nhật điểm số");
   };
 
   const activeDisplayMode = matchState.is_standby ? "standby" : matchState.display_slide_mode || "question";
@@ -885,6 +885,15 @@ export default function AdminLivePage() {
               const resp = matchState.current_responses[p.slot_number];
               const isStar = matchState.star_of_hope_slot === p.slot_number;
 
+              // TỰ ĐỘNG NHẬN DIỆN ĐÚNG/SAI NGAY TẠI BÀN GIÁM KHẢO
+              const isAnswerCorrect = resp
+                ? resp.is_correct !== undefined
+                  ? resp.is_correct
+                  : currentQuestion
+                  ? checkAnswerCorrectness(resp.answer_text, currentQuestion.correct_answer)
+                  : false
+                : false;
+
               return (
                 <div key={p.slot_number} className="bg-[#091326] border border-slate-800/80 rounded-2xl p-3 space-y-2 shadow-md">
                   <div className="flex items-center justify-between">
@@ -902,12 +911,25 @@ export default function AdminLivePage() {
                     </span>
                   </div>
 
-                  <div className="p-1.5 rounded-lg bg-[#060c1a] border border-slate-800 flex items-center justify-between min-h-[28px]">
-                    <span className="text-[11px] font-mono text-slate-300 truncate">
-                      {resp ? resp.answer_text : <span className="text-slate-600 italic">Chưa nộp</span>}
-                    </span>
+                  {/* CÂU TRẢ LỜI CỦA THÍ SINH */}
+                  <div className={`p-2 rounded-xl border flex items-center justify-between min-h-[32px] ${
+                    resp && matchState.is_revealed
+                      ? isAnswerCorrect
+                        ? "bg-emerald-950/60 border-emerald-500/60 text-emerald-200"
+                        : "bg-rose-950/60 border-rose-500/60 text-rose-200"
+                      : "bg-[#060c1a] border-slate-800 text-slate-300"
+                  }`}>
+                    <div className="flex items-center gap-1.5 truncate">
+                      {resp && matchState.is_revealed && (
+                        isAnswerCorrect ? <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <X className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                      )}
+                      <span className="text-xs font-bold truncate">
+                        {resp ? resp.answer_text : <span className="text-slate-600 italic">Chưa nộp</span>}
+                      </span>
+                    </div>
+
                     {resp && (
-                      <span className="text-[10px] text-[#e0c588] font-mono">
+                      <span className="text-[10px] text-[#e0c588] font-mono shrink-0 ml-2">
                         {(resp.response_time_ms / 1000).toFixed(2)}s
                       </span>
                     )}

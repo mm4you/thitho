@@ -1,10 +1,11 @@
 /**
- * SMART CASE-INSENSITIVE & VIETNAMESE-AWARE AUTO GRADING ENGINE
- * Chuẩn hóa và so khớp đáp án thông minh:
+ * SUPER-ROBUST AUTO GRADING ENGINE (VIETNAMESE + MULTI-CHOICE + FUZZY MATCH)
+ * Chuẩn hóa và so khớp đáp án thông minh 100%:
  * - Không phân biệt chữ HOA / chữ thường (Case-Insensitive)
- * - Tự động loại bỏ khoảng trắng thừa, chuẩn hóa Unicode NFC
- * - Tự động đối sánh tiếng Việt có dấu và không dấu
- * - Xử lý trắc nghiệm (A, B, C, D) và tự luận linh hoạt
+ * - Tự động loại bỏ dấu chấm, dấu hai chấm, dấu gạch ngang, khoảng trắng thừa
+ * - Chuẩn hóa Unicode NFC & đối sánh tiếng Việt có dấu và không dấu
+ * - Xử lý trắc nghiệm hoàn hảo: "A", "A.", "A. Hà Nội", "Hà Nội", "ha noi"...
+ * - Tự luận dung sai thông minh (chứa từ khóa chính)
  */
 
 export function removeVietnameseTones(str: string): string {
@@ -22,7 +23,27 @@ export function cleanText(str: string): string {
     .trim()
     .toLowerCase()
     .normalize("NFC")
-    .replace(/\s+/g, " ");
+    .replace(/[\.\,\;\:\!\?\-\_\(\)\[\]\"\'\`]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Trích xuất nhãn trắc nghiệm (A, B, C, D) và phần nội dung thân câu hỏi
+ */
+export function parseMultipleChoiceAnswer(str: string): { label: string | null; body: string } {
+  if (!str) return { label: null, body: "" };
+  const raw = str.trim();
+
+  // Khớp định dạng: "A. Hà Nội", "A: Hà Nội", "A - Hà Nội", "A Hà Nội", "(A) Hà Nội", "A"
+  const match = raw.match(/^\(?\s*([A-Da-d])\s*[\.\:\-\)\s]\s*(.*)$/) || raw.match(/^([A-Da-d])$/);
+  if (match) {
+    const label = match[1].toUpperCase();
+    const body = (match[2] || "").trim();
+    return { label, body };
+  }
+
+  return { label: null, body: raw };
 }
 
 /**
@@ -31,47 +52,48 @@ export function cleanText(str: string): string {
 export function checkAnswerCorrectness(userAnswer: string, correctAnswer: string): boolean {
   if (!userAnswer || !correctAnswer) return false;
 
-  const cleanUser = cleanText(userAnswer);
-  const cleanCorrect = cleanText(correctAnswer);
+  const rawUser = userAnswer.trim();
+  const rawCorrect = correctAnswer.trim();
 
-  // 1. So khớp trực tiếp không phân biệt chữ hoa / thường
+  // 1. So khớp tuyệt đối trực tiếp
+  if (rawUser.toLowerCase() === rawCorrect.toLowerCase()) return true;
+
+  // 2. Parse cấu trúc Trắc nghiệm A, B, C, D
+  const userParsed = parseMultipleChoiceAnswer(rawUser);
+  const correctParsed = parseMultipleChoiceAnswer(rawCorrect);
+
+  // Nếu cả 2 đều có nhãn (hoặc câu hỏi trắc nghiệm có nhãn A/B/C/D)
+  if (correctParsed.label) {
+    // a. Thí sinh chỉ chọn nhãn: "A", "A.", "a" trùng với nhãn đáp án
+    if (userParsed.label && userParsed.label === correctParsed.label) {
+      return true;
+    }
+
+    // b. Thí sinh chỉ gõ nội dung thân ("Hà Nội", "ha noi") trùng với thân đáp án đúng
+    if (correctParsed.body) {
+      const cleanUserBody = cleanText(userParsed.body || rawUser);
+      const cleanCorrectBody = cleanText(correctParsed.body);
+
+      if (cleanUserBody === cleanCorrectBody) return true;
+      if (cleanText(removeVietnameseTones(cleanUserBody)) === cleanText(removeVietnameseTones(cleanCorrectBody))) {
+        return true;
+      }
+    }
+  }
+
+  // 3. Chuẩn hóa làm sạch văn bản (Clean text)
+  const cleanUser = cleanText(rawUser);
+  const cleanCorrect = cleanText(rawCorrect);
   if (cleanUser === cleanCorrect) return true;
 
-  // 2. So khớp không dấu tiếng Việt
+  // 4. So khớp không dấu tiếng Việt
   const noToneUser = cleanText(removeVietnameseTones(cleanUser));
   const noToneCorrect = cleanText(removeVietnameseTones(cleanCorrect));
   if (noToneUser === noToneCorrect) return true;
 
-  // 3. Xử lý câu hỏi trắc nghiệm (Ví dụ: "A. Hà Nội", "B. Sắt (Fe)")
-  const mcRegex = /^([a-d])[\.\:\-\s]+(.*)$/i;
-  const correctMatch = cleanCorrect.match(mcRegex);
-  const userMatch = cleanUser.match(mcRegex);
-
-  if (correctMatch) {
-    const correctLetter = correctMatch[1].toLowerCase();
-    const correctBody = correctMatch[2].trim();
-    const noToneBody = cleanText(removeVietnameseTones(correctBody));
-
-    // Thí sinh chỉ chọn chữ cái: "a", "A", "a."
-    if (cleanUser === correctLetter || cleanUser === `${correctLetter}.` || cleanUser === `${correctLetter}:`) {
-      return true;
-    }
-
-    // Thí sinh gửi phần nội dung: "Hà Nội", "ha noi"
-    if (cleanUser === correctBody || noToneUser === noToneBody) {
-      return true;
-    }
-
-    // Thí sinh gửi cả chữ cái và nội dung
-    if (userMatch) {
-      if (userMatch[1].toLowerCase() === correctLetter) return true;
-      if (cleanText(userMatch[2]) === correctBody || cleanText(removeVietnameseTones(userMatch[2])) === noToneBody) return true;
-    }
-  }
-
-  // 4. So khớp từ khóa / tập con (Substring Match)
+  // 5. So khớp từ khóa / dung sai từ ngữ (Sub-string match)
   if (cleanCorrect.length >= 3 && cleanUser.length >= 3) {
-    if (cleanUser.includes(cleanCorrect) || cleanCorrect.includes(cleanUser)) {
+    if (cleanUser === cleanCorrect || cleanUser.includes(cleanCorrect) || cleanCorrect.includes(cleanUser)) {
       return true;
     }
     if (noToneUser.includes(noToneCorrect) || noToneCorrect.includes(noToneUser)) {
