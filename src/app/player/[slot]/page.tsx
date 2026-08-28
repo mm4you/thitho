@@ -505,37 +505,39 @@ export default function PlayerPodiumPage() {
           </form>
         )}
 
-        {/* NÚT BẤM CHUÔNG CƯỚP ĐIỂM & SAO HY VỌNG */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-          {/* NÚT CHUÔNG CƯỚP ĐIỂM */}
-          <button
-            onClick={handlePressBuzzer}
-            disabled={!canInteract || !!matchState.buzzer_winner_slot}
-            className={`h-14 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xl ${
-              matchState.buzzer_winner_slot
-                ? "bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed"
-                : "bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-rose-600/30 active:scale-98"
-            }`}
-          >
-            <Zap className="w-5 h-5 fill-white" />
-            <span>{matchState.buzzer_winner_slot ? "ĐÃ CÓ NGƯỜI GIÀNH CHUÔNG" : "BẤM CHUÔNG GIÀNH QUYỀN"}</span>
-          </button>
-
-          {/* NÚT SAO HY VỌNG (VÒNG 4) */}
-          {isRound4VeDich && (
+        {/* NÚT BẤM CHUÔNG CƯỚP ĐIỂM & SAO HY VỌNG (CHỈ HIỆN Ở VÒNG 4 VỀ ĐÍCH HOẶC VÒNG 2 VCNV) */}
+        {(isRound4VeDich || currentRoundIndex === 1) && (
+          <div className={`grid gap-3 pt-2 ${isRound4VeDich ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+            {/* NÚT CHUÔNG CƯỚP ĐIỂM */}
             <button
-              onClick={handleToggleStarOfHope}
-              className={`h-14 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
-                isStarChosenByMe
-                  ? "bg-[#e0c588] text-black border-[#f4e5be] shadow-lg shadow-[#e0c588]/30"
-                  : "bg-[#091326] text-[#f4e5be] border-[#e0c588]/40 hover:border-[#e0c588]"
+              onClick={handlePressBuzzer}
+              disabled={!canInteract || !!matchState.buzzer_winner_slot}
+              className={`h-14 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xl ${
+                matchState.buzzer_winner_slot
+                  ? "bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed"
+                  : "bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-rose-600/30 active:scale-98"
               }`}
             >
-              <Star className={`w-5 h-5 ${isStarChosenByMe ? "fill-black" : ""}`} />
-              <span>{isStarChosenByMe ? "ĐÃ ĐẶT SAO HY VỌNG" : "ĐẶT NGÔI SAO HY VỌNG"}</span>
+              <Zap className="w-5 h-5 fill-white" />
+              <span>{matchState.buzzer_winner_slot ? "ĐÃ CÓ NGƯỜI GIÀNH CHUÔNG" : "BẤM CHUÔNG GIÀNH QUYỀN"}</span>
             </button>
-          )}
-        </div>
+
+            {/* NÚT SAO HY VỌNG (VÒNG 4) */}
+            {isRound4VeDich && (
+              <button
+                onClick={handleToggleStarOfHope}
+                className={`h-14 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+                  isStarChosenByMe
+                    ? "bg-[#e0c588] text-black border-[#f4e5be] shadow-lg shadow-[#e0c588]/30"
+                    : "bg-[#091326] text-[#f4e5be] border-[#e0c588]/40 hover:border-[#e0c588]"
+                }`}
+              >
+                <Star className={`w-5 h-5 ${isStarChosenByMe ? "fill-black" : ""}`} />
+                <span>{isStarChosenByMe ? "ĐÃ ĐẶT SAO HY VỌNG" : "ĐẶT NGÔI SAO HY VỌNG"}</span>
+              </button>
+            )}
+          </div>
+        )}
       </main>
 
       {/* FOOTER */}
