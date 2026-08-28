@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cẩm Nang Từng Bước - OlymQuiz Arena</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      line-height: 1.6;
+      padding: 30px 16px;
+    }
+
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.06);
+      border: 1px solid #e2e8f0;
+    }
+
+    .no-print {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+
+    .btn-print {
+      background: #dc2626;
+      color: #ffffff;
+      border: none;
+      padding: 10px 22px;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+    }
+
+    /* HEADER */
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .header-badge {
+      display: inline-block;
+      background: #fee2e2;
+      color: #dc2626;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 14px;
+      border-radius: 50px;
+      margin-bottom: 8px;
+    }
+
+    .header h1 {
+      font-size: 26px;
+      color: #0f172a;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* STEP CARD */
+    .step-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 36px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      page-break-inside: avoid;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .step-badge {
+      background: #dc2626;
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 13px;
+      padding: 4px 12px;
+      border-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: #475569;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    /* IMAGE FRAME WITH DELICATE RED OUTLINE */
+    .image-container {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      background: #000;
+      margin-bottom: 16px;
+    }
+
+    .image-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* MẢNH NHỎ MÀU ĐỎ SẮC NÉT (THIN RED OUTLINE) */
+    .red-box {
+      position: absolute;
+      border: 2px solid #ef4444;
+      background: rgba(239, 68, 68, 0.12);
+      border-radius: 8px;
+      pointer-events: none;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+    }
+
+    .red-pin {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: #ef4444;
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 12px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+
+    /* INSTRUCTION POINTS */
+    .action-points {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .point-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 3px solid #ef4444;
+      padding: 10px 14px;
+      border-radius: 6px;
+    }
+
+    .point-num {
+      width: 20px;
+      height: 20px;
+      background: #ef4444;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 11px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .point-text {
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .point-text strong {
+      color: #0f172a;
+    }
+
+    .key-btn {
+      display: inline-block;
+      background: #e2e8f0;
+      color: #0f172a;
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .summary-tip {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .summary-tip p {
+      font-size: 13px;
+      color: #1e40af;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .container {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .no-print {
+        display: none;
+      }
+      .step-card {
+        box-shadow: none;
+        border: 1px solid #cbd5e1;
+        margin-bottom: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="no-print">
+      <button class="btn-print" onclick="window.print()">🖨️ In hoặc Lưu File PDF</button>
+    </div>
+
+    <!-- HEADER -->
+    <div class="header">
+      <span class="header-badge">Hướng Dẫn Vận Hành Trực Quan</span>
+      <h1>HƯỚNG DẪN TỪNG BƯỚC ĐIỀU HÀNH OLYMQUIZ</h1>
+      <p>Có đường nét đỏ thanh mảnh chỉ trực tiếp vào các nút cần bấm — Cực kỳ dễ hiểu!</p>
+    </div>
+
+    <!-- BƯỚC 1: CẤP MÃ PIN -->
+    <div class="step-card">
+      <div class="step-header">
+        <span class="step-badge">Bước 1</span>
+        <h2 class="step-title">CẤP MÃ PIN CHO 4 THÍ SINH</h2>
+      </div>
+      <p class="step-desc">Giám Khảo vào trang <strong>/admin/players</strong> để lấy link thi đấu và mã PIN gửi cho 4 bạn thí sinh.</p>
+
+      <div class="image-container">
+        <img src="screenshots/12_admin_players.png" alt="Cấp mã PIN thí sinh" />
+        
+        <!-- ĐƯỜNG NÉT ĐỎ MẢNH CHỈ VÀO MÃ PIN VÀ NÚT COPY -->
+        <div class="red-box" style="top: 59%; left: 3%; width: 46%; height: 16%;"></div>
+        <div class="red-pin" style="top: 61%; left: 49%;">1</div>
+
+        <div class="red-box" style="top: 77%; left: 3%; width: 38%; height: 16%;"></div>
+        <div class="red-pin" style="top: 80%; left: 41%;">2</div>
+      </div>
+
+      <div class="action-points">
+        <div class="point-item">
+          <div class="point-num">1</div>
+          <div class="point-text"><strong>Mã PIN Bảo Mật:</strong> Mỗi máy có 1 mã riêng (Ví dụ Máy 1: <code>1111</code>, Máy 2: <code>2222</code>). Thí sinh cần mã này mới mở được bục thi.</div>
+        </div>
+        <div class="point-item">
+          <div class="point-num">2</div>
+          <div class="point-text"><strong>Nút [SAO CHÉP LINK THI ĐẤU]:</strong> Bấm nút này để copy cả Link lẫn Mã PIN gửi qua Zalo/Facebook cho từng bạn.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BƯỚC 2: THÍ SINH VÀO PHÒNG THI & CHỌN ĐÁP ÁN -->
+    <div class="step-card">
+      <div class="step-header">
+        <span class="step-badge">Bước 2</span>
+        <h2 class="step-title">THÍ SINH BẤM CHỌN ĐÁP ÁN TRÊN BỤC ĐẤU</h2>
+      </div>
+      <p class="step-desc">Thí sinh mở link trên điện thoại hoặc máy tính cá nhân <strong>(/player/1 đến /player/4)</strong>.</p>
+
+      <div class="image-container">
+        <img src="screenshots/11_player_screen.png" alt="Thí sinh chọn đáp án" />
+
+        <!-- ĐƯỜNG NÉT ĐỎ MẢNH CHỈ VÀO 4 NÚT A, B, C, D -->
+        <div class="red-box" style="top: 61%; left: 16%; width: 68%; height: 35%;"></div>
+        <div class="red-pin" style="top: 63%; left: 84%;">1</div>
+      </div>
+
+      <div class="action-points">
+        <div class="point-item">
+          <div class="point-num">1</div>
+          <div class="point-text"><strong>4 Thẻ Trắc Nghiệm (A, B, C, D):</strong> Thí sinh chỉ cần <strong>chạm 1 lần vào ô đáp án</strong> muốn chọn. Màn hình sẽ đổi sang màu xanh ngọc xác nhận nộp bài thành công ngay lập tức!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BƯỚC 3: GIÁM KHẢO BẤM ĐẾM GIỜ -->
+    <div class="step-card">
+      <div class="step-header">
+        <span class="step-badge">Bước 3</span>
+        <h2 class="step-title">GIÁM KHẢO BẤM BẮT ĐẦU ĐẾM GIỜ</h2>
+      </div>
+      <p class="step-desc">Giám Khảo mở <strong>Bàn Điều Hành Live (/admin/live)</strong> để điều khiển nhịp độ câu hỏi.</p>
+
+      <div class="image-container">
+        <img src="screenshots/13_admin_live.png" alt="Bấm đếm giờ" />
+
+        <!-- ĐƯỜNG NÉT ĐỎ MẢNH CHỈ VÀO ĐỒNG HỒ & NÚT START -->
+        <div class="red-box" style="top: 18%; left: 3%; width: 23%; height: 39%;"></div>
+        <div class="red-pin" style="top: 20%; left: 26%;">1</div>
+      </div>
+
+      <div class="action-points">
+        <div class="point-item">
+          <div class="point-num">1</div>
+          <div class="point-text"><strong>Nút [Bắt Đầu] (Phím <span class="key-btn">Space</span>):</strong> Nhấn phím cách <span class="key-btn">Space</span> để bắt đầu đếm lùi thời gian. Bục của 4 thí sinh sẽ tự động mở khóa cho phép chọn đáp án.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BƯỚC 4: MỞ ĐÁP ÁN & CHẤM ĐIỂM -->
+    <div class="step-card">
+      <div class="step-header">
+        <span class="step-badge">Bước 4</span>
+        <h2 class="step-title">MỞ ĐÁP ÁN & TỰ ĐỘNG CHẤM ĐIỂM</h2>
+      </div>
+      <p class="step-desc">Khi hết giờ làm bài, Giám Khảo công bố đáp án và hệ thống tự động cộng điểm theo tốc độ.</p>
+
+      <div class="image-container">
+        <img src="screenshots/13_admin_live.png" alt="Mở đáp án và chấm điểm" />
+
+        <!-- ĐƯỜNG NÉT ĐỎ MẢNH CHỈ VÀO BỘ 3 NÚT KHÓA - MỞ - CHẤM -->
+        <div class="red-box" style="top: 55%; left: 28%; width: 42%; height: 16%;"></div>
+        <div class="red-pin" style="top: 57%; left: 70%;">1</div>
+      </div>
+
+      <div class="action-points">
+        <div class="point-item">
+          <div class="point-num">1</div>
+          <div class="point-text">
+            <strong>Thao Tác 2 Nút:</strong><br/>
+            • Bấm <strong>[Mở Đáp Án]</strong>: Máy chiếu sẽ viền xanh đáp án đúng và hiện câu trả lời của 4 bạn.<br/>
+            • Nhấn phím <span class="key-btn">G</span> <strong>[Chấm Điểm]</strong>: Hệ thống tự động so khớp và cộng điểm ngay vào bảng tổng sắp.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BƯỚC 5: MÁY CHIẾU TỰ ĐỘNG SO KHỚP CHUẨN XÁC -->
+    <div class="step-card">
+      <div class="step-header">
+        <span class="step-badge">Bước 5</span>
+        <h2 class="step-title">MÀN MÁY CHIẾU HIỆN KẾT QUẢ ĐÚNG / SAI</h2>
+      </div>
+      <p class="step-desc">Màn hình máy chiếu hội trường <strong>(/display)</strong> hiển thị trực quan cho toàn bộ khán giả theo dõi.</p>
+
+      <div class="image-container">
+        <img src="screenshots/02_display_q1.png" alt="Màn máy chiếu hiển thị kết quả" />
+
+        <!-- ĐƯỜNG NÉT ĐỎ MẢNH CHỈ VÀO ĐÁP ÁN ĐÚNG VÀ BỤC THÍ SINH -->
+        <div class="red-box" style="top: 45%; left: 17%; width: 32%; height: 14%;"></div>
+        <div class="red-pin" style="top: 47%; left: 49%;">1</div>
+
+        <div class="red-box" style="top: 76%; left: 12%; width: 76%; height: 21%;"></div>
+        <div class="red-pin" style="top: 78%; left: 88%;">2</div>
+      </div>
+
+      <div class="action-points">
+        <div class="point-item">
+          <div class="point-num">1</div>
+          <div class="point-text"><strong>Phương Án Đúng (Hà Nội):</strong> Tự động phát sáng viền xanh ngọc bích nổi bật.</div>
+        </div>
+        <div class="point-item">
+          <div class="point-num">2</div>
+          <div class="point-text"><strong>Bục Thí Sinh Ở Dưới:</strong> Hiện dấu tick xanh <code>✔️ A. Hà Nội</code> cho bạn nào trả lời đúng và dấu <code>✕</code> đỏ cho bạn trả lời sai.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BƯỚC 6: CHIẾU BẢNG VÀNG TRAO GIẢI -->
+    <div class="step-card">
+      <div class="step-header">
+        <span class="step-badge">Bước 6</span>
+        <h2 class="step-title">CHIẾU SLIDE BẢNG VÀNG TRAO GIẢI CHUNG CUỘC</h2>
+      </div>
+      <p class="step-desc">Kết thúc 4 vòng thi, Giám Khảo bấm nút <strong>[4. Bảng Vàng Trao Giải]</strong> trên Bàn Điều Hành.</p>
+
+      <div class="image-container">
+        <img src="screenshots/10_display_leaderboard.png" alt="Slide Bảng vàng trao giải" />
+      </div>
+
+      <div class="action-points">
+        <div class="point-item">
+          <div class="point-num">★</div>
+          <div class="point-text"><strong>Vinh Danh Quán Quân:</strong> Máy chiếu tự động xếp hạng Quán Quân, Á Quân, Hạng Ba, Hạng Tư kèm hiệu ứng pháo hoa giấy Confetti rực rỡ để kết thúc buổi thi!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TỔNG KẾT NHANH -->
+    <div class="summary-tip">
+      <p>💡 <strong>Tóm tắt bí kíp cho Giám Khảo:</strong> Cấp PIN bước 1 $\rightarrow$ Trong trận chỉ bấm: <span class="key-btn">Space</span> (Đếm giờ) $\rightarrow$ <strong>Mở Đáp Án</strong> $\rightarrow$ <span class="key-btn">G</span> (Chấm điểm) $\rightarrow$ Hết trận bấm <strong>Bảng Vàng Trao Giải</strong>. Xong!</p>
+    </div>
+
+  </div>
+
+</body>
+</html>
