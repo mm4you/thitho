@@ -199,10 +199,11 @@ export default function DisplayPage() {
       } else if (event.type === "TOGGLE_STAR_OF_HOPE") {
         setMatchState((prev) => ({ ...prev, star_of_hope_slot: event.slot_number }));
         if (event.slot_number) {
+          const sNum = event.slot_number;
           sound.playCorrect();
           setMatchState((currentState) => {
-            const p = currentState.players.find((item) => item.slot_number === event.slot_number);
-            setStarOfHopeBanner({ slot: event.slot_number, name: p?.name || `Thí sinh ${event.slot_number}` });
+            const p = currentState.players.find((item) => item.slot_number === sNum);
+            setStarOfHopeBanner({ slot: sNum, name: p?.name || `Thí sinh ${sNum}` });
             return currentState;
           });
           confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 }, colors: ["#e0c588", "#f4e5be", "#ffffff"] });
