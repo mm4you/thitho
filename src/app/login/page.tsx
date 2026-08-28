@@ -30,7 +30,9 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
-  const [serverJudgeCode, setServerJudgeCode] = useState<string>("GK-4H46SH");
+  const [serverJudgeCode, setServerJudgeCode] = useState<string>(() => {
+    return loadSavedMatchState()?.admin_access_code || "GK-OLYMPIA-2026";
+  });
 
   useEffect(() => {
     fetch("/api/judge-code")

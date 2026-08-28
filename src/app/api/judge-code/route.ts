@@ -8,8 +8,8 @@ function normalizeCode(str: string): string {
     .replace(/^GK/, "");
 }
 
-// Lưu trữ DUY NHẤT MỘT MÃ ĐANG HOẠT ĐỘNG (Single Active Judge Code)
-let currentActiveJudgeCode = "GK-4H46SH";
+// LƯU TRỮ MÃ ĐANG HOẠT ĐỘNG TRONG RUNTIME & PERSISTENCE
+let currentActiveJudgeCode = "GK-OLYMPIA-2026";
 
 export async function GET(req: NextRequest) {
   const enteredQuery = req.nextUrl.searchParams.get("code");
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const cleanEntered = normalizeCode(enteredQuery);
     const cleanActive = normalizeCode(currentActiveJudgeCode);
 
-    // CHỈ CHẤP NHẬN DUY NHẤT MÃ ĐANG HOẠT ĐỘNG (hoặc mã Master Super Admin)
+    // Chấp nhận mã đang hoạt động hoặc mã Master Super Admin
     const isValid =
       cleanEntered === cleanActive ||
       cleanEntered === "OLYMQUIZKHANG2026";
@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     if (body.judge_code) {
       const code = String(body.judge_code).trim().toUpperCase();
-      // Ghi đè mã mới - Toàn bộ mã cũ bị hủy bỏ ngay lập tức
       currentActiveJudgeCode = code;
     }
     return NextResponse.json({

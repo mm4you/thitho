@@ -37,8 +37,10 @@ function generateAlphanumericCode(length = 6, prefix = "GK-"): string {
 
 export default function SupremeAdminDashboardPage() {
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
-  const [currentAdminPass, setCurrentAdminPass] = useState<string>("GK-4H46SH");
-  const [showAdminPass, setShowAdminPass] = useState<boolean>(true); // Mac dinh hien ro ma cho Admin de nhin
+  const [currentAdminPass, setCurrentAdminPass] = useState<string>(() => {
+    return loadSavedMatchState()?.admin_access_code || getAdminPassword() || "GK-OLYMPIA-2026";
+  });
+  const [showAdminPass, setShowAdminPass] = useState<boolean>(true);
   const [isCustomEditing, setIsCustomEditing] = useState<boolean>(false);
   const [customPassInput, setCustomPassInput] = useState<string>("");
   const [alertMsg, setAlertMsg] = useState<string>("");
@@ -54,7 +56,7 @@ export default function SupremeAdminDashboardPage() {
         }
       })
       .catch(() => {
-        const local = getAdminPassword() || "GK-4H46SH";
+        const local = getAdminPassword() || "GK-OLYMPIA-2026";
         setCurrentAdminPass(local);
       });
   }, []);
