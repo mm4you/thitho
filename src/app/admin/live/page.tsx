@@ -10,6 +10,7 @@ import {
   syncMatchStateToCloud,
 } from "@/lib/supabase";
 import { sound } from "@/lib/sounds";
+import { checkAnswerCorrectness } from "@/lib/grading";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import {
   Play,
@@ -306,18 +307,15 @@ export default function AdminLivePage() {
     });
   };
 
-  // TỰ ĐỘNG CHẤM ĐIỂM
+  // TỰ ĐỘNG CHẤM ĐIỂM THÔNG MINH (CASE-INSENSITIVE & VIETNAMESE-AWARE)
   const executeAutoGrade = () => {
     if (!currentQuestion) return;
     const isTangToc = currentRound.round_type === "tang_toc";
-    const correctAnswers = currentQuestion.correct_answer.toLowerCase().trim();
+    const correctAnswer = currentQuestion.correct_answer;
 
     const submissions = Object.values(matchState.current_responses);
     const correctSubmissions = submissions
-      .filter((sub) => {
-        const text = sub.answer_text.toLowerCase().trim();
-        return text.includes(correctAnswers) || correctAnswers.includes(text) || (text[0] === correctAnswers[0] && text.length <= 2);
-      })
+      .filter((sub) => checkAnswerCorrectness(sub.answer_text, correctAnswer))
       .sort((a, b) => a.response_time_ms - b.response_time_ms);
 
     const results: Record<number, { is_correct: boolean; points_awarded: number }> = {};
