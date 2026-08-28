@@ -206,13 +206,14 @@ export default function DisplayPage() {
 
   const currentRound = matchState.rounds[matchState.current_round_index];
   const currentQuestion = currentRound?.questions[matchState.current_question_index];
+  const isMultipleChoice = currentQuestion?.question_type === "multiple_choice" || (currentQuestion?.options && currentQuestion.options.length > 0);
   const isRound2VCNV = matchState.current_round_index === 1;
   const isRound4VeDich = matchState.current_round_index === 3;
   const activePlayer = matchState.players.find((p) => p.slot_number === matchState.active_player_slot);
 
   return (
     <div className="h-screen w-screen bg-[#05070e] text-slate-100 flex flex-col justify-between overflow-hidden relative font-sans select-none">
-      {/* Dynamic Ambient Glow */}
+      {/* Ambient Lighting */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70vw] h-[200px] bg-gradient-to-b from-cyan-600/10 via-indigo-500/5 to-transparent blur-3xl pointer-events-none" />
 
       {/* TOP HEADER */}
@@ -324,7 +325,7 @@ export default function DisplayPage() {
           </div>
         ) : (
           /* MÀN HÌNH CÂU HỎI */
-          <div className="space-y-5">
+          <div className="space-y-4">
             {/* VÒNG 4 SPOTLIGHT BANNER */}
             {isRound4VeDich && activePlayer && (
               <div className="flex items-center justify-center gap-2.5 bg-[#0a0f1d] border border-violet-500/40 rounded-2xl py-2 px-5 shadow-md">
@@ -339,8 +340,8 @@ export default function DisplayPage() {
               </div>
             )}
 
-            {/* KHUNG CÂU HỎI SẮC NÉT */}
-            <div className="bg-[#080c18] border border-slate-800 rounded-3xl p-7 md:p-8 shadow-2xl relative">
+            {/* KHUNG CÂU HỎI */}
+            <div className="bg-[#080c18] border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative">
               <div className="absolute top-0 right-0 px-5 py-2 bg-cyan-500/10 border-b border-l border-cyan-500/20 rounded-bl-2xl text-xs font-mono font-bold text-cyan-400">
                 +{currentQuestion?.points_correct || 10} ĐIỂM
               </div>
@@ -357,11 +358,41 @@ export default function DisplayPage() {
                   </div>
                 )}
               </div>
+
+              {/* HIỂN THỊ 4 PHƯƠNG ÁN TRẮC NGHIỆM A, B, C, D TRÊN MÀN HÌNH MÁY CHIẾU */}
+              {isMultipleChoice && currentQuestion?.options && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-5 mt-4 border-t border-slate-800/80">
+                  {currentQuestion.options.map((opt, idx) => {
+                    const label = ["A", "B", "C", "D"][idx] || String(idx + 1);
+                    const isCorrectOpt = matchState.is_revealed && (opt === currentQuestion.correct_answer || opt.startsWith(currentQuestion.correct_answer[0]));
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
+                          isCorrectOpt
+                            ? "bg-emerald-950/80 border-emerald-400 text-white shadow-lg shadow-emerald-500/30 scale-102"
+                            : "bg-[#0a0f1d] border-slate-800 text-slate-200"
+                        }`}
+                      >
+                        <span className={`w-8 h-8 rounded-lg font-black text-sm flex items-center justify-center shrink-0 ${
+                          isCorrectOpt ? "bg-emerald-500 text-black font-black" : "bg-slate-800 text-cyan-400"
+                        }`}>
+                          {label}
+                        </span>
+                        <span className="text-sm font-bold leading-snug">
+                          {opt.replace(/^[A-D]\.\s*/, "")}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* VÒNG 2: BẢNG Ô CHỮ CHƯỚNG NGẠI VẬT */}
             {isRound2VCNV && (
-              <div className="bg-[#080c18] border border-slate-800/80 rounded-2xl p-5 space-y-3 shadow-lg">
+              <div className="bg-[#080c18] border border-slate-800/80 rounded-2xl p-4 space-y-2.5 shadow-lg">
                 <div className="text-center">
                   <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">CHƯỚNG NGẠI VẬT BÍ MẬT (8 CHỮ CÁI)</span>
                   <div className="flex justify-center gap-2 mt-2">
@@ -382,8 +413,8 @@ export default function DisplayPage() {
               </div>
             )}
 
-            {/* ĐÁP ÁN CÔNG BỐ */}
-            {matchState.is_revealed && currentQuestion?.correct_answer && (
+            {/* ĐÁP ÁN CÔNG BỐ (CHO TỰ LUẬN) */}
+            {matchState.is_revealed && !isMultipleChoice && currentQuestion?.correct_answer && (
               <div className="bg-[#081814] border border-emerald-500/60 rounded-2xl p-3.5 text-center shadow-xl animate-in zoom-in-95">
                 <span className="text-[10px] font-bold text-emerald-400 uppercase block">ĐÁP ÁN CHÍNH XÁC:</span>
                 <span className="text-xl font-black text-white uppercase tracking-widest">{currentQuestion.correct_answer}</span>

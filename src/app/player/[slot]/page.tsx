@@ -18,7 +18,8 @@ import {
   Star,
   Crown,
   User,
-  Sparkles,
+  Clock,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -45,12 +46,11 @@ export default function PlayerPage() {
   const [editName, setEditName] = useState<string>("");
   const [editSchool, setEditSchool] = useState<string>("");
 
-  // Bảng màu 4 Bục Đấu Next-Gen
   const slotThemes = [
-    { name: "MÁY 1", border: "border-rose-500/50", glow: "shadow-rose-500/20", accent: "text-rose-400", bg: "bg-[#0f0a12]", badge: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
-    { name: "MÁY 2", border: "border-cyan-500/50", glow: "shadow-cyan-500/20", accent: "text-cyan-400", bg: "bg-[#060e18]", badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40" },
-    { name: "MÁY 3", border: "border-amber-500/50", glow: "shadow-amber-500/20", accent: "text-amber-400", bg: "bg-[#140e06]", badge: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
-    { name: "MÁY 4", border: "border-violet-500/50", glow: "shadow-violet-500/20", accent: "text-violet-400", bg: "bg-[#0e0a18]", badge: "bg-violet-500/20 text-violet-300 border-violet-500/40" },
+    { name: "MÁY 1", border: "border-rose-500/50", accent: "text-rose-400", badge: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
+    { name: "MÁY 2", border: "border-cyan-500/50", accent: "text-cyan-400", badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40" },
+    { name: "MÁY 3", border: "border-amber-500/50", accent: "text-amber-400", badge: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
+    { name: "MÁY 4", border: "border-violet-500/50", accent: "text-violet-400", badge: "bg-violet-500/20 text-violet-300 border-violet-500/40" },
   ];
 
   const currentTheme = slotThemes[slotNumber - 1] || slotThemes[0];
@@ -58,11 +58,15 @@ export default function PlayerPage() {
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
 
+  const isMultipleChoice = currentQuestion?.question_type === "multiple_choice" || (currentQuestion?.options && currentQuestion.options.length > 0);
   const isRound2VCNV = matchState.current_round_index === 1;
   const isRound4VeDich = matchState.current_round_index === 3;
   const isMyMainTurnInRound4 = isRound4VeDich && matchState.active_player_slot === slotNumber;
   const isStarChosenByMe = matchState.star_of_hope_slot === slotNumber;
   const isBuzzerWinner = matchState.buzzer_winner_slot === slotNumber;
+
+  // ĐIỀU KIỆN MỞ KHÓA THAO TÁC: CHỈ KHI TIMER ĐANG CHẠY VÀ CHƯA BỊ KHÓA / CHƯA STANDBY
+  const canInteract = matchState.is_timer_running && !matchState.is_locked && !matchState.is_standby;
 
   useEffect(() => {
     if (me) {
@@ -157,12 +161,13 @@ export default function PlayerPage() {
     return () => unsubscribe();
   }, [slotNumber]);
 
-  const handleSubmitAnswer = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!answerInput.trim() || hasSubmitted || matchState.is_locked) return;
+  // Nộp đáp án (Dùng cho cả Trắc nghiệm & Tự luận)
+  const submitAnswer = (selectedText: string) => {
+    if (!canInteract || hasSubmitted) return;
 
     const timeSpent = timerStartTime > 0 ? Date.now() - timerStartTime : 1500;
-    const finalAnswer = answerInput.trim();
+    const finalAnswer = selectedText.trim();
+    if (!finalAnswer) return;
 
     setHasSubmitted(true);
     setSubmittedAnswer(finalAnswer);
@@ -280,7 +285,7 @@ export default function PlayerPage() {
 
       {/* KHUNG CÂU HỎI THỜI GIAN THỰC */}
       <main className="my-5 space-y-4">
-        {/* VÒNG 4: NÚT ĐẶT SAO HOẶC THÔNG BÁO */}
+        {/* VÒNG 4: NÚT ĐẶT SAO */}
         {isRound4VeDich && isMyMainTurnInRound4 && (
           <div className="bg-gradient-to-r from-violet-950/60 via-indigo-950/40 to-violet-950/60 border border-violet-500/40 rounded-2xl p-3.5 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-2">
@@ -331,12 +336,14 @@ export default function PlayerPage() {
           <div className="pt-1">
             <Button
               onClick={handlePressBuzzer}
-              disabled={!!matchState.buzzer_winner_slot}
+              disabled={!canInteract || !!matchState.buzzer_winner_slot}
               className={`w-full h-14 rounded-2xl font-black text-sm uppercase tracking-wider cursor-pointer shadow-xl transition-all ${
                 isBuzzerWinner
                   ? "bg-emerald-600 text-white shadow-emerald-500/30 scale-102"
                   : matchState.buzzer_winner_slot
                   ? "bg-slate-900 text-slate-600 border border-slate-800 opacity-60"
+                  : !canInteract
+                  ? "bg-slate-900 text-slate-600 border border-slate-800 opacity-40 cursor-not-allowed"
                   : "bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-rose-600/30 animate-pulse active:scale-98"
               }`}
             >
@@ -345,14 +352,17 @@ export default function PlayerPage() {
                 ? "BẠN ĐÃ GIÀNH QUYỀN TRẢ LỜI!"
                 : matchState.buzzer_winner_slot
                 ? "ĐÃ CÓ THÍ SINH BẤM CHUÔNG"
+                : !canInteract
+                ? "CHỜ BẮT ĐẦU ĐẾM GIỜ ĐỂ BẤM CHUÔNG"
                 : "BẤM CHUÔNG CƯỚP ĐIỂM NGAY"}
             </Button>
           </div>
         )}
 
-        {/* KHU VỰC NHẬP ĐÁP ÁN */}
-        <form onSubmit={handleSubmitAnswer} className="space-y-3 pt-1">
+        {/* KHU VỰC TRẢ LỜI CÂU HỎI */}
+        <div className="space-y-3 pt-1">
           {hasSubmitted ? (
+            /* ĐÃ NỘP BÀI */
             <div className="bg-cyan-950/30 border border-cyan-500/50 rounded-2xl p-5 text-center space-y-1.5 shadow-xl animate-in zoom-in-95">
               <CheckCircle2 className="w-8 h-8 text-cyan-400 mx-auto" />
               <h4 className="text-sm font-black text-white uppercase">ĐÃ NỘP BÀI THÀNH CÔNG</h4>
@@ -363,32 +373,72 @@ export default function PlayerPage() {
                 Thời gian nộp: {(submittedTimeMs / 1000).toFixed(2)}s
               </span>
             </div>
+          ) : !canInteract ? (
+            /* KHÓA: ĐANG CHỜ GIÁM KHẢO BẤM BẮT ĐẦU ĐẾM GIỜ */
+            <div className="bg-[#090d16] border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+              <Clock className="w-8 h-8 text-slate-600 mx-auto animate-spin" style={{ animationDuration: "6s" }} />
+              <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+                ĐANG CHỜ BAN GIÁM KHẢO BẮT ĐẦU ĐẾM GIỜ...
+              </h4>
+              <p className="text-xs text-slate-600">
+                Khi đồng hồ đếm ngược bắt đầu chạy, bạn mới có thể bấm chọn hoặc gửi câu trả lời.
+              </p>
+            </div>
+          ) : isMultipleChoice && currentQuestion?.options ? (
+            /* VÒNG 1 (TRẮC NGHIỆM): 4 NÚT BẤM A, B, C, D 1-CHẠM */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              {currentQuestion.options.map((opt, idx) => {
+                const label = ["A", "B", "C", "D"][idx] || String(idx + 1);
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => submitAnswer(opt)}
+                    className="p-3.5 rounded-xl bg-[#090d16] hover:bg-cyan-950/60 border border-slate-700 hover:border-cyan-400 text-left transition-all cursor-pointer flex items-center gap-3 group active:scale-98 shadow-md"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-cyan-500 group-hover:text-black text-cyan-400 font-black text-sm flex items-center justify-center shrink-0 transition-colors">
+                      {label}
+                    </span>
+                    <span className="text-xs md:text-sm font-bold text-white group-hover:text-cyan-200 leading-snug">
+                      {opt.replace(/^[A-D]\.\s*/, "")}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           ) : (
-            <div className="space-y-2.5">
+            /* VÒNG TỰ LUẬN (NHẬP CHỮ) */
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitAnswer(answerInput);
+              }}
+              className="space-y-2.5"
+            >
               <input
                 type="text"
-                disabled={matchState.is_locked}
+                autoFocus
                 value={answerInput}
                 onChange={(e) => setAnswerInput(e.target.value)}
-                placeholder={matchState.is_locked ? "Đã hết giờ nộp bài" : "Nhập câu trả lời của bạn..."}
-                className="w-full bg-[#090d16] border border-slate-700 focus:border-cyan-400 rounded-xl px-4 py-3.5 text-base font-bold text-white placeholder:text-slate-600 focus:outline-none shadow-lg disabled:opacity-40"
+                placeholder="Nhập câu trả lời của bạn..."
+                className="w-full bg-[#090d16] border border-slate-700 focus:border-cyan-400 rounded-xl px-4 py-3.5 text-base font-bold text-white placeholder:text-slate-600 focus:outline-none shadow-lg"
               />
 
               <Button
                 type="submit"
-                disabled={matchState.is_locked || !answerInput.trim()}
+                disabled={!answerInput.trim()}
                 className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs h-12 uppercase tracking-wider rounded-xl cursor-pointer shadow-lg shadow-cyan-600/20 disabled:opacity-30 active:scale-98 transition-all"
               >
                 <Send className="w-3.5 h-3.5 mr-1.5" /> NỘP CÂU TRẢ LỜI
               </Button>
-            </div>
+            </form>
           )}
-        </form>
+        </div>
       </main>
 
       {/* FOOTER */}
       <footer className="text-center py-2">
-        <Link href="/" className="text-xs text-slate-500 hover:text-slate-300">
+        <Link href="/" className="text-xs text-slate-500 hover:text-slate-300 font-mono">
           ← Quay lại Trang Chủ
         </Link>
       </footer>
