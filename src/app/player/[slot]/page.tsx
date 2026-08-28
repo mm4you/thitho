@@ -169,7 +169,7 @@ export default function PlayerPage({ params }: { params: Promise<{ slot: string 
     setHasSubmitted(true);
     setSubmittedAnswer(finalAnswer);
     setSubmittedTimeMs(timeSpent);
-    sound.playClick();
+    sound.playTick();
 
     sendGameEvent({
       type: "SUBMIT_ANSWER",
