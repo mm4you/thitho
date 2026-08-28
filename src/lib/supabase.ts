@@ -23,6 +23,19 @@ if (typeof window !== "undefined" && "BroadcastChannel" in window) {
 }
 
 export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) => void) {
+  // 1. Tự động kéo state mới nhất từ Server khi vừa mở trang trên bất kỳ máy nào
+  if (typeof window !== "undefined") {
+    fetch("/api/sync-match")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && data?.state) {
+          saveMatchStateLocally(data.state);
+          onEvent({ type: "SYNC_STATE", state: data.state });
+        }
+      })
+      .catch(() => {});
+  }
+
   const channel = supabase.channel(CHANNEL_NAME, {
     config: { broadcast: { self: false } },
   });
@@ -32,7 +45,6 @@ export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) =>
       if (payload?.payload) {
         const ev = payload.payload as RealtimeEventPayload;
         if (ev.type === "REQUEST_SYNC") {
-          // Tu dong gui lai state hien tai neu co
           const currentState = loadSavedMatchState();
           sendGameEvent({ type: "SYNC_STATE", state: currentState });
         } else {
@@ -42,7 +54,6 @@ export function subscribeToGameChannel(onEvent: (event: RealtimeEventPayload) =>
     })
     .subscribe((status) => {
       if (status === "SUBSCRIBED") {
-        // Yeu cau may Host gui state moi nhat
         sendGameEvent({ type: "REQUEST_SYNC" });
       }
     });
@@ -94,6 +105,18 @@ const ADMIN_PASS_KEY = "custom_admin_password";
 export async function syncMatchStateToCloud(state: MatchState) {
   saveMatchStateLocally(state);
 
+  // 1. Lưu vào Server API trung tâm
+  try {
+    fetch("/api/sync-match", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state }),
+    }).catch(() => {});
+  } catch {
+    // ignore
+  }
+
+  // 2. Phát broadcast tới các máy khác
   try {
     sendGameEvent({ type: "SYNC_STATE", state });
   } catch (err) {
@@ -107,7 +130,6 @@ export function loadSavedMatchState(): MatchState {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Dam bao luon co admin_access_code
       if (!parsed.admin_access_code) {
         parsed.admin_access_code = getAdminPassword() || "GK-OLYMPIA-2026";
       }
