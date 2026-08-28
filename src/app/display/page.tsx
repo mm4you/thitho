@@ -22,6 +22,7 @@ import {
   Trophy,
   Users,
   BookOpen,
+  Layers,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 
@@ -102,7 +103,7 @@ export default function DisplayPage() {
     };
   }, [isTimerRunning, timerStartTime, timeLimit]);
 
-  // ĐĂNG KÝ WEBSOCKET 1 LẦN DUY NHẤT KHI MOUNT (EMPTY DEPENDENCY ARRAY [])
+  // ĐĂNG KÝ WEBSOCKET 1 LẦN DUY NHẤT
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
       if (event.type === "SYNC_STATE") {
@@ -249,7 +250,7 @@ export default function DisplayPage() {
     });
 
     return () => unsubscribe();
-  }, []); // 100% CLEAN: Rỗng để không bao giờ bị re-subscribe loop!
+  }, []);
 
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
@@ -264,42 +265,56 @@ export default function DisplayPage() {
     ? "standby"
     : matchState.display_slide_mode || "question";
 
-  // THỂ LỆ 4 VÒNG THI
+  // CHI TIẾT THỂ LỆ 4 VÒNG THI
   const roundRulesData = [
     {
+      roundNum: 1,
       title: "VÒNG 1: KHỞI ĐỘNG",
-      desc: "Trắc nghiệm tốc độ 4 phương án A, B, C, D.",
+      subtitle: "Trắc nghiệm tốc độ 4 phương án A, B, C, D",
+      time: "15 giây / câu",
+      scoring: "+10 điểm mỗi câu đúng",
       rules: [
         "Mỗi câu hỏi có 15 giây suy nghĩ và nộp đáp án.",
-        "Mỗi câu trả lời đúng được +10 Điểm. Không bị trừ điểm khi sai.",
-        "4 thí sinh cùng bước vào đấu đối kháng thời gian thực.",
+        "Mỗi câu trả lời đúng được +10 Điểm. Trả lời sai không bị trừ điểm.",
+        "4 thí sinh cùng thi đấu đối kháng và chọn đáp án độc lập trên máy cá nhân.",
       ],
     },
     {
+      roundNum: 2,
       title: "VÒNG 2: VƯỢT CHƯỚNG NGẠI VẬT",
-      desc: "Giải mã 4 hàng ngang để tìm ra Từ Khóa Chướng Ngại Vật bí mật.",
+      subtitle: "Giải mã 4 hàng ngang tìm Từ Khóa bí mật",
+      time: "15 giây / hàng ngang",
+      scoring: "+10đ hàng ngang • +60đ / +40đ / +20đ Từ khóa chính",
       rules: [
-        "Mỗi câu hàng ngang đúng được +10 Điểm kèm gợi ý số chữ cái.",
-        "Bấm chuông trả lời từ khóa chính: +60 Điểm (ở hàng 1) hoặc +40/+20 Điểm ở các hàng tiếp theo.",
-        "Trả lời sai từ khóa chính sẽ bị dừng cuộc chơi ở vòng này.",
+        "Gồm 4 câu hỏi hàng ngang kèm gợi ý số lượng chữ cái.",
+        "Mỗi câu hàng ngang đúng được +10 Điểm cho các thí sinh trả lời đúng.",
+        "Bấm chuông trả lời Chướng ngại vật: +60đ (sau hàng 1), +40đ (sau hàng 2), +20đ (sau hàng 3).",
+        "Trả lời sai Chướng ngại vật sẽ bị tước quyền thi đấu ở phần còn lại của vòng này.",
       ],
     },
     {
+      roundNum: 3,
       title: "VÒNG 3: TĂNG TỐC",
-      desc: "Cuộc đua phản xạ và thời gian trả lời nhanh nhất.",
+      subtitle: "Cuộc đua phản xạ thời gian mili-giây",
+      time: "10s - 20s - 30s - 40s",
+      scoring: "+40đ • +30đ • +20đ • +10đ theo tốc độ",
       rules: [
-        "4 mốc thời gian: 10 giây (câu 1) - 20 giây (câu 2) - 30 giây (câu 3) - 40 giây (câu 4).",
-        "Thứ tự cộng điểm đúng: Nhanh nhất (+40đ) • Nhì (+30đ) • Ba (+20đ) • Tư (+10đ).",
-        "Độ chính xác và thời gian nộp bài được tính bằng mili-giây.",
+        "Gồm 4 câu hỏi với các mốc thời gian tăng dần: 10s (câu 1), 20s (câu 2), 30s (câu 3), 40s (câu 4).",
+        "Thứ tự cộng điểm cho các thí sinh trả lời đúng: Nhanh nhất (+40đ) • Nhanh nhì (+30đ) • Nhanh ba (+20đ) • Nhanh tư (+10đ).",
+        "Thời gian phản hồi được đo chính xác đến từng mili-giây.",
       ],
     },
     {
+      roundNum: 4,
       title: "VÒNG 4: VỀ ĐÍCH",
-      desc: "Chọn gói câu hỏi và bứt phá cùng Ngôi Sao Hy Vọng.",
+      subtitle: "Gói câu hỏi & Ngôi Sao Hy Vọng",
+      time: "15s - 20s / câu",
+      scoring: "+20đ / +30đ • Sao Hy Vọng (x2 hoặc -50%)",
       rules: [
-        "Mỗi thí sinh có 1 lượt thi chính gồm các câu 20 điểm và 30 điểm.",
-        "Đặt Ngôi Sao Hy Vọng: Đúng +x2 Điểm • Sai -50% Điểm.",
-        "Nếu thí sinh chính sai, 3 thí sinh còn lại được quyền Bấm Chuông Cướp Điểm.",
+        "Mỗi thí sinh có 1 lượt thi chính với các câu hỏi 20 điểm và 30 điểm.",
+        "Quyền đặt Ngôi Sao Hy Vọng 1 lần: Trả lời đúng +x2 Điểm • Trả lời sai -50% Điểm câu hỏi.",
+        "Nếu thí sinh chính trả lời sai, 3 thí sinh còn lại có quyền Bấm Chuông Cướp Điểm.",
+        "Cướp điểm đúng được trọn số điểm của câu • Cướp điểm sai bị trừ 50% số điểm của câu.",
       ],
     },
   ];
@@ -329,6 +344,7 @@ export default function DisplayPage() {
             <span className="px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase tracking-wider bg-[#e0c588]/15 text-[#f4e5be] border border-[#e0c588]/30">
               {currentRound?.title || "VÒNG THI ĐẤU"}
             </span>
+
             {currentMode === "question" && (
               <span className="text-xs text-slate-400 font-mono font-bold uppercase">
                 CÂU {matchState.current_question_index + 1}/{currentRound?.questions.length || 0}
@@ -339,9 +355,14 @@ export default function DisplayPage() {
                 <Users className="w-3.5 h-3.5" /> GIỚI THIỆU 4 THÍ SINH
               </span>
             )}
-            {currentMode === "rules" && (
+            {currentMode === "rules_all" && (
               <span className="text-xs text-[#e0c588] font-mono font-bold uppercase flex items-center gap-1">
-                <BookOpen className="w-3.5 h-3.5" /> LUẬT THI VÒNG ĐẤU
+                <Layers className="w-3.5 h-3.5" /> TỔNG QUAN 4 VÒNG THI ĐẤU
+              </span>
+            )}
+            {["rules_1", "rules_2", "rules_3", "rules_4"].includes(currentMode) && (
+              <span className="text-xs text-amber-400 font-mono font-bold uppercase flex items-center gap-1">
+                <BookOpen className="w-3.5 h-3.5" /> THỂ LỆ VÒNG {currentMode.replace("rules_", "")}
               </span>
             )}
             {currentMode === "leaderboard" && (
@@ -427,10 +448,10 @@ export default function DisplayPage() {
       )}
 
       {/* ============================================================ */}
-      {/* MAIN ARENA CENTER STAGE (STATIC NON-FLICKERING) */}
+      {/* MAIN ARENA CENTER STAGE (MULTI-SLIDE MODES) */}
       {/* ============================================================ */}
       <main className="flex-1 flex flex-col justify-center px-8 md:px-12 py-4 max-w-6xl mx-auto w-full relative z-10 overflow-hidden">
-        {/* SLIDE 1: STANDBY */}
+        {/* SLIDE: STANDBY */}
         {currentMode === "standby" && (
           <div className="text-center space-y-6">
             <div className="flex justify-center">
@@ -450,7 +471,7 @@ export default function DisplayPage() {
           </div>
         )}
 
-        {/* SLIDE 2: GIỚI THIỆU 4 THÍ SINH */}
+        {/* SLIDE: GIỚI THIỆU 4 THÍ SINH */}
         {currentMode === "intro_players" && (
           <div className="space-y-6">
             <div className="text-center space-y-1">
@@ -494,22 +515,75 @@ export default function DisplayPage() {
           </div>
         )}
 
-        {/* SLIDE 3: LUẬT THI VÒNG ĐẤU */}
-        {currentMode === "rules" && (
+        {/* SLIDE: TOÀN BỘ 4 VÒNG THI ĐẤU (RULES_ALL) */}
+        {currentMode === "rules_all" && (
+          <div className="space-y-6">
+            <div className="text-center space-y-1">
+              <span className="text-xs font-mono font-bold text-[#e0c588] uppercase tracking-widest flex items-center justify-center gap-1.5">
+                <Layers className="w-4 h-4 text-[#e0c588]" /> THỂ LỆ TỔNG QUAN
+              </span>
+              <h2 className="text-3xl font-black text-white uppercase">CẤU TRÚC 4 VÒNG THI ĐẤU</h2>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              {roundRulesData.map((r) => (
+                <div
+                  key={r.roundNum}
+                  className="bg-[#091326] border border-[#e0c588]/30 rounded-3xl p-5 flex flex-col justify-between space-y-4 shadow-xl hover:border-[#e0c588] transition-all"
+                >
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-lg bg-[#060c1a] text-[#e0c588] border border-[#e0c588]/40">
+                      VÒNG {r.roundNum}
+                    </span>
+                    <h3 className="text-base font-black text-white leading-snug">{r.title.replace(/^VÒNG \d:\s*/, "")}</h3>
+                    <p className="text-xs text-slate-400 font-medium leading-relaxed">{r.subtitle}</p>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <div className="p-2 rounded-xl bg-[#060c1a] border border-slate-800 text-center">
+                      <span className="text-[9px] text-slate-500 uppercase block font-mono">THỜI GIAN:</span>
+                      <span className="text-xs font-bold text-[#f4e5be]">{r.time}</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-[#060c1a] border border-slate-800 text-center">
+                      <span className="text-[9px] text-slate-500 uppercase block font-mono">ĐIỂM THƯỞNG:</span>
+                      <span className="text-xs font-bold text-emerald-400">{r.scoring}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* SLIDE: LUẬT THI RIÊNG LẺ TỪNG VÒNG (RULES_1, RULES_2, RULES_3, RULES_4) */}
+        {["rules_1", "rules_2", "rules_3", "rules_4"].includes(currentMode) && (
           <div className="max-w-4xl mx-auto space-y-6 w-full">
             {(() => {
-              const rule = roundRulesData[matchState.current_round_index] || roundRulesData[0];
+              const roundIdx = parseInt(currentMode.replace("rules_", ""), 10) - 1;
+              const rule = roundRulesData[roundIdx] || roundRulesData[0];
+
               return (
                 <div className="bg-[#091326] border-2 border-[#e0c588]/40 rounded-3xl p-8 space-y-6 shadow-2xl">
                   <div className="border-b border-slate-800 pb-4 text-center space-y-1">
                     <span className="text-xs font-mono font-bold text-[#e0c588] uppercase tracking-widest">
-                      THỂ LỆ THI ĐẤU
+                      THỂ LỆ CHI TIẾT
                     </span>
                     <h2 className="text-3xl font-black text-white uppercase">{rule.title}</h2>
-                    <p className="text-sm text-slate-400 font-medium">{rule.desc}</p>
+                    <p className="text-sm text-slate-400 font-medium">{rule.subtitle}</p>
                   </div>
 
-                  <div className="space-y-3.5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-2xl bg-[#060c1a] border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-500 uppercase block font-mono">THỜI GIAN LÀM BÀI:</span>
+                      <span className="text-sm font-black text-[#f4e5be]">{rule.time}</span>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-[#060c1a] border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-500 uppercase block font-mono">CƠ CHẾ ĐIỂM SỐ:</span>
+                      <span className="text-sm font-black text-emerald-400">{rule.scoring}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
                     {rule.rules.map((item, idx) => (
                       <div key={idx} className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-[#060c1a] border border-slate-800 text-slate-200">
                         <span className="w-7 h-7 rounded-lg bg-[#e0c588]/20 border border-[#e0c588]/40 text-[#f4e5be] font-bold text-xs flex items-center justify-center shrink-0">
@@ -525,7 +599,7 @@ export default function DisplayPage() {
           </div>
         )}
 
-        {/* SLIDE 4: BẢNG VÀNG VINH DANH & TRAO GIẢI */}
+        {/* SLIDE: BẢNG VÀNG VINH DANH & TRAO GIẢI */}
         {currentMode === "leaderboard" && (
           <div className="space-y-6">
             <div className="text-center space-y-1">
@@ -586,7 +660,7 @@ export default function DisplayPage() {
           </div>
         )}
 
-        {/* SLIDE 5: MÀN HÌNH THI ĐẤU CÂU HỎI */}
+        {/* SLIDE: MÀN HÌNH THI ĐẤU CÂU HỎI */}
         {currentMode === "question" && (
           <div className="space-y-4">
             {/* VÒNG 4 SPOTLIGHT BANNER */}

@@ -39,6 +39,7 @@ import {
   BookOpen,
   Trophy,
   HelpCircle,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -504,8 +505,8 @@ export default function AdminLivePage() {
         </div>
       </header>
 
-      {/* THANH ĐIỀU PHỐI 5 CHẾ ĐỘ SLIDES MÀN MÁY CHIẾU (SLIDE SWITCHER) */}
-      <div className="bg-[#091326] border-b border-slate-800/80 px-6 py-2.5">
+      {/* THANH ĐIỀU PHỐI CÁC CHẾ ĐỘ SLIDES MÀN MÁY CHIẾU (SLIDE SWITCHER) */}
+      <div className="bg-[#091326] border-b border-slate-800/80 px-6 py-2.5 space-y-2">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <span className="text-xs font-mono font-bold text-[#e0c588] uppercase flex items-center gap-1.5">
             <Tv className="w-4 h-4" /> CHẾ ĐỘ MÀN HÌNH MÁY CHIẾU:
@@ -521,7 +522,7 @@ export default function AdminLivePage() {
                   : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
               }`}
             >
-              <HelpCircle className="w-3.5 h-3.5 mr-1" /> 1. Câu Hỏi Thi Đấu
+              <HelpCircle className="w-3.5 h-3.5 mr-1" /> Câu Hỏi Thi Đấu
             </Button>
 
             <Button
@@ -533,19 +534,19 @@ export default function AdminLivePage() {
                   : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
               }`}
             >
-              <Users className="w-3.5 h-3.5 mr-1" /> 2. Giới Thiệu 4 Thí Sinh
+              <Users className="w-3.5 h-3.5 mr-1" /> Giới Thiệu 4 Thí Sinh
             </Button>
 
             <Button
               size="sm"
-              onClick={() => handleSetDisplaySlideMode("rules")}
+              onClick={() => handleSetDisplaySlideMode("rules_all")}
               className={`text-xs font-bold h-8 px-3 rounded-xl cursor-pointer transition-all ${
-                activeDisplayMode === "rules"
+                activeDisplayMode === "rules_all"
                   ? "bg-amber-600 text-white font-black shadow-md scale-102"
                   : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
               }`}
             >
-              <BookOpen className="w-3.5 h-3.5 mr-1" /> 3. Luật Thi Vòng
+              <Layers className="w-3.5 h-3.5 mr-1" /> Toàn Bộ 4 Vòng
             </Button>
 
             <Button
@@ -557,7 +558,7 @@ export default function AdminLivePage() {
                   : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
               }`}
             >
-              <Trophy className="w-3.5 h-3.5 mr-1" /> 4. Bảng Vàng Trao Giải
+              <Trophy className="w-3.5 h-3.5 mr-1" /> Bảng Vàng Trao Giải
             </Button>
 
             <Button
@@ -569,15 +570,42 @@ export default function AdminLivePage() {
                   : "bg-[#060c1a] hover:bg-slate-800 text-slate-300 border border-slate-800"
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 mr-1" /> 5. Màn Hình Chờ
+              <Sparkles className="w-3.5 h-3.5 mr-1" /> Màn Hình Chờ
             </Button>
+          </div>
+        </div>
+
+        {/* HÀNG NÚT CHỌN SLIDE LUẬT THI RIÊNG LẺ TỪNG VÒNG */}
+        <div className="max-w-7xl mx-auto flex items-center gap-2 pt-1 border-t border-slate-800/40">
+          <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">
+            CHIẾU LUẬT RIÊNG LẺ:
+          </span>
+          <div className="flex gap-1.5">
+            {[1, 2, 3, 4].map((vNum) => {
+              const modeKey = `rules_${vNum}` as DisplaySlideMode;
+              const isActive = activeDisplayMode === modeKey;
+
+              return (
+                <button
+                  key={vNum}
+                  onClick={() => handleSetDisplaySlideMode(modeKey)}
+                  className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-[#e0c588] text-black border-[#f4e5be] font-black scale-105"
+                      : "bg-[#060c1a] text-slate-400 border-slate-800 hover:text-white"
+                  }`}
+                >
+                  Luật Vòng {vNum}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* TOAST THÔNG BÁO TRẠNG THÁI */}
       {toastMessage && (
-        <div className="fixed top-24 right-6 z-50 bg-[#091326] border-2 border-[#e0c588] text-[#f4e5be] px-4 py-2.5 rounded-2xl shadow-2xl font-bold text-xs flex items-center gap-2 animate-in slide-in-from-top-3">
+        <div className="fixed top-28 right-6 z-50 bg-[#091326] border-2 border-[#e0c588] text-[#f4e5be] px-4 py-2.5 rounded-2xl shadow-2xl font-bold text-xs flex items-center gap-2 animate-in slide-in-from-top-3">
           <Check className="w-4 h-4 text-[#e0c588]" />
           <span>{toastMessage}</span>
         </div>

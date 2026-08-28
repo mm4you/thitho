@@ -1,6 +1,15 @@
 export type QuestionType = "multiple_choice" | "text_input" | "buzzer";
 
-export type DisplaySlideMode = "question" | "intro_players" | "rules" | "leaderboard" | "standby";
+export type DisplaySlideMode =
+  | "question"
+  | "intro_players"
+  | "rules_all"
+  | "rules_1"
+  | "rules_2"
+  | "rules_3"
+  | "rules_4"
+  | "leaderboard"
+  | "standby";
 
 export interface Question {
   id: string;
