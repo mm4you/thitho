@@ -39,10 +39,6 @@ export default function HomePage() {
           <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight text-white leading-none">
             OLYM<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400">QUIZ</span> ARENA
           </h1>
-
-          <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
-            Hệ thống điều phối thi đấu đối kháng trực tuyến 4 thí sinh chuẩn format Olympia với chấm điểm tự động mili-giây.
-          </p>
         </div>
 
         {/* 3 KHỐI ĐIỀU HƯỚNG CÂN ĐỐI */}
