@@ -24,7 +24,7 @@ export function BrandLogo({ size = "md", showWordmark = true, className = "" }: 
   };
 
   const subSizes = {
-    sm: "text-[8px]",
+    sm: "text-[9px]",
     md: "text-[10px]",
     lg: "text-xs",
     xl: "text-sm",
@@ -32,64 +32,51 @@ export function BrandLogo({ size = "md", showWordmark = true, className = "" }: 
 
   return (
     <div className={`inline-flex items-center gap-3 select-none ${className}`}>
-      {/* Biểu Tượng Vòng Nguyệt Quế & Ngọn Lửa Hoàng Kim SVG 4K */}
+      {/* Biểu Tượng Cyber Crown & Vector Spark Sắc Nét */}
       <div
-        className={`${iconSizes[size]} rounded-2xl bg-gradient-to-br from-amber-400 via-amber-600 to-yellow-600 p-[2px] shadow-lg shadow-amber-500/20 flex items-center justify-center shrink-0`}
+        className={`${iconSizes[size]} rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-600 to-violet-600 p-[1.5px] shadow-lg shadow-cyan-500/20 flex items-center justify-center shrink-0`}
       >
-        <div className="w-full h-full rounded-[14px] bg-[#060a14] flex items-center justify-center p-1.5">
+        <div className="w-full h-full rounded-[14px] bg-[#05070e] flex items-center justify-center p-2">
           <svg viewBox="0 0 100 100" className="w-full h-full" fill="none">
-            {/* Vòng Tròn Viền Hào Quang */}
-            <circle cx="50" cy="50" r="44" stroke="url(#goldGrad)" strokeWidth="3" strokeDasharray="3 3" opacity="0.6" />
-            <circle cx="50" cy="50" r="39" stroke="url(#goldGrad)" strokeWidth="2" opacity="0.8" />
+            {/* Khối Đa Giác Kim Cương Sắc Lạnh */}
+            <polygon
+              points="50,15 85,35 85,65 50,85 15,65 15,35"
+              stroke="url(#cyberGrad)"
+              strokeWidth="4"
+              strokeLinejoin="round"
+            />
+            {/* Lõi Vương Miện & Ngôi Sao Năng Lượng */}
+            <path
+              d="M 32 60 L 38 40 L 50 50 L 62 40 L 68 60 Z"
+              fill="url(#coreGrad)"
+            />
+            <circle cx="50" cy="30" r="4" fill="#38bdf8" />
+            <circle cx="35" cy="34" r="3" fill="#818cf8" />
+            <circle cx="65" cy="34" r="3" fill="#818cf8" />
 
-            {/* Vòng Nguyệt Quế Tinh Tế (Trái) */}
-            <path
-              d="M 28 68 C 22 55, 23 38, 36 26 C 36 34, 33 46, 38 56 C 40 60, 43 64, 46 68 C 39 68, 33 69, 28 68 Z"
-              fill="url(#goldGrad)"
-            />
-            {/* Vòng Nguyệt Quế Tinh Tế (Phải) */}
-            <path
-              d="M 72 68 C 78 55, 77 38, 64 26 C 64 34, 67 46, 62 56 C 60 60, 57 64, 54 68 C 61 68, 67 69, 72 68 Z"
-              fill="url(#goldGrad)"
-            />
-
-            {/* Ngọn Lửa Tri Thức Ở Trung Tâm */}
-            <path
-              d="M 50 24 C 53 37, 63 44, 59 62 C 56 70, 52 74, 50 74 C 48 74, 44 70, 41 62 C 37 44, 47 37, 50 24 Z"
-              fill="url(#fireGrad)"
-            />
-            {/* Tim Lửa Sáng Rực */}
-            <path
-              d="M 50 44 C 53 50, 55 55, 53 63 C 52 67, 50 69, 50 69 C 50 69, 48 67, 47 63 C 45 55, 47 50, 50 44 Z"
-              fill="#fef08a"
-            />
-
-            {/* Gradient Định Nghĩa */}
             <defs>
-              <linearGradient id="goldGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#fef08a" />
-                <stop offset="0.3" stopColor="#fbbf24" />
-                <stop offset="0.7" stopColor="#f59e0b" />
-                <stop offset="1" stopColor="#b45309" />
+              <linearGradient id="cyberGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#38bdf8" />
+                <stop offset="0.5" stopColor="#6366f1" />
+                <stop offset="1" stopColor="#a855f7" />
               </linearGradient>
-              <linearGradient id="fireGrad" x1="50" y1="24" x2="50" y2="74" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#fef08a" />
-                <stop offset="0.35" stopColor="#f59e0b" />
-                <stop offset="1" stopColor="#dc2626" />
+              <linearGradient id="coreGrad" x1="50" y1="40" x2="50" y2="60" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#38bdf8" />
+                <stop offset="1" stopColor="#6366f1" />
               </linearGradient>
             </defs>
           </svg>
         </div>
       </div>
 
-      {/* Wordmark Chữ Chuẩn Broadcast */}
+      {/* Wordmark Chữ Tối Giản Hiện Đại */}
       {showWordmark && (
         <div className="leading-tight">
           <div className={`${titleSizes[size]} font-black tracking-tight text-white uppercase`}>
-            OLYM<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500">QUIZ</span>
+            OLYM<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400">QUIZ</span>
           </div>
-          <div className={`${subSizes[size]} font-extrabold tracking-[0.25em] text-slate-400 uppercase`}>
-            ARENA BROADCAST
+          <div className={`${subSizes[size]} font-mono font-bold tracking-[0.25em] text-slate-400 uppercase`}>
+            ARENA 2.5
           </div>
         </div>
       )}
