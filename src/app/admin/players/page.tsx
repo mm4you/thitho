@@ -16,12 +16,13 @@ import {
   RefreshCw,
   Copy,
   Check,
-  Eye,
-  EyeOff,
+  RotateCcw,
   Sliders,
   ExternalLink,
   ShieldCheck,
   Sparkles,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -40,6 +41,7 @@ export default function AdminPlayersManagementPage() {
   const [originUrl, setOriginUrl] = useState<string>("");
   const [copiedSlot, setCopiedSlot] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string>("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -60,7 +62,12 @@ export default function AdminPlayersManagementPage() {
     return () => unsubscribe();
   }, []);
 
-  // ĐỔI TÊN THÍ SINH
+  const showToast = (msg: string) => {
+    setStatusMessage(msg);
+    setTimeout(() => setStatusMessage(""), 3000);
+  };
+
+  // ĐỔI TÊN / TRƯỜNG / PIN THÍ SINH
   const handleUpdatePlayer = (slot: number, field: "name" | "school_name" | "pin_code", value: string) => {
     const updated = matchState.players.map((p) =>
       p.slot_number === slot ? { ...p, [field]: value } : p
@@ -82,15 +89,30 @@ export default function AdminPlayersManagementPage() {
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "SYNC_STATE", state: newState });
 
-    // Copy mã vào clipboard
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(newPin).catch(() => {});
       setCopiedSlot(slot);
       setTimeout(() => setCopiedSlot(null), 2500);
     }
+    showToast(`Đã tạo mã mới cho Máy ${slot}: ${newPin}`);
   };
 
-  // 1-CLICK RESET TẤT CẢ MÃ 4 THÍ SINH (HỦY MÃ CŨ TOÀN DIỆN)
+  // 1-CLICK RESET BỤC THÍ SINH CỤ THỂ (Xóa tên, đặt điểm = 0, tạo mã mới)
+  const handleResetSingleSlot = (slot: number) => {
+    const newPin = generateAlphanumericCode(4);
+    const updated = matchState.players.map((p) =>
+      p.slot_number === slot
+        ? { ...p, name: `Thí sinh ${slot}`, school_name: "", score: 0, pin_code: newPin }
+        : p
+    );
+    const newState = { ...matchState, players: updated };
+    setMatchState(newState);
+    syncMatchStateToCloud(newState);
+    sendGameEvent({ type: "SYNC_STATE", state: newState });
+    showToast(`Đã Reset hoàn toàn Bục Máy ${slot} về mặc định!`);
+  };
+
+  // 1-CLICK TẠO MỚI TOÀN BỘ 4 MÃ PIN (HỦY MÃ CŨ)
   const handleGenerateNewPinsForAll = () => {
     const updated = matchState.players.map((p) => ({
       ...p,
@@ -103,6 +125,45 @@ export default function AdminPlayersManagementPage() {
 
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 3000);
+    showToast("Đã tạo mới toàn bộ 4 mã PIN thí sinh!");
+  };
+
+  // 1-CLICK RESET ĐIỂM 4 THÍ SINH VỀ 0
+  const handleResetAllScores = () => {
+    const updated = matchState.players.map((p) => ({ ...p, score: 0 }));
+    const newState = { ...matchState, players: updated };
+    setMatchState(newState);
+    syncMatchStateToCloud(newState);
+    sendGameEvent({ type: "SYNC_STATE", state: newState });
+    showToast("Đã reset điểm số của 4 thí sinh về 0!");
+  };
+
+  // 1-CLICK RESET TOÀN DIỆN CẢ 4 BỤC ĐẤU (TRẬN THI ĐẤU MỚI)
+  const handleResetAllSlotsCompletely = () => {
+    const updated = matchState.players.map((p) => ({
+      ...p,
+      name: `Thí sinh ${p.slot_number}`,
+      school_name: "",
+      score: 0,
+      pin_code: generateAlphanumericCode(4),
+    }));
+    const newState = {
+      ...matchState,
+      players: updated,
+      is_standby: true,
+      is_timer_running: false,
+      is_locked: false,
+      is_revealed: false,
+      is_scored: false,
+      buzzer_winner_slot: null,
+      star_of_hope_slot: null,
+      active_player_slot: null,
+      current_responses: {},
+    };
+    setMatchState(newState);
+    syncMatchStateToCloud(newState);
+    sendGameEvent({ type: "SYNC_STATE", state: newState });
+    showToast("Đã Reset toàn bộ 4 bục đấu sẵn sàng cho trận mới!");
   };
 
   const handleCopyLink = (slot: number) => {
@@ -115,6 +176,7 @@ export default function AdminPlayersManagementPage() {
       setCopiedSlot(slot);
       setTimeout(() => setCopiedSlot(null), 2500);
     }
+    showToast(`Đã sao chép Link & Mã Máy ${slot} vào Clipboard!`);
   };
 
   return (
@@ -143,24 +205,50 @@ export default function AdminPlayersManagementPage() {
           </div>
         </header>
 
-        {/* NÚT TẠO MÃ TỔNG CHO TOÀN BỘ 4 THÍ SINH */}
-        <div className="bg-[#091326] border border-[#e0c588]/30 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
-          <div className="space-y-1">
-            <h3 className="text-sm font-black text-white uppercase flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-[#e0c588]" /> CƠ CHẾ BẢO MẬT THÍ SINH (SINGLE ACTIVE PIN)
-            </h3>
-            <p className="text-xs text-slate-400 font-medium leading-relaxed">
-              Khi bạn bấm tạo mã mới, tất cả mã cũ của thí sinh sẽ lập tức bị hủy bỏ trên hệ thống Cloud.
-            </p>
+        {/* THÔNG BÁO TOAST NẾU CÓ */}
+        {statusMessage && (
+          <div className="p-3 rounded-2xl bg-emerald-950/60 border border-emerald-500/60 text-emerald-200 text-xs font-bold text-center shadow-lg animate-in fade-in">
+            ✓ {statusMessage}
           </div>
+        )}
 
-          <Button
-            onClick={handleGenerateNewPinsForAll}
-            className="bg-gradient-to-r from-[#c5a059] to-[#e0c588] hover:from-[#b48f48] hover:to-[#c5a059] text-black font-black text-xs h-11 px-5 rounded-xl cursor-pointer shadow-lg shadow-[#c5a059]/20 shrink-0"
-          >
-            <RefreshCw className="w-4 h-4 mr-1.5" />
-            {copiedAll ? "ĐÃ TẠO MỚI TOÀN BỘ 4 MÃ!" : "TẠO MỚI MÃ CẢ 4 THÍ SINH"}
-          </Button>
+        {/* THANH ĐIỀU KHIỂN & BỘ NÚT RESET TỔNG */}
+        <div className="bg-[#091326] border border-[#e0c588]/30 rounded-3xl p-5 space-y-4 shadow-xl">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-white uppercase flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-[#e0c588]" /> BỘ CÔNG CỤ ĐIỀU HÀNH & RESET BỤC ĐẤU
+              </h3>
+              <p className="text-xs text-slate-400 font-medium">
+                Tự động đồng bộ thời gian thực và lưu trữ vĩnh viễn trên Server Cloud
+              </p>
+            </div>
+
+            {/* CÁC NÚT RESET NHANH */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={handleResetAllScores}
+                variant="outline"
+                className="border-slate-700 hover:border-amber-500 text-amber-300 font-bold text-xs h-9 px-3 rounded-xl cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset Điểm Về 0
+              </Button>
+
+              <Button
+                onClick={handleGenerateNewPinsForAll}
+                className="bg-[#c5a059] hover:bg-[#b48f48] text-black font-black text-xs h-9 px-3.5 rounded-xl cursor-pointer shadow-md"
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Tạo Mới 4 Mã PIN
+              </Button>
+
+              <Button
+                onClick={handleResetAllSlotsCompletely}
+                className="bg-rose-600 hover:bg-rose-500 text-white font-black text-xs h-9 px-3.5 rounded-xl cursor-pointer shadow-md shadow-rose-600/20"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Reset Cả 4 Bục Máy
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* DANH SÁCH 4 BỤC ĐẤU THÍ SINH */}
@@ -182,9 +270,22 @@ export default function AdminPlayersManagementPage() {
                     <span className="text-sm font-bold text-white">Bục Đấu #{slot}</span>
                   </div>
 
-                  <span className="font-mono text-lg font-black text-[#e0c588]">
-                    {p.score} Điểm
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-lg font-black text-[#e0c588]">
+                      {p.score} Điểm
+                    </span>
+
+                    {/* NÚT RESET RIÊNG CHO BỤC NÀY */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleResetSingleSlot(slot)}
+                      className="text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 h-8 px-2 rounded-lg cursor-pointer transition-colors"
+                      title={`Reset Bục Máy ${slot}`}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset Bục
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
