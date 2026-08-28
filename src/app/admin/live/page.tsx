@@ -28,8 +28,7 @@ import {
   Sliders,
   ShieldCheck,
   Sparkles,
-  ChevronRight,
-  ChevronLeft,
+  Command,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -58,7 +57,7 @@ export default function AdminLivePage() {
     }
   }, [matchState.current_round_index, matchState.current_question_index, currentQuestion?.time_limit]);
 
-  // MASTER TIMER INTERVAL ĐẾM LÙI CHÍNH XÁC
+  // MASTER TIMER INTERVAL
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerActive) {
@@ -67,7 +66,6 @@ export default function AdminLivePage() {
           if (prev <= 1) {
             sound.playTimeUp();
             setIsTimerActive(false);
-            // Tự động khóa câu trả lời khi hết giờ
             handleLockAnswers();
             return 0;
           }
@@ -80,6 +78,35 @@ export default function AdminLivePage() {
       if (interval) clearInterval(interval);
     };
   }, [isTimerActive]);
+
+  // TÍCH HỢP PRO HOTKEYS CHO MC / BAN GIÁM KHẢO
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Bỏ qua nếu đang gõ trong input
+      if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (isTimerActive) {
+          handlePauseTimer();
+        } else {
+          handleStartTimer();
+        }
+      } else if (e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        handleLockAnswers();
+      } else if (e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        executeAutoGrade();
+      } else if (e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        handleResetTimer();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isTimerActive, timeLeft, matchState]);
 
   const toggleMute = () => {
     const next = !isAudioMuted;
@@ -123,7 +150,6 @@ export default function AdminLivePage() {
     return () => unsubscribe();
   }, []);
 
-  // BẮT ĐẦU ĐẾM GIỜ
   const handleStartTimer = (seconds?: number) => {
     const duration = seconds || Number(customTimeInput) || currentQuestion?.time_limit || 15;
     setTimeLeft(duration);
@@ -146,7 +172,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "START_TIMER", time_limit: duration, start_time: Date.now() });
   };
 
-  // TẠM DỪNG ĐẾM GIỜ
   const handlePauseTimer = () => {
     setIsTimerActive(false);
     const newState: MatchState = { ...matchState, is_timer_running: false, time_left: timeLeft };
@@ -155,7 +180,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
-  // RESET ĐỒNG HỒ
   const handleResetTimer = () => {
     setIsTimerActive(false);
     const defaultTime = currentQuestion?.time_limit || 15;
@@ -174,7 +198,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SYNC_STATE", state: newState });
   };
 
-  // KHÓA NỘP BÀI
   const handleLockAnswers = () => {
     setIsTimerActive(false);
     const newState: MatchState = {
@@ -187,7 +210,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "LOCK_ANSWERS" });
   };
 
-  // MỞ ĐÁP ÁN
   const handleRevealAnswers = () => {
     const newState: MatchState = {
       ...matchState,
@@ -198,7 +220,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "REVEAL_ANSWERS" });
   };
 
-  // BẬT / TẮT MÀN HÌNH STANDBY
   const handleToggleStandby = () => {
     const next = !matchState.is_standby;
     const newState: MatchState = { ...matchState, is_standby: next };
@@ -207,7 +228,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "TOGGLE_STANDBY", is_standby: next });
   };
 
-  // RESET CHUÔNG CƯỚP ĐIỂM
   const handleResetBuzzer = () => {
     const newState: MatchState = {
       ...matchState,
@@ -219,7 +239,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "RESET_BUZZER" });
   };
 
-  // ĐẶT NGÔI SAO HY VỌNG
   const handleToggleStar = (slot: number) => {
     const nextSlot = matchState.star_of_hope_slot === slot ? null : slot;
     const newState: MatchState = { ...matchState, star_of_hope_slot: nextSlot };
@@ -228,7 +247,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "TOGGLE_STAR_OF_HOPE", slot_number: nextSlot });
   };
 
-  // ĐẶT LƯỢT THI CHÍNH VÒNG 4
   const handleSetActivePlayer = (slot: number | null) => {
     const newState: MatchState = { ...matchState, active_player_slot: slot };
     setMatchState(newState);
@@ -236,7 +254,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "SET_ACTIVE_PLAYER", slot_number: slot });
   };
 
-  // ĐIỀU CHỈNH ĐIỂM SỐ THỦ CÔNG
   const handleOverrideScore = (slot: 1 | 2 | 3 | 4, delta: number) => {
     const updatedPlayers = matchState.players.map((p) =>
       p.slot_number === slot ? { ...p, score: Math.max(0, p.score + delta) } : p
@@ -247,7 +264,6 @@ export default function AdminLivePage() {
     sendGameEvent({ type: "OVERRIDE_SCORE", slot_number: slot, delta });
   };
 
-  // CHỌN CÂU HỎI
   const handleSelectQuestion = (qIndex: number) => {
     setIsTimerActive(false);
     const targetQ = currentRound.questions[qIndex];
@@ -275,7 +291,6 @@ export default function AdminLivePage() {
     });
   };
 
-  // CHỌN VÒNG THI
   const handleSelectRound = (rIndex: number) => {
     setIsTimerActive(false);
     const targetRound = matchState.rounds[rIndex];
@@ -376,27 +391,32 @@ export default function AdminLivePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05070e] text-slate-100 flex flex-col font-sans select-none pb-8">
+    <div className="min-h-screen bg-[#060c1a] text-slate-100 flex flex-col font-sans select-none pb-8">
       {/* TOP HEADER */}
-      <header className="px-6 py-3 border-b border-slate-800 bg-[#070a14] flex items-center justify-between sticky top-0 z-30 shadow-md">
+      <header className="px-6 py-3 border-b border-slate-800 bg-[#070e1e] flex items-center justify-between sticky top-0 z-30 shadow-md">
         <div className="flex items-center gap-4">
           <BrandLogo size="sm" showWordmark={false} />
           <div>
             <h1 className="text-xs md:text-sm font-black uppercase text-white flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-cyan-400" /> BÀN ĐIỀU HÀNH BAN GIÁM KHẢO (LIVE CONTROL)
+              <ShieldCheck className="w-4 h-4 text-[#e0c588]" /> BÀN ĐIỀU HÀNH BAN GIÁM KHẢO (LIVE CONTROL)
             </h1>
             <p className="text-[11px] text-slate-400 font-medium">
-              Vòng: <span className="text-cyan-400 font-bold">{currentRound.title}</span> | Câu: <span className="text-white font-bold">#{matchState.current_question_index + 1}</span>
+              Vòng: <span className="text-[#e0c588] font-bold">{currentRound.title}</span> | Câu: <span className="text-white font-bold">#{matchState.current_question_index + 1}</span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5">
+          <div className="hidden md:flex items-center gap-2 text-[10px] text-slate-400 bg-[#091326] px-3 py-1.5 rounded-xl border border-slate-800">
+            <Command className="w-3 h-3 text-[#e0c588]" />
+            <span>Phím tắt: <kbd className="px-1 bg-black/40 rounded font-mono">Space</kbd> Đếm giờ • <kbd className="px-1 bg-black/40 rounded font-mono">L</kbd> Khóa • <kbd className="px-1 bg-black/40 rounded font-mono">G</kbd> Chấm</span>
+          </div>
+
           <Button
             onClick={handleToggleStandby}
             className={`text-xs font-bold h-9 px-3.5 rounded-xl cursor-pointer transition-all ${
               matchState.is_standby
-                ? "bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/20"
+                ? "bg-[#e0c588] hover:bg-[#c5a059] text-black shadow-lg shadow-[#e0c588]/20"
                 : "bg-slate-800 hover:bg-slate-700 text-slate-300"
             }`}
           >
@@ -412,10 +432,10 @@ export default function AdminLivePage() {
 
           <button
             onClick={toggleMute}
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+            className="p-2 rounded-xl bg-[#091326] border border-slate-800 text-slate-400 hover:text-white"
             title="Bật/Tắt âm thanh"
           >
-            {isAudioMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-cyan-400" />}
+            {isAudioMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-[#e0c588]" />}
           </button>
         </div>
       </header>
@@ -425,9 +445,9 @@ export default function AdminLivePage() {
         {/* CỘT 1: VÒNG THI & MASTER TIMER (3/12) */}
         <div className="lg:col-span-3 space-y-4">
           {/* BỘ ĐẾM GIỜ MASTER TIMER PRO */}
-          <div className="bg-[#090d16] border-2 border-cyan-500/40 rounded-2xl p-4 space-y-3 shadow-xl">
+          <div className="bg-[#091326] border-2 border-[#e0c588]/40 rounded-2xl p-4 space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-cyan-400 uppercase flex items-center gap-1.5">
+              <span className="text-xs font-mono font-bold text-[#e0c588] uppercase flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" /> MASTER TIMER:
               </span>
               <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded ${isTimerActive ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse" : "bg-slate-800 text-slate-400"}`}>
@@ -436,8 +456,8 @@ export default function AdminLivePage() {
             </div>
 
             {/* ĐỒNG HỒ ĐẾM NGƯỢC LED SỐ TO */}
-            <div className="bg-[#060810] border border-slate-800 rounded-xl py-3 text-center">
-              <span className={`font-mono text-4xl md:text-5xl font-black tabular-nums transition-colors ${timeLeft <= 3 && isTimerActive ? "text-rose-500 animate-pulse" : "text-cyan-400"}`}>
+            <div className="bg-[#060c1a] border border-slate-800 rounded-xl py-3 text-center">
+              <span className={`font-mono text-4xl md:text-5xl font-black tabular-nums transition-colors ${timeLeft <= 3 && isTimerActive ? "text-rose-500 animate-pulse" : "text-[#e0c588]"}`}>
                 {String(timeLeft).padStart(2, "0")}<span className="text-sm font-bold text-slate-500">s</span>
               </span>
             </div>
@@ -449,14 +469,14 @@ export default function AdminLivePage() {
                   onClick={handlePauseTimer}
                   className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs h-9 rounded-xl cursor-pointer shadow-md"
                 >
-                  <Pause className="w-3.5 h-3.5 mr-1" /> Tạm Dừng
+                  <Pause className="w-3.5 h-3.5 mr-1" /> Tạm Dừng (Space)
                 </Button>
               ) : (
                 <Button
                   onClick={() => handleStartTimer()}
-                  className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs h-9 rounded-xl cursor-pointer shadow-lg shadow-cyan-600/20"
+                  className="bg-[#c5a059] hover:bg-[#b48f48] text-black font-black text-xs h-9 rounded-xl cursor-pointer shadow-lg shadow-[#c5a059]/20"
                 >
-                  <Play className="w-3.5 h-3.5 mr-1" /> Bắt Đầu ({timeLeft}s)
+                  <Play className="w-3.5 h-3.5 mr-1" /> Bắt Đầu (Space)
                 </Button>
               )}
 
@@ -464,7 +484,7 @@ export default function AdminLivePage() {
                 onClick={handleResetTimer}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs h-9 rounded-xl cursor-pointer"
               >
-                <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
+                <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset (R)
               </Button>
             </div>
 
@@ -474,7 +494,7 @@ export default function AdminLivePage() {
                 <Button
                   key={sec}
                   onClick={() => handleStartTimer(sec)}
-                  className="bg-[#060810] hover:bg-cyan-950/60 border border-slate-800 text-slate-300 hover:text-white font-mono font-bold text-xs h-8 rounded-lg cursor-pointer"
+                  className="bg-[#060c1a] hover:bg-[#0d1c3a] border border-slate-800 text-slate-300 hover:text-white font-mono font-bold text-xs h-8 rounded-lg cursor-pointer"
                 >
                   {sec}s
                 </Button>
@@ -483,7 +503,7 @@ export default function AdminLivePage() {
           </div>
 
           {/* 4 VÒNG THI */}
-          <div className="bg-[#090d16] border border-slate-800/80 rounded-2xl p-4 space-y-2 shadow-md">
+          <div className="bg-[#091326] border border-slate-800/80 rounded-2xl p-4 space-y-2 shadow-md">
             <span className="text-xs font-bold text-slate-400 uppercase block">4 VÒNG THI ĐẤU:</span>
             <div className="space-y-1.5">
               {matchState.rounds.map((round, idx) => (
@@ -492,8 +512,8 @@ export default function AdminLivePage() {
                   onClick={() => handleSelectRound(idx)}
                   className={`w-full text-left p-2.5 rounded-xl font-bold text-xs transition-all border cursor-pointer flex items-center justify-between ${
                     matchState.current_round_index === idx
-                      ? "bg-cyan-600 border-cyan-400 text-white shadow-md"
-                      : "bg-[#060810] border-slate-800 text-slate-400 hover:text-slate-200"
+                      ? "bg-[#c5a059] border-[#e0c588] text-black shadow-md font-black"
+                      : "bg-[#060c1a] border-slate-800 text-slate-400 hover:text-slate-200"
                   }`}
                 >
                   <span>{idx + 1}. {round.title}</span>
@@ -504,7 +524,7 @@ export default function AdminLivePage() {
           </div>
 
           {/* DANH SÁCH CÂU HỎI */}
-          <div className="bg-[#090d16] border border-slate-800/80 rounded-2xl p-4 space-y-2 shadow-md">
+          <div className="bg-[#091326] border border-slate-800/80 rounded-2xl p-4 space-y-2 shadow-md">
             <span className="text-xs font-bold text-slate-400 uppercase block">CÂU HỎI TRONG VÒNG:</span>
             <div className="grid grid-cols-4 gap-1.5 max-h-[140px] overflow-y-auto pr-1">
               {currentRound.questions.map((_, qIdx) => (
@@ -513,8 +533,8 @@ export default function AdminLivePage() {
                   onClick={() => handleSelectQuestion(qIdx)}
                   className={`h-8 rounded-lg font-bold text-xs border transition-all cursor-pointer ${
                     matchState.current_question_index === qIdx
-                      ? "bg-cyan-500 border-cyan-300 text-black shadow-md scale-105"
-                      : "bg-[#060810] border-slate-800 text-slate-400 hover:text-white"
+                      ? "bg-[#e0c588] border-[#f4e5be] text-black shadow-md scale-105 font-black"
+                      : "bg-[#060c1a] border-slate-800 text-slate-400 hover:text-white"
                   }`}
                 >
                   #{qIdx + 1}
@@ -526,9 +546,9 @@ export default function AdminLivePage() {
 
         {/* CỘT 2: CHI TIẾT CÂU HỎI & NÚT ĐIỀU PHỐI (5/12) */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-[#090d16] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-xl">
+          <div className="bg-[#091326] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-800/60 pb-2.5">
-              <span className="text-xs font-bold text-cyan-400 uppercase">
+              <span className="text-xs font-bold text-[#e0c588] uppercase">
                 CÂU {matchState.current_question_index + 1} (+{currentQuestion?.points_correct}đ)
               </span>
               <span className="text-[10px] font-mono text-slate-500 uppercase">{currentQuestion?.question_type}</span>
@@ -543,14 +563,14 @@ export default function AdminLivePage() {
               {currentQuestion?.options && currentQuestion.options.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   {currentQuestion.options.map((opt, idx) => (
-                    <div key={idx} className="p-2 rounded-lg bg-[#060810] border border-slate-800 text-xs text-slate-300">
+                    <div key={idx} className="p-2 rounded-lg bg-[#060c1a] border border-slate-800 text-xs text-slate-300">
                       {opt}
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="p-3 rounded-xl bg-[#060810] border border-slate-800 space-y-0.5">
+              <div className="p-3 rounded-xl bg-[#060c1a] border border-slate-800 space-y-0.5">
                 <span className="text-[10px] font-bold text-slate-500 uppercase block">ĐÁP ÁN CHÍNH XÁC:</span>
                 <p className="font-mono text-base font-black text-emerald-400 uppercase">
                   {currentQuestion?.correct_answer}
@@ -564,7 +584,7 @@ export default function AdminLivePage() {
                 onClick={handleLockAnswers}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs h-9 rounded-xl cursor-pointer"
               >
-                <Lock className="w-3.5 h-3.5 mr-1" /> Khóa Nộp
+                <Lock className="w-3.5 h-3.5 mr-1" /> Khóa Nộp (L)
               </Button>
               <Button
                 onClick={handleRevealAnswers}
@@ -576,16 +596,16 @@ export default function AdminLivePage() {
                 onClick={executeAutoGrade}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs h-9 rounded-xl cursor-pointer shadow-lg shadow-emerald-600/20"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Chấm Điểm
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Chấm Điểm (G)
               </Button>
             </div>
           </div>
 
           {/* VÒNG 4: THI ĐẤU & SAO */}
           {isVeDichRound && (
-            <div className="bg-[#090d16] border border-violet-500/30 rounded-2xl p-4 space-y-2.5 shadow-xl">
-              <span className="text-xs font-bold text-violet-400 uppercase flex items-center gap-1.5">
-                <Star className="w-3.5 h-3.5 fill-violet-400" /> VÒNG 4: LƯỢT THI CHÍNH & NGÔI SAO HY VỌNG
+            <div className="bg-[#091326] border border-[#e0c588]/30 rounded-2xl p-4 space-y-2.5 shadow-xl">
+              <span className="text-xs font-bold text-[#e0c588] uppercase flex items-center gap-1.5">
+                <Star className="w-3.5 h-3.5 fill-[#e0c588]" /> VÒNG 4: LƯỢT THI CHÍNH & NGÔI SAO HY VỌNG
               </span>
 
               <div className="grid grid-cols-4 gap-2">
@@ -598,7 +618,7 @@ export default function AdminLivePage() {
                       <button
                         onClick={() => handleSetActivePlayer(isMain ? null : p.slot_number)}
                         className={`w-full py-1.5 rounded-lg text-xs font-black border transition-all cursor-pointer ${
-                          isMain ? "bg-violet-600 text-white border-violet-400 shadow-md" : "bg-[#060810] text-slate-400 border-slate-800"
+                          isMain ? "bg-[#c5a059] text-black border-[#e0c588] shadow-md" : "bg-[#060c1a] text-slate-400 border-slate-800"
                         }`}
                       >
                         MÁY {p.slot_number}
@@ -606,10 +626,10 @@ export default function AdminLivePage() {
                       <button
                         onClick={() => handleToggleStar(p.slot_number)}
                         className={`w-full py-1 rounded-md text-[10px] font-black border transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                          isStar ? "bg-violet-500 text-white border-violet-300" : "bg-transparent text-slate-500 border-slate-800"
+                          isStar ? "bg-[#e0c588] text-black border-[#f4e5be]" : "bg-transparent text-slate-500 border-slate-800"
                         }`}
                       >
-                        <Star className={`w-3 h-3 ${isStar ? "fill-white" : ""}`} /> SAO
+                        <Star className={`w-3 h-3 ${isStar ? "fill-black" : ""}`} /> SAO
                       </button>
                     </div>
                   );
@@ -647,7 +667,7 @@ export default function AdminLivePage() {
               const isStar = matchState.star_of_hope_slot === p.slot_number;
 
               return (
-                <div key={p.slot_number} className="bg-[#090d16] border border-slate-800/80 rounded-2xl p-3 space-y-2 shadow-md">
+                <div key={p.slot_number} className="bg-[#091326] border border-slate-800/80 rounded-2xl p-3 space-y-2 shadow-md">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-300">
@@ -658,17 +678,17 @@ export default function AdminLivePage() {
                       </span>
                     </div>
 
-                    <span className="font-mono text-base font-black text-cyan-400 tabular-nums">
+                    <span className="font-mono text-base font-black text-[#e0c588] tabular-nums">
                       {p.score}đ
                     </span>
                   </div>
 
-                  <div className="p-1.5 rounded-lg bg-[#060810] border border-slate-800 flex items-center justify-between min-h-[28px]">
+                  <div className="p-1.5 rounded-lg bg-[#060c1a] border border-slate-800 flex items-center justify-between min-h-[28px]">
                     <span className="text-[11px] font-mono text-slate-300 truncate">
                       {resp ? resp.answer_text : <span className="text-slate-600 italic">Chưa nộp</span>}
                     </span>
                     {resp && (
-                      <span className="text-[10px] text-cyan-400 font-mono">
+                      <span className="text-[10px] text-[#e0c588] font-mono">
                         {(resp.response_time_ms / 1000).toFixed(2)}s
                       </span>
                     )}

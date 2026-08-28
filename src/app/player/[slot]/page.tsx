@@ -20,6 +20,9 @@ import {
   User,
   Clock,
   Lock,
+  KeyRound,
+  ShieldAlert,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -27,6 +30,10 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 function countLettersOnly(str: string): number {
   if (!str) return 0;
   return str.replace(/\s+/g, "").length;
+}
+
+function normalizeInputCode(code: string): string {
+  return (code || "").toUpperCase().replace(/[\s\-_–—]/g, "").trim();
 }
 
 export default function PlayerPage() {
@@ -42,18 +49,15 @@ export default function PlayerPage() {
   const [submittedTimeMs, setSubmittedTimeMs] = useState<number>(0);
   const [timerStartTime, setTimerStartTime] = useState<number>(0);
 
+  // XÁC THỰC MÃ THÍ SINH
+  const [enteredPin, setEnteredPin] = useState<string>("");
+  const [pinError, setPinError] = useState<string>("");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>("");
   const [editSchool, setEditSchool] = useState<string>("");
 
-  const slotThemes = [
-    { name: "MÁY 1", border: "border-rose-500/50", accent: "text-rose-400", badge: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
-    { name: "MÁY 2", border: "border-cyan-500/50", accent: "text-cyan-400", badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40" },
-    { name: "MÁY 3", border: "border-amber-500/50", accent: "text-amber-400", badge: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
-    { name: "MÁY 4", border: "border-violet-500/50", accent: "text-violet-400", badge: "bg-violet-500/20 text-violet-300 border-violet-500/40" },
-  ];
-
-  const currentTheme = slotThemes[slotNumber - 1] || slotThemes[0];
   const me = matchState.players.find((p) => p.slot_number === slotNumber);
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
   const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
@@ -65,8 +69,31 @@ export default function PlayerPage() {
   const isStarChosenByMe = matchState.star_of_hope_slot === slotNumber;
   const isBuzzerWinner = matchState.buzzer_winner_slot === slotNumber;
 
-  // ĐIỀU KIỆN MỞ KHÓA THAO TÁC: CHỈ KHI TIMER ĐANG CHẠY VÀ CHƯA BỊ KHÓA / CHƯA STANDBY
-  const canInteract = matchState.is_timer_running && !matchState.is_locked && !matchState.is_standby;
+  // BẢNG MÀU 4 BỤC ĐẤU NOBEL ACADEMIC
+  const slotThemes = [
+    { name: "MÁY 1", border: "border-rose-500/40", accent: "text-rose-400", badge: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
+    { name: "MÁY 2", border: "border-blue-500/40", accent: "text-blue-400", badge: "bg-blue-500/20 text-blue-300 border-blue-500/40" },
+    { name: "MÁY 3", border: "border-[#e0c588]/40", accent: "text-[#e0c588]", badge: "bg-[#e0c588]/20 text-[#f4e5be] border-[#e0c588]/40" },
+    { name: "MÁY 4", border: "border-emerald-500/40", accent: "text-emerald-400", badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
+  ];
+  const currentTheme = slotThemes[slotNumber - 1] || slotThemes[0];
+
+  // KIỂM TRA MÃ PIN KHI VÀO HOẶC KHI ADMIN RESET MÃ MỚI
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedPin = sessionStorage.getItem(`player_pin_slot_${slotNumber}`);
+      const requiredPin = me?.pin_code || "";
+
+      if (savedPin && requiredPin && normalizeInputCode(savedPin) === normalizeInputCode(requiredPin)) {
+        setIsAuthenticated(true);
+      } else if (!requiredPin) {
+        setIsAuthenticated(true);
+      } else {
+        // Mã cũ bị mất quyền khi Admin reset
+        setIsAuthenticated(false);
+      }
+    }
+  }, [slotNumber, me?.pin_code]);
 
   useEffect(() => {
     if (me) {
@@ -161,7 +188,26 @@ export default function PlayerPage() {
     return () => unsubscribe();
   }, [slotNumber]);
 
-  // Nộp đáp án (Dùng cho cả Trắc nghiệm & Tự luận)
+  // XÁC THỰC MÃ THÍ SINH
+  const handleVerifyPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEntered = normalizeInputCode(enteredPin);
+    const cleanRequired = normalizeInputCode(me?.pin_code || "");
+
+    if (!cleanRequired || cleanEntered === cleanRequired) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`player_pin_slot_${slotNumber}`, enteredPin.trim());
+      }
+      setIsAuthenticated(true);
+      setPinError("");
+    } else {
+      setPinError("Mã bảo mật không chính xác hoặc đã bị Ban Tổ Chức thay đổi!");
+    }
+  };
+
+  const canInteract = matchState.is_timer_running && !matchState.is_locked && !matchState.is_standby;
+
+  // NỘP BÀI
   const submitAnswer = (selectedText: string) => {
     if (!canInteract || hasSubmitted) return;
 
@@ -183,7 +229,7 @@ export default function PlayerPage() {
   };
 
   const handlePressBuzzer = () => {
-    if (matchState.buzzer_winner_slot) return;
+    if (!canInteract || matchState.buzzer_winner_slot) return;
     const pressTime = timerStartTime > 0 ? Date.now() - timerStartTime : Date.now();
     sound.playBuzzer();
     sendGameEvent({ type: "PRESS_BUZZER", slot_number: slotNumber, press_time_ms: pressTime });
@@ -206,10 +252,74 @@ export default function PlayerPage() {
     setIsEditingProfile(false);
   };
 
+  // NẾU CHƯA NHẬP MÃ THÍ SINH: HIỂN THỊ MÀN HÌNH KHÓA MÃ PIN
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-[100dvh] bg-[#060c1a] text-slate-100 flex items-center justify-center p-4 font-sans select-none">
+        <div className="w-full max-w-sm bg-[#091326] border border-[#e0c588]/30 rounded-3xl p-7 shadow-2xl space-y-6 text-center">
+          <div className="flex justify-center">
+            <BrandLogo size="md" showWordmark={false} />
+          </div>
+
+          <div className="space-y-1.5">
+            <span className={`text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-lg border ${currentTheme.badge}`}>
+              MÁY THI ĐẤU SỐ {slotNumber}
+            </span>
+            <h2 className="text-lg font-black text-white uppercase tracking-tight pt-1">
+              XÁC THỰC MÃ BỤC ĐẤU
+            </h2>
+            <p className="text-xs text-slate-400 font-medium leading-relaxed">
+              Nhập mã PIN bảo mật do Ban Giám Khảo cấp để mở khóa máy thi đấu này
+            </p>
+          </div>
+
+          <form onSubmit={handleVerifyPin} className="space-y-4 text-left">
+            <div>
+              <label className="text-[10px] font-mono font-bold text-slate-400 block mb-1.5 uppercase">
+                MÃ BẢO MẬT (PIN):
+              </label>
+              <input
+                type="text"
+                autoFocus
+                value={enteredPin}
+                onChange={(e) => {
+                  setEnteredPin(e.target.value.toUpperCase());
+                  setPinError("");
+                }}
+                placeholder="Nhập mã (Ví dụ: 1111)..."
+                className="w-full bg-[#060c1a] border border-slate-700 focus:border-[#e0c588] rounded-xl px-4 py-3 text-center text-base font-mono font-black text-[#f4e5be] uppercase placeholder:text-slate-600 focus:outline-none tracking-widest"
+              />
+            </div>
+
+            {pinError && (
+              <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/50 text-rose-300 text-xs font-bold flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{pinError}</span>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-[#c5a059] to-[#e0c588] hover:from-[#b48f48] hover:to-[#c5a059] text-black font-black text-xs h-11 uppercase tracking-wider rounded-xl cursor-pointer shadow-lg shadow-[#c5a059]/20"
+            >
+              MỞ KHÓA BỤC THI ĐẤU <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </form>
+
+          <div className="pt-2">
+            <Link href="/" className="text-xs text-slate-500 hover:text-slate-300 font-mono">
+              ← Quay lại Trang Chủ
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-[100dvh] bg-[#05070e] text-slate-100 flex flex-col justify-between p-4 md:p-6 font-sans select-none max-w-xl mx-auto w-full">
+    <div className="min-h-[100dvh] bg-[#060c1a] text-slate-100 flex flex-col justify-between p-4 md:p-6 font-sans select-none max-w-xl mx-auto w-full">
       {/* HEADER BỤC ĐẤU */}
-      <header className="bg-[#090d16] border border-slate-800/80 rounded-2xl p-4 shadow-xl flex items-center justify-between">
+      <header className="bg-[#091326] border border-slate-800/80 rounded-2xl p-4 shadow-xl flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className={`text-xs font-mono font-black px-3 py-1 rounded-xl border ${currentTheme.badge}`}>
             MÁY {slotNumber}
@@ -222,13 +332,13 @@ export default function PlayerPage() {
               </h2>
               <button
                 onClick={() => setIsEditingProfile(true)}
-                className="text-slate-500 hover:text-cyan-400 p-1 transition-colors"
+                className="text-slate-500 hover:text-[#e0c588] p-1 transition-colors"
                 title="Đổi tên"
               >
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium truncate max-w-[150px]">
+            <p className="text-[11px] text-slate-400 font-medium truncate max-w-[150px]">
               {me?.school_name || "Chưa cập nhật trường"}
             </p>
           </div>
@@ -236,7 +346,7 @@ export default function PlayerPage() {
 
         <div className="text-right">
           <span className="text-[10px] font-bold text-slate-500 uppercase block">ĐIỂM SỐ:</span>
-          <span className="font-mono text-2xl md:text-3xl font-black text-cyan-400 tabular-nums">
+          <span className="font-mono text-2xl md:text-3xl font-black text-[#e0c588] tabular-nums">
             {me?.score || 0}
           </span>
         </div>
@@ -245,9 +355,9 @@ export default function PlayerPage() {
       {/* MODAL SỬA THÔNG TIN */}
       {isEditingProfile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
-          <div className="bg-[#0b101c] border border-cyan-500/40 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+          <div className="bg-[#091326] border border-[#e0c588]/40 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
             <h3 className="text-sm font-black uppercase text-white flex items-center gap-2">
-              <User className="w-4 h-4 text-cyan-400" /> CẬP NHẬT THÔNG TIN THÍ SINH
+              <User className="w-4 h-4 text-[#e0c588]" /> CẬP NHẬT THÔNG TIN THÍ SINH
             </h3>
 
             <div className="space-y-3">
@@ -257,7 +367,7 @@ export default function PlayerPage() {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-[#060810] border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#060c1a] border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-[#e0c588]"
                 />
               </div>
               <div>
@@ -266,13 +376,13 @@ export default function PlayerPage() {
                   type="text"
                   value={editSchool}
                   onChange={(e) => setEditSchool(e.target.value)}
-                  className="w-full bg-[#060810] border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#060c1a] border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#e0c588]"
                 />
               </div>
             </div>
 
             <div className="flex gap-2 pt-2">
-              <Button onClick={handleSaveProfile} className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs h-10 rounded-xl cursor-pointer">
+              <Button onClick={handleSaveProfile} className="flex-1 bg-[#c5a059] hover:bg-[#b48f48] text-black font-bold text-xs h-10 rounded-xl cursor-pointer">
                 Lưu Thông Tin
               </Button>
               <Button variant="ghost" onClick={() => setIsEditingProfile(false)} className="text-slate-400 text-xs h-10">
@@ -283,15 +393,23 @@ export default function PlayerPage() {
         </div>
       )}
 
+      {/* TRẠNG THÁI TOÀN CẢNH KHI GIÀNH QUYỀN TRẢ LỜI */}
+      {isBuzzerWinner && (
+        <div className="my-3 bg-gradient-to-r from-emerald-900/80 via-emerald-800/90 to-emerald-900/80 border-2 border-emerald-400 rounded-2xl p-4 text-center shadow-2xl animate-pulse">
+          <span className="text-xs font-mono font-black uppercase text-emerald-200 block">🎙️ BẠN ĐÃ GIÀNH QUYỀN TRẢ LỜI!</span>
+          <span className="text-sm font-black text-white uppercase">HÃY PHÁT BIỂU CÂU TRẢ LỜI VỚI BAN GIÁM KHẢO</span>
+        </div>
+      )}
+
       {/* KHUNG CÂU HỎI THỜI GIAN THỰC */}
-      <main className="my-5 space-y-4">
+      <main className="my-4 space-y-4">
         {/* VÒNG 4: NÚT ĐẶT SAO */}
         {isRound4VeDich && isMyMainTurnInRound4 && (
-          <div className="bg-gradient-to-r from-violet-950/60 via-indigo-950/40 to-violet-950/60 border border-violet-500/40 rounded-2xl p-3.5 flex items-center justify-between shadow-lg">
+          <div className="bg-[#091326] border border-[#e0c588]/40 rounded-2xl p-3.5 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-violet-400" />
+              <Crown className="w-5 h-5 text-[#e0c588]" />
               <div>
-                <span className="text-xs font-black text-violet-300 uppercase block">LƯỢT THI CỦA BẠN!</span>
+                <span className="text-xs font-black text-[#f4e5be] uppercase block">LƯỢT THI CỦA BẠN!</span>
                 <span className="text-[11px] text-slate-400 font-medium">Bạn có thể chọn Ngôi Sao Hy Vọng</span>
               </div>
             </div>
@@ -300,19 +418,19 @@ export default function PlayerPage() {
               onClick={handleToggleStarOfHope}
               className={`font-black text-xs h-9 px-3.5 rounded-xl cursor-pointer transition-all ${
                 isStarChosenByMe
-                  ? "bg-violet-500 text-white shadow-lg shadow-violet-500/40"
-                  : "bg-black/40 border border-violet-500/50 text-violet-300 hover:bg-violet-600 hover:text-white"
+                  ? "bg-[#e0c588] text-black shadow-lg shadow-[#e0c588]/30"
+                  : "bg-[#060c1a] border border-[#e0c588]/50 text-[#e0c588] hover:bg-[#c5a059] hover:text-black"
               }`}
             >
-              <Star className={`w-3.5 h-3.5 mr-1 ${isStarChosenByMe ? "fill-white" : ""}`} />
+              <Star className={`w-3.5 h-3.5 mr-1 ${isStarChosenByMe ? "fill-black" : ""}`} />
               {isStarChosenByMe ? "ĐÃ ĐẶT SAO" : "ĐẶT SAO"}
             </Button>
           </div>
         )}
 
-        <div className="bg-[#090d16] border border-slate-800/80 rounded-2xl p-5 space-y-3 shadow-lg">
+        <div className="bg-[#091326] border border-slate-800/80 rounded-2xl p-5 space-y-3 shadow-lg">
           <div className="flex items-center justify-between border-b border-slate-800/60 pb-2.5">
-            <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+            <span className="text-xs font-bold text-[#e0c588] uppercase tracking-wider">
               {currentRound.title} • CÂU {matchState.current_question_index + 1}
             </span>
             <span className="text-[11px] font-mono font-bold text-slate-400">
@@ -325,7 +443,7 @@ export default function PlayerPage() {
           </h3>
 
           {isRound2VCNV && currentQuestion?.correct_answer && (
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 text-xs font-bold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#060c1a] border border-[#e0c588]/30 text-[#f4e5be] text-xs font-bold">
               💡 Gợi ý: Gồm <span className="text-white font-black">{countLettersOnly(currentQuestion.correct_answer)}</span> chữ cái
             </div>
           )}
@@ -363,10 +481,10 @@ export default function PlayerPage() {
         <div className="space-y-3 pt-1">
           {hasSubmitted ? (
             /* ĐÃ NỘP BÀI */
-            <div className="bg-cyan-950/30 border border-cyan-500/50 rounded-2xl p-5 text-center space-y-1.5 shadow-xl animate-in zoom-in-95">
-              <CheckCircle2 className="w-8 h-8 text-cyan-400 mx-auto" />
+            <div className="bg-[#091326] border border-[#e0c588]/60 rounded-2xl p-5 text-center space-y-1.5 shadow-xl animate-in zoom-in-95">
+              <CheckCircle2 className="w-8 h-8 text-[#e0c588] mx-auto" />
               <h4 className="text-sm font-black text-white uppercase">ĐÃ NỘP BÀI THÀNH CÔNG</h4>
-              <p className="font-mono text-base font-bold text-cyan-300 uppercase">
+              <p className="font-mono text-base font-bold text-[#f4e5be] uppercase">
                 &ldquo;{submittedAnswer}&rdquo;
               </p>
               <span className="text-[11px] text-slate-500 font-mono block">
@@ -375,7 +493,7 @@ export default function PlayerPage() {
             </div>
           ) : !canInteract ? (
             /* KHÓA: ĐANG CHỜ GIÁM KHẢO BẤM BẮT ĐẦU ĐẾM GIỜ */
-            <div className="bg-[#090d16] border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+            <div className="bg-[#091326] border border-slate-800 rounded-2xl p-6 text-center space-y-2">
               <Clock className="w-8 h-8 text-slate-600 mx-auto animate-spin" style={{ animationDuration: "6s" }} />
               <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
                 ĐANG CHỜ BAN GIÁM KHẢO BẮT ĐẦU ĐẾM GIỜ...
@@ -385,8 +503,8 @@ export default function PlayerPage() {
               </p>
             </div>
           ) : isMultipleChoice && currentQuestion?.options ? (
-            /* VÒNG 1 (TRẮC NGHIỆM): 4 NÚT BẤM A, B, C, D 1-CHẠM */
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            /* VÒNG 1 (TRẮC NGHIỆM): BIG TOUCH CARDS CÔNG THÁI HỌC CHO MOBILE */
+            <div className="grid grid-cols-2 gap-3">
               {currentQuestion.options.map((opt, idx) => {
                 const label = ["A", "B", "C", "D"][idx] || String(idx + 1);
                 return (
@@ -394,12 +512,12 @@ export default function PlayerPage() {
                     key={idx}
                     type="button"
                     onClick={() => submitAnswer(opt)}
-                    className="p-3.5 rounded-xl bg-[#090d16] hover:bg-cyan-950/60 border border-slate-700 hover:border-cyan-400 text-left transition-all cursor-pointer flex items-center gap-3 group active:scale-98 shadow-md"
+                    className="p-4 rounded-2xl bg-[#091326] hover:bg-[#0d1c3a] border-2 border-slate-700 hover:border-[#e0c588] text-left transition-all cursor-pointer flex flex-col justify-between min-h-[90px] group active:scale-95 shadow-lg"
                   >
-                    <span className="w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-cyan-500 group-hover:text-black text-cyan-400 font-black text-sm flex items-center justify-center shrink-0 transition-colors">
+                    <span className="w-9 h-9 rounded-xl bg-[#060c1a] group-hover:bg-[#e0c588] group-hover:text-black text-[#e0c588] font-black text-base flex items-center justify-center shrink-0 transition-colors border border-slate-800">
                       {label}
                     </span>
-                    <span className="text-xs md:text-sm font-bold text-white group-hover:text-cyan-200 leading-snug">
+                    <span className="text-xs md:text-sm font-bold text-white group-hover:text-[#f4e5be] leading-snug mt-2">
                       {opt.replace(/^[A-D]\.\s*/, "")}
                     </span>
                   </button>
@@ -421,13 +539,13 @@ export default function PlayerPage() {
                 value={answerInput}
                 onChange={(e) => setAnswerInput(e.target.value)}
                 placeholder="Nhập câu trả lời của bạn..."
-                className="w-full bg-[#090d16] border border-slate-700 focus:border-cyan-400 rounded-xl px-4 py-3.5 text-base font-bold text-white placeholder:text-slate-600 focus:outline-none shadow-lg"
+                className="w-full bg-[#091326] border border-slate-700 focus:border-[#e0c588] rounded-xl px-4 py-3.5 text-base font-bold text-white placeholder:text-slate-600 focus:outline-none shadow-lg"
               />
 
               <Button
                 type="submit"
                 disabled={!answerInput.trim()}
-                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs h-12 uppercase tracking-wider rounded-xl cursor-pointer shadow-lg shadow-cyan-600/20 disabled:opacity-30 active:scale-98 transition-all"
+                className="w-full bg-[#c5a059] hover:bg-[#b48f48] text-black font-black text-xs h-12 uppercase tracking-wider rounded-xl cursor-pointer shadow-lg shadow-[#c5a059]/20 disabled:opacity-30 active:scale-98 transition-all"
               >
                 <Send className="w-3.5 h-3.5 mr-1.5" /> NỘP CÂU TRẢ LỜI
               </Button>
