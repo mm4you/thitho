@@ -22,8 +22,6 @@ import {
   Trophy,
   Users,
   BookOpen,
-  Award,
-  HelpCircle,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 
@@ -104,6 +102,7 @@ export default function DisplayPage() {
     };
   }, [isTimerRunning, timerStartTime, timeLimit]);
 
+  // ĐĂNG KÝ WEBSOCKET 1 LẦN DUY NHẤT KHI MOUNT (EMPTY DEPENDENCY ARRAY [])
   useEffect(() => {
     const unsubscribe = subscribeToGameChannel((event: RealtimeEventPayload) => {
       if (event.type === "SYNC_STATE") {
@@ -200,8 +199,11 @@ export default function DisplayPage() {
         setMatchState((prev) => ({ ...prev, star_of_hope_slot: event.slot_number }));
         if (event.slot_number) {
           sound.playCorrect();
-          const p = matchState.players.find((item) => item.slot_number === event.slot_number);
-          setStarOfHopeBanner({ slot: event.slot_number, name: p?.name || `Thí sinh ${event.slot_number}` });
+          setMatchState((currentState) => {
+            const p = currentState.players.find((item) => item.slot_number === event.slot_number);
+            setStarOfHopeBanner({ slot: event.slot_number, name: p?.name || `Thí sinh ${event.slot_number}` });
+            return currentState;
+          });
           confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 }, colors: ["#e0c588", "#f4e5be", "#ffffff"] });
           setTimeout(() => setStarOfHopeBanner(null), 4500);
         }
@@ -227,28 +229,30 @@ export default function DisplayPage() {
         }));
       } else if (event.type === "CHANGE_QUESTION") {
         setIsTimerRunning(false);
-        const qLimit = matchState.rounds[event.round_index]?.questions[event.question_index]?.time_limit || 15;
-        setTimeLimit(qLimit);
-        setTimeLeft(qLimit);
-        setMatchState((prev) => ({
-          ...prev,
-          current_round_index: event.round_index,
-          current_question_index: event.question_index,
-          display_slide_mode: "question",
-          is_locked: false,
-          is_revealed: false,
-          is_scored: false,
-          buzzer_winner_slot: null,
-          current_responses: {},
-        }));
+        setMatchState((prev) => {
+          const qLimit = prev.rounds[event.round_index]?.questions[event.question_index]?.time_limit || 15;
+          setTimeLimit(qLimit);
+          setTimeLeft(qLimit);
+          return {
+            ...prev,
+            current_round_index: event.round_index,
+            current_question_index: event.question_index,
+            display_slide_mode: "question",
+            is_locked: false,
+            is_revealed: false,
+            is_scored: false,
+            buzzer_winner_slot: null,
+            current_responses: {},
+          };
+        });
       }
     });
 
     return () => unsubscribe();
-  }, [matchState.players]);
+  }, []); // 100% CLEAN: Rỗng để không bao giờ bị re-subscribe loop!
 
-  const currentRound = matchState.rounds[matchState.current_round_index];
-  const currentQuestion = currentRound?.questions[matchState.current_question_index];
+  const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
+  const currentQuestion = currentRound?.questions[matchState.current_question_index] || currentRound?.questions[0];
   const isMultipleChoice = currentQuestion?.question_type === "multiple_choice" || (currentQuestion?.options && currentQuestion.options.length > 0);
   const isRound2VCNV = matchState.current_round_index === 1;
   const isRound4VeDich = matchState.current_round_index === 3;
@@ -256,12 +260,11 @@ export default function DisplayPage() {
 
   const progressPercent = timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 0;
 
-  // XÁC ĐỊNH CHẾ ĐỘ SLIDE ĐANG HIỂN THỊ
   const currentMode: DisplaySlideMode = matchState.is_standby
     ? "standby"
     : matchState.display_slide_mode || "question";
 
-  // THỂ LỆ 4 VÒNG THI (CHO SLIDE RULES)
+  // THỂ LỆ 4 VÒNG THI
   const roundRulesData = [
     {
       title: "VÒNG 1: KHỞI ĐỘNG",
@@ -301,28 +304,24 @@ export default function DisplayPage() {
     },
   ];
 
-  // XẾP HẠNG 4 THÍ SINH (CHO SLIDE LEADERBOARD)
   const sortedPlayers = [...matchState.players].sort((a, b) => b.score - a.score);
 
   return (
     <div className="h-screen w-screen bg-[#060c1a] text-slate-100 flex flex-col justify-between overflow-hidden relative font-sans select-none">
-      {/* THANH LASER TIMER PROGRESS BAR (CHỈ HIỆN KHI Ở SLIDE QUESTION) */}
+      {/* THANH LASER TIMER PROGRESS BAR */}
       {currentMode === "question" && (
         <div className="w-full h-2 bg-slate-900 absolute top-0 left-0 z-50 overflow-hidden">
           <div
             className={`h-full transition-all duration-300 ease-linear ${
-              timeLeft <= 3 && isTimerRunning ? "bg-rose-500 shadow-lg shadow-rose-500/80 animate-pulse" : "bg-gradient-to-r from-[#c5a059] via-[#e0c588] to-[#f4e5be] shadow-lg shadow-[#e0c588]/50"
+              timeLeft <= 3 && isTimerRunning ? "bg-rose-500 shadow-lg shadow-rose-500/80" : "bg-gradient-to-r from-[#c5a059] via-[#e0c588] to-[#f4e5be]"
             }`}
             style={{ width: `${progressPercent}%` }}
           />
         </div>
       )}
 
-      {/* Dynamic Ambient Background */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[75vw] h-[220px] bg-gradient-to-b from-[#e0c588]/10 via-[#0a152e]/5 to-transparent blur-3xl pointer-events-none" />
-
       {/* TOP HEADER */}
-      <header className="relative z-10 px-8 py-3.5 flex items-center justify-between border-b border-slate-800/80 bg-[#070e1e]/90 backdrop-blur-md">
+      <header className="relative z-10 px-8 py-3.5 flex items-center justify-between border-b border-slate-800 bg-[#070e1e] shrink-0">
         <div className="flex items-center gap-4">
           <BrandLogo size="sm" showWordmark={true} />
           <div className="h-5 w-px bg-slate-800" />
@@ -353,12 +352,12 @@ export default function DisplayPage() {
           </div>
         </div>
 
-        {/* TIMER DISPLAY (CHỈ HIỆN KHI Ở SLIDE QUESTION) */}
+        {/* TIMER DISPLAY */}
         <div className="flex items-center gap-5">
           {currentMode === "question" && (
             <div className="flex items-center gap-3 bg-[#091326] border border-[#e0c588]/30 px-5 py-1.5 rounded-2xl shadow-lg">
               <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">THỜI GIAN:</span>
-              <span className={`font-mono text-2xl md:text-3xl font-black tabular-nums transition-colors ${timeLeft <= 3 && isTimerRunning ? "text-rose-500 animate-pulse" : "text-[#e0c588]"}`}>
+              <span className={`font-mono text-2xl md:text-3xl font-black tabular-nums ${timeLeft <= 3 && isTimerRunning ? "text-rose-500" : "text-[#e0c588]"}`}>
                 {String(timeLeft).padStart(2, "0")}s
               </span>
             </div>
@@ -392,10 +391,10 @@ export default function DisplayPage() {
 
       {/* POPUP STAR OF HOPE BANNER */}
       {starOfHopeBanner && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/85">
           <div className="bg-[#091326] border-2 border-[#e0c588] rounded-3xl p-10 max-w-xl text-center space-y-4 shadow-2xl shadow-[#e0c588]/30">
             <div className="flex justify-center">
-              <div className="p-4 rounded-full bg-[#e0c588]/20 border border-[#e0c588] animate-bounce">
+              <div className="p-4 rounded-full bg-[#e0c588]/20 border border-[#e0c588]">
                 <Star className="w-14 h-14 text-[#e0c588] fill-[#e0c588]" />
               </div>
             </div>
@@ -415,7 +414,7 @@ export default function DisplayPage() {
       {/* BUZZER WINNER BANNER */}
       {matchState.buzzer_winner_slot && currentMode === "question" && (
         <div className="absolute top-18 left-1/2 -translate-x-1/2 z-40">
-          <div className="bg-gradient-to-r from-rose-600 to-rose-700 border border-white/60 rounded-2xl px-6 py-2.5 shadow-2xl shadow-rose-600/40 flex items-center gap-3 animate-pulse">
+          <div className="bg-gradient-to-r from-rose-600 to-rose-700 border border-white/60 rounded-2xl px-6 py-2.5 shadow-2xl shadow-rose-600/40 flex items-center gap-3">
             <Zap className="w-6 h-6 text-yellow-300 fill-yellow-300" />
             <div>
               <span className="text-[10px] font-bold text-white/80 uppercase block">QUYỀN TRẢ LỜI CƯỚP ĐIỂM:</span>
@@ -428,10 +427,10 @@ export default function DisplayPage() {
       )}
 
       {/* ============================================================ */}
-      {/* MAIN ARENA CENTER STAGE: RENDER THEO 5 SLIDE MODES */}
+      {/* MAIN ARENA CENTER STAGE (STATIC NON-FLICKERING) */}
       {/* ============================================================ */}
-      <main className="flex-1 flex flex-col justify-center px-8 md:px-12 py-4 max-w-6xl mx-auto w-full relative z-10">
-        {/* SLIDE MODE 1: STANDBY */}
+      <main className="flex-1 flex flex-col justify-center px-8 md:px-12 py-4 max-w-6xl mx-auto w-full relative z-10 overflow-hidden">
+        {/* SLIDE 1: STANDBY */}
         {currentMode === "standby" && (
           <div className="text-center space-y-6">
             <div className="flex justify-center">
@@ -451,9 +450,9 @@ export default function DisplayPage() {
           </div>
         )}
 
-        {/* SLIDE MODE 2: GIỚI THIỆU 4 THÍ SINH (INTRO_PLAYERS) */}
+        {/* SLIDE 2: GIỚI THIỆU 4 THÍ SINH */}
         {currentMode === "intro_players" && (
-          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+          <div className="space-y-6">
             <div className="text-center space-y-1">
               <span className="text-xs font-mono font-bold text-[#e0c588] uppercase tracking-widest">
                 DANH SÁCH 4 GƯƠNG MẶT THI ĐẤU
@@ -467,7 +466,7 @@ export default function DisplayPage() {
                 return (
                   <div
                     key={p.slot_number}
-                    className={`rounded-3xl border-2 p-6 flex flex-col justify-between space-y-5 transition-all shadow-2xl ${theme.bg} ${theme.border}`}
+                    className={`rounded-3xl border-2 p-6 flex flex-col justify-between space-y-5 shadow-2xl ${theme.bg} ${theme.border}`}
                   >
                     <div className="flex items-center justify-between">
                       <span className={`text-xs font-mono font-black uppercase px-3 py-1 rounded-xl border ${theme.badge}`}>
@@ -495,9 +494,9 @@ export default function DisplayPage() {
           </div>
         )}
 
-        {/* SLIDE MODE 3: LUẬT THI VÒNG ĐẤU (RULES) */}
+        {/* SLIDE 3: LUẬT THI VÒNG ĐẤU */}
         {currentMode === "rules" && (
-          <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in zoom-in-95 duration-300 w-full">
+          <div className="max-w-4xl mx-auto space-y-6 w-full">
             {(() => {
               const rule = roundRulesData[matchState.current_round_index] || roundRulesData[0];
               return (
@@ -526,9 +525,9 @@ export default function DisplayPage() {
           </div>
         )}
 
-        {/* SLIDE MODE 4: BẢNG VÀNG VINH DANH & TRAO GIẢI (LEADERBOARD) */}
+        {/* SLIDE 4: BẢNG VÀNG VINH DANH & TRAO GIẢI */}
         {currentMode === "leaderboard" && (
-          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+          <div className="space-y-6">
             <div className="text-center space-y-1">
               <span className="text-xs font-mono font-bold text-[#e0c588] uppercase tracking-widest flex items-center justify-center gap-1.5">
                 <Trophy className="w-4 h-4 text-[#e0c588]" /> BẢNG TỔNG SẮP CHUNG CUỘC
@@ -550,13 +549,13 @@ export default function DisplayPage() {
                 return (
                   <div
                     key={p.slot_number}
-                    className={`rounded-3xl border-2 p-5 text-center space-y-4 shadow-2xl transition-all ${rankColors[rankIdx]} ${
+                    className={`rounded-3xl border-2 p-5 text-center space-y-4 shadow-2xl ${rankColors[rankIdx]} ${
                       isChampion ? "scale-105 ring-2 ring-[#e0c588]/40 -translate-y-2" : ""
                     }`}
                   >
                     <div className="flex justify-center">
                       {isChampion ? (
-                        <div className="p-3 rounded-full bg-[#e0c588]/20 border border-[#e0c588] animate-bounce">
+                        <div className="p-3 rounded-full bg-[#e0c588]/20 border border-[#e0c588]">
                           <Crown className="w-8 h-8 text-[#e0c588]" />
                         </div>
                       ) : (
@@ -587,7 +586,7 @@ export default function DisplayPage() {
           </div>
         )}
 
-        {/* SLIDE MODE 5: MÀN HÌNH THI ĐẤU CÂU HỎI (QUESTION) */}
+        {/* SLIDE 5: MÀN HÌNH THI ĐẤU CÂU HỎI */}
         {currentMode === "question" && (
           <div className="space-y-4">
             {/* VÒNG 4 SPOTLIGHT BANNER */}
@@ -635,7 +634,7 @@ export default function DisplayPage() {
                         key={idx}
                         className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
                           isCorrectOpt
-                            ? "bg-emerald-950/90 border-emerald-400 text-white shadow-lg shadow-emerald-500/30 scale-102"
+                            ? "bg-emerald-950/90 border-emerald-400 text-white shadow-lg shadow-emerald-500/30"
                             : "bg-[#060c1a] border-slate-700/80 text-slate-200"
                         }`}
                       >
@@ -665,7 +664,7 @@ export default function DisplayPage() {
                         key={i}
                         className={`w-11 h-12 rounded-xl border font-black text-lg flex items-center justify-center transition-all ${
                           matchState.is_revealed
-                            ? "bg-[#e0c588] border-[#f4e5be] text-black scale-105"
+                            ? "bg-[#e0c588] border-[#f4e5be] text-black"
                             : "bg-[#060c1a] border-slate-700 text-slate-500"
                         }`}
                       >
@@ -688,9 +687,9 @@ export default function DisplayPage() {
         )}
       </main>
 
-      {/* BOTTOM 4 THÍ SINH PODIUM (CHỈ HIỆN Ở SLIDE QUESTION) */}
+      {/* BOTTOM 4 THÍ SINH PODIUM */}
       {currentMode === "question" && (
-        <footer className="relative z-10 px-8 py-3.5 bg-[#060c1a]/95 border-t border-slate-800/80 backdrop-blur-md">
+        <footer className="relative z-10 px-8 py-3.5 bg-[#060c1a] border-t border-slate-800/80 shrink-0">
           <div className="grid grid-cols-4 gap-3.5 max-w-6xl mx-auto">
             {matchState.players.map((player) => {
               const theme = slotThemes[player.slot_number - 1];
@@ -703,8 +702,8 @@ export default function DisplayPage() {
                 <div
                   key={player.slot_number}
                   className={`rounded-2xl border p-3.5 flex flex-col justify-between transition-all ${theme.bg} ${
-                    isBuzzerWinner ? "border-rose-500 shadow-xl shadow-rose-500/30 scale-102" :
-                    isMainPlayer ? "border-[#e0c588] shadow-xl shadow-[#e0c588]/30 scale-102" :
+                    isBuzzerWinner ? "border-rose-500 shadow-xl shadow-rose-500/30" :
+                    isMainPlayer ? "border-[#e0c588] shadow-xl shadow-[#e0c588]/30" :
                     theme.border
                   }`}
                 >
