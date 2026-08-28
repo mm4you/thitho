@@ -6,12 +6,25 @@
 \usepackage{tabularx}
 \usepackage{booktabs}
 \usepackage{enumitem}
+\usepackage{tikz}
 
 \definecolor{navy}{HTML}{060C1A}
 \definecolor{gold}{HTML}{C5A059}
 \definecolor{primary}{HTML}{0284C7}
 \definecolor{dark}{HTML}{0F172A}
-\definecolor{boxbg}{HTML}{F8FAFC}
+\definecolor{heartred}{HTML}{E11D48}
+\definecolor{heartpink}{HTML}{FB7185}
+
+\newcommand{\cuteheart}{%
+  \begin{tikzpicture}[baseline=-0.8ex, scale=0.42]
+    \shade[top color=heartpink, bottom color=heartred] 
+      (0, 0.35) .. controls (-0.1, 1.1) and (-1.1, 1.1) .. (-1.1, 0.35)
+      .. controls (-1.1, -0.2) and (-0.2, -0.7) .. (0, -1.2)
+      .. controls (0.2, -0.7) and (1.1, -0.2) .. (1.1, 0.35)
+      .. controls (1.1, 1.1) and (0.1, 1.1) .. (0, 0.35) -- cycle;
+    \fill[white, opacity=0.6] (-0.45, 0.55) circle (0.18);
+  \end{tikzpicture}%
+}
 
 \pagestyle{plain}
 
@@ -22,7 +35,7 @@
 % ============================================================
 \begin{center}
     \vspace*{0.5cm}
-    {\Huge\bfseries\color{primary} Huyền \textcolor{red}{\Large $\heartsuit$}}\\[0.3cm]
+    {\Huge\bfseries\color{primary} HUYỀN \cuteheart}\\[0.3cm]
     {\LARGE\bfseries\color{navy} TÀI LIỆU HƯỚNG DẪN VẬN HÀNH OLYMQUIZ ARENA}\\[0.2cm]
     \rule{\textwidth}{1.5pt}
     \vspace{0.4cm}
