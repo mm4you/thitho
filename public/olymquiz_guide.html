@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hướng Dẫn Sử Dụng OlymQuiz Arena</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      line-height: 1.6;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+
+    .no-print {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 24px;
+    }
+
+    .btn-print {
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* HEADER */
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      color: #0f172a;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 15px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* SECTION */
+    .section {
+      margin-bottom: 36px;
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0369a1;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-left: 4px solid #0284c7;
+      padding-left: 12px;
+    }
+
+    /* 3 STEPS QUICK BOX */
+    .quick-steps {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .step-box {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      background: #0284c7;
+      color: #ffffff;
+      font-weight: 800;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 8px auto;
+      font-size: 14px;
+    }
+
+    .step-box h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0369a1;
+      margin-bottom: 6px;
+    }
+
+    .step-box p {
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.4;
+    }
+
+    /* IMAGE FRAME */
+    .image-frame {
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 16px 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .image-frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* EXPLANATION LIST */
+    .explain-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .explain-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 12px 16px;
+      border-radius: 8px;
+    }
+
+    .badge-num {
+      width: 24px;
+      height: 24px;
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .explain-text h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 2px;
+    }
+
+    .explain-text p {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.4;
+    }
+
+    .key-badge {
+      display: inline-block;
+      background: #e2e8f0;
+      color: #0f172a;
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+    }
+
+    /* TABLE */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 10px 14px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    td strong {
+      color: #0369a1;
+    }
+
+    .tip-card {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .tip-card p {
+      font-size: 13px;
+      color: #065f46;
+      font-weight: 600;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .container {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .no-print {
+        display: none;
+      }
+      .section {
+        page-break-inside: avoid;
+        margin-bottom: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="no-print">
+      <button class="btn-print" onclick="window.print()">In hoặc Lưu File PDF</button>
+    </div>
+
+    <!-- TIÊU ĐỀ CHÍNH -->
+    <div class="header">
+      <h1>CẨM NANG VẬN HÀNH OLYMQUIZ ARENA</h1>
+      <p>Hướng dẫn ngắn gọn, dễ hiểu nhất dành cho Ban Giám Khảo & Thí Sinh</p>
+    </div>
+
+    <!-- QUY TRÌNH 3 BƯỚC -->
+    <div class="section">
+      <h2 class="section-title">QUY TRÌNH 3 BƯỚC ĐIỀU HÀNH TRẬN ĐẤU</h2>
+      
+      <div class="quick-steps">
+        <div class="step-box">
+          <div class="step-num">1</div>
+          <h3>CẤP MÃ PIN</h3>
+          <p>Vào trang <strong>/admin/players</strong>, copy link và mã PIN (1111, 2222, 3333, 4444) gửi cho 4 thí sinh.</p>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">2</div>
+          <h3>ĐẾM GIỜ & CHẤM</h3>
+          <p>Bấm <span class="key-badge">Space</span> để đếm giờ $\rightarrow$ Bấm <strong>Mở Đáp Án</strong> $\rightarrow$ Bấm <span class="key-badge">G</span> để tự động chấm điểm.</p>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">3</div>
+          <h3>TRAO GIẢI</h3>
+          <p>Khi hết 4 vòng, bấm nút <strong>[4. Bảng Vàng Trao Giải]</strong> để máy chiếu vinh danh Quán quân.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- BÀN GIÁM KHẢO LIVE -->
+    <div class="section">
+      <h2 class="section-title">1. BÀN ĐIỀU HÀNH BAN GIÁM KHẢO (/admin/live)</h2>
+      
+      <div class="image-frame">
+        <img src="screenshots/13_admin_live.png" alt="Bàn Giám Khảo Live" />
+      </div>
+
+      <div class="explain-list">
+        <div class="explain-item">
+          <div class="badge-num">1</div>
+          <div class="explain-text">
+            <h4>Thanh Chọn Slide Máy Chiếu (Hàng trên cùng)</h4>
+            <p>Bấm để đổi màn hình máy chiếu sang: <strong>Câu hỏi</strong>, <strong>Giới thiệu 4 thí sinh</strong>, <strong>Thể lệ 4 vòng</strong>, <strong>Bảng vàng trao giải</strong>.</p>
+          </div>
+        </div>
+
+        <div class="explain-item">
+          <div class="badge-num">2</div>
+          <div class="explain-text">
+            <h4>Bộ Đếm Giờ (Góc trái)</h4>
+            <p>Bấm phím <span class="key-badge">Space</span> để Bắt đầu/Tạm dừng. Bấm phím <span class="key-badge">R</span> để Reset lại từ đầu. Các nút <strong>15s, 20s, 30s</strong> để đổi nhanh thời gian.</p>
+          </div>
+        </div>
+
+        <div class="explain-item">
+          <div class="badge-num">3</div>
+          <div class="explain-text">
+            <h4>Bộ 3 Nút Điều Phối (Khung giữa)</h4>
+            <p>
+              • <strong>Khóa Nộp (Phím <span class="key-badge">L</span>)</strong>: Khóa không cho thí sinh bấm nữa.<br/>
+              • <strong>Mở Đáp Án</strong>: Chiếu đáp án đúng lên máy chiếu.<br/>
+              • <strong>Chấm Điểm (Phím <span class="key-badge">G</span>)</strong>: Tự động cộng điểm cho bạn nào trả lời đúng.
+            </p>
+          </div>
+        </div>
+
+        <div class="explain-item">
+          <div class="badge-num">4</div>
+          <div class="explain-text">
+            <h4>Vòng Về Đích & Ngôi Sao Hy Vọng (Khung giữa dưới)</h4>
+            <p>Chọn bạn đang thi chính và bấm nút <strong>[SAO]</strong> nếu bạn đó đặt Ngôi Sao Hy Vọng (+x2 điểm nếu đúng, -50% nếu sai).</p>
+          </div>
+        </div>
+
+        <div class="explain-item">
+          <div class="badge-num">5</div>
+          <div class="explain-text">
+            <h4>Giám Sát 4 Thí Sinh (Cột bên phải)</h4>
+            <p>Xem câu trả lời và số giây của từng bạn. Có các nút <strong>+20, +30, -10</strong> để cộng/trừ điểm thủ công.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BỤC THÍ SINH -->
+    <div class="section">
+      <h2 class="section-title">2. BỤC THÍ SINH (/player/1 đến /player/4)</h2>
+      
+      <div class="image-frame">
+        <img src="screenshots/11_player_screen.png" alt="Bục Thí Sinh" />
+      </div>
+
+      <div class="explain-list">
+        <div class="explain-item">
+          <div class="badge-num">A</div>
+          <div class="explain-text">
+            <h4>Câu Hỏi Trắc Nghiệm (Vòng 1 & Vòng 3)</h4>
+            <p>Thí sinh chỉ cần <strong>chạm vào 1 trong 4 ô A, B, C, D</strong>. Nút sẽ sáng đèn xanh báo nộp bài thành công ngay lập tức.</p>
+          </div>
+        </div>
+
+        <div class="explain-item">
+          <div class="badge-num">B</div>
+          <div class="explain-text">
+            <h4>Câu Hỏi Tự Luận & Ô Chữ (Vòng 2)</h4>
+            <p>Gõ câu trả lời vào ô và bấm nút <strong>[Nộp Bài]</strong> (hệ thống tự nhận diện có dấu và không dấu).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CẤP MÃ PIN -->
+    <div class="section">
+      <h2 class="section-title">3. CẤP MÃ PIN CHO THÍ SINH (/admin/players)</h2>
+      
+      <div class="image-frame">
+        <img src="screenshots/12_admin_players.png" alt="Quản Lý Thí Sinh" />
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Nút Bấm</th>
+            <th>Cách Sử Dụng</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>SAO CHÉP LINK THI ĐẤU</strong></td>
+            <td>Bấm nút này để copy link và mã PIN (Ví dụ: 1111) gửi cho thí sinh qua Zalo/Facebook.</td>
+          </tr>
+          <tr>
+            <td><strong>Reset Điểm Về 0</strong></td>
+            <td>Đưa điểm của cả 4 thí sinh về số 0 trước khi bắt đầu trận mới.</td>
+          </tr>
+          <tr>
+            <td><strong>Tạo Mới 4 Mã PIN</strong></td>
+            <td>Đổi toàn bộ mã PIN mới cho 4 máy và hủy mã cũ.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MẸO HAY -->
+    <div class="tip-card">
+      <p>💡 <strong>Bí kíp nhớ nhanh cho Giám Khảo:</strong> Trong suốt trận đấu, bạn chỉ cần nhớ 3 phím: <span class="key-badge">Space</span> (Đếm giờ) $\rightarrow$ <span class="key-badge">L</span> (Khóa nộp) $\rightarrow$ <span class="key-badge">G</span> (Chấm điểm). Rất nhanh và chuyên nghiệp!</p>
+    </div>
+
+  </div>
+
+</body>
+</html>
