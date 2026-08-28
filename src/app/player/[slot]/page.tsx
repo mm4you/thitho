@@ -1,28 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import {
-  subscribeToGameChannel,
-  sendGameEvent,
-  loadSavedMatchState,
-} from "@/lib/supabase";
 import { sound } from "@/lib/sounds";
+import { subscribeToGameChannel, sendGameEvent, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
 import {
-  Send,
-  CheckCircle2,
   Zap,
-  Edit2,
   Star,
-  Crown,
-  User,
-  Clock,
+  CheckCircle2,
   Lock,
+  Edit2,
+  Check,
+  X,
+  Volume2,
+  VolumeX,
+  Crown,
   KeyRound,
   ShieldAlert,
-  ArrowRight,
+  Sparkles,
+  Lightbulb,
+  Radio,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -36,11 +35,10 @@ function normalizeInputCode(code: string): string {
   return (code || "").toUpperCase().replace(/[\s\-_–—]/g, "").trim();
 }
 
-export default function PlayerPage() {
-  const router = useRouter();
+export default function PlayerPodiumPage() {
   const params = useParams();
-  const rawSlot = params?.slot;
-  const slotNumber = (Math.max(1, Math.min(4, Number(rawSlot) || 1))) as 1 | 2 | 3 | 4;
+  const rawSlot = params?.slot as string;
+  const slotNumber = (rawSlot ? parseInt(rawSlot, 10) : 1) as 1 | 2 | 3 | 4;
 
   const [matchState, setMatchState] = useState<MatchState>(loadSavedMatchState);
   const [answerInput, setAnswerInput] = useState<string>("");
@@ -49,14 +47,16 @@ export default function PlayerPage() {
   const [submittedTimeMs, setSubmittedTimeMs] = useState<number>(0);
   const [timerStartTime, setTimerStartTime] = useState<number>(0);
 
-  // XÁC THỰC MÃ THÍ SINH
+  // MÃ PIN BẢO MẬT
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   const [enteredPin, setEnteredPin] = useState<string>("");
   const [pinError, setPinError] = useState<string>("");
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
+  // CHỈNH SỬA THÔNG TIN
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>("");
   const [editSchool, setEditSchool] = useState<string>("");
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
 
   const me = matchState.players.find((p) => p.slot_number === slotNumber);
   const currentRound = matchState.rounds[matchState.current_round_index] || matchState.rounds[0];
@@ -89,7 +89,6 @@ export default function PlayerPage() {
       } else if (!requiredPin) {
         setIsAuthenticated(true);
       } else {
-        // Mã cũ bị mất quyền khi Admin reset
         setIsAuthenticated(false);
       }
     }
@@ -107,7 +106,7 @@ export default function PlayerPage() {
       if (event.type === "SYNC_STATE") {
         setMatchState(event.state);
       } else if (event.type === "START_TIMER") {
-        setTimerStartTime(event.start_time);
+        setTimerStartTime(event.start_time || Date.now());
         setHasSubmitted(false);
         setAnswerInput("");
         setSubmittedAnswer("");
@@ -258,41 +257,36 @@ export default function PlayerPage() {
       <div className="min-h-[100dvh] bg-[#060c1a] text-slate-100 flex items-center justify-center p-4 font-sans select-none">
         <div className="w-full max-w-sm bg-[#091326] border border-[#e0c588]/30 rounded-3xl p-7 shadow-2xl space-y-6 text-center">
           <div className="flex justify-center">
-            <BrandLogo size="md" showWordmark={false} />
+            <div className="p-3.5 rounded-2xl bg-[#e0c588]/10 border border-[#e0c588]/40">
+              <KeyRound className="w-8 h-8 text-[#e0c588]" />
+            </div>
           </div>
 
           <div className="space-y-1.5">
-            <span className={`text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-lg border ${currentTheme.badge}`}>
-              MÁY THI ĐẤU SỐ {slotNumber}
+            <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-lg bg-[#060c1a] text-[#e0c588] border border-[#e0c588]/40">
+              BỤC ĐẤU MÁY {slotNumber}
             </span>
-            <h2 className="text-lg font-black text-white uppercase tracking-tight pt-1">
-              XÁC THỰC MÃ BỤC ĐẤU
-            </h2>
-            <p className="text-xs text-slate-400 font-medium leading-relaxed">
-              Nhập mã PIN bảo mật do Ban Giám Khảo cấp để mở khóa máy thi đấu này
+            <h2 className="text-xl font-bold text-white uppercase">MÃ BẢO MẬT BỤC THI</h2>
+            <p className="text-xs text-slate-400">
+              Vui lòng nhập mã PIN do Ban Tổ Chức cấp để mở khóa bục thi đấu này
             </p>
           </div>
 
-          <form onSubmit={handleVerifyPin} className="space-y-4 text-left">
-            <div>
-              <label className="text-[10px] font-mono font-bold text-slate-400 block mb-1.5 uppercase">
-                MÃ BẢO MẬT (PIN):
-              </label>
-              <input
-                type="text"
-                autoFocus
-                value={enteredPin}
-                onChange={(e) => {
-                  setEnteredPin(e.target.value.toUpperCase());
-                  setPinError("");
-                }}
-                placeholder="Nhập mã (Ví dụ: 1111)..."
-                className="w-full bg-[#060c1a] border border-slate-700 focus:border-[#e0c588] rounded-xl px-4 py-3 text-center text-base font-mono font-black text-[#f4e5be] uppercase placeholder:text-slate-600 focus:outline-none tracking-widest"
-              />
-            </div>
+          <form onSubmit={handleVerifyPin} className="space-y-4">
+            <input
+              type="text"
+              value={enteredPin}
+              onChange={(e) => {
+                setEnteredPin(e.target.value.toUpperCase());
+                setPinError("");
+              }}
+              placeholder="Nhập mã PIN..."
+              className="w-full bg-[#060c1a] border border-slate-700 focus:border-[#e0c588] rounded-xl px-4 py-3 font-mono font-black text-center text-lg text-[#f4e5be] tracking-widest uppercase focus:outline-none"
+              autoFocus
+            />
 
             {pinError && (
-              <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/50 text-rose-300 text-xs font-bold flex items-center gap-1.5">
+              <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/50 text-rose-300 text-xs font-semibold flex items-center gap-1.5 text-left">
                 <ShieldAlert className="w-4 h-4 shrink-0" />
                 <span>{pinError}</span>
               </div>
@@ -302,263 +296,251 @@ export default function PlayerPage() {
               type="submit"
               className="w-full bg-gradient-to-r from-[#c5a059] to-[#e0c588] hover:from-[#b48f48] hover:to-[#c5a059] text-black font-black text-xs h-11 uppercase tracking-wider rounded-xl cursor-pointer shadow-lg shadow-[#c5a059]/20"
             >
-              MỞ KHÓA BỤC THI ĐẤU <ArrowRight className="w-4 h-4 ml-1" />
+              MỞ KHÓA BỤC ĐẤU
             </Button>
-          </form>
 
-          <div className="pt-2">
-            <Link href="/" className="text-xs text-slate-500 hover:text-slate-300 font-mono">
-              ← Quay lại Trang Chủ
+            <Link href="/" className="block text-xs text-slate-500 hover:text-slate-300 font-mono pt-2">
+              Quay lại Trang Chủ
             </Link>
-          </div>
+          </form>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#060c1a] text-slate-100 flex flex-col justify-between p-4 md:p-6 font-sans select-none max-w-xl mx-auto w-full">
-      {/* HEADER BỤC ĐẤU */}
-      <header className="bg-[#091326] border border-slate-800/80 rounded-2xl p-4 shadow-xl flex items-center justify-between">
+    <div className="min-h-[100dvh] bg-[#060c1a] text-slate-100 flex flex-col justify-between p-4 md:p-6 font-sans select-none relative overflow-x-hidden">
+      {/* HEADER BỤC ĐẤU THÍ SINH */}
+      <header className="flex items-center justify-between border-b border-slate-800 pb-3 z-10">
         <div className="flex items-center gap-3">
-          <span className={`text-xs font-mono font-black px-3 py-1 rounded-xl border ${currentTheme.badge}`}>
-            MÁY {slotNumber}
-          </span>
-
+          <BrandLogo size="sm" showWordmark={false} />
           <div>
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-sm md:text-base font-bold text-white truncate max-w-[150px]">
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded-md border ${currentTheme.badge}`}>
+                MÁY {slotNumber}
+              </span>
+              <h1 className="text-sm font-bold text-white truncate max-w-[140px] md:max-w-[200px]">
                 {me?.name || `Thí sinh ${slotNumber}`}
-              </h2>
+              </h1>
               <button
-                onClick={() => setIsEditingProfile(true)}
-                className="text-slate-500 hover:text-[#e0c588] p-1 transition-colors"
+                onClick={() => setIsEditingProfile(!isEditingProfile)}
+                className="text-slate-500 hover:text-slate-300 p-1 cursor-pointer"
                 title="Đổi tên"
               >
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium truncate max-w-[150px]">
-              {me?.school_name || "Chưa cập nhật trường"}
-            </p>
+            <p className="text-[10px] text-slate-400 truncate max-w-[200px]">{me?.school_name || "Trường THPT..."}</p>
           </div>
         </div>
 
-        <div className="text-right">
-          <span className="text-[10px] font-bold text-slate-500 uppercase block">ĐIỂM SỐ:</span>
-          <span className="font-mono text-2xl md:text-3xl font-black text-[#e0c588] tabular-nums">
-            {me?.score || 0}
-          </span>
+        <div className="flex items-center gap-2">
+          {/* ĐIỂM SỐ */}
+          <div className="bg-[#091326] border border-[#e0c588]/40 px-3.5 py-1.5 rounded-xl flex items-center gap-2 shadow-md">
+            <span className="text-[9px] font-mono font-bold text-slate-400 uppercase">ĐIỂM:</span>
+            <span className="font-mono text-xl font-black text-[#e0c588] tabular-nums">
+              {me?.score || 0}
+            </span>
+          </div>
+
+          <button
+            onClick={() => {
+              const next = !isAudioMuted;
+              setIsAudioMuted(next);
+              sound.setMuted(next);
+            }}
+            className="p-2 rounded-xl bg-[#091326] border border-slate-800 text-slate-400 hover:text-white"
+          >
+            {isAudioMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-[#e0c588]" />}
+          </button>
         </div>
       </header>
 
-      {/* MODAL SỬA THÔNG TIN */}
+      {/* POPUP CHỈNH SỬA TÊN THÍ SINH */}
       {isEditingProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
-          <div className="bg-[#091326] border border-[#e0c588]/40 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
-            <h3 className="text-sm font-black uppercase text-white flex items-center gap-2">
-              <User className="w-4 h-4 text-[#e0c588]" /> CẬP NHẬT THÔNG TIN THÍ SINH
-            </h3>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Họ và tên:</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-[#060c1a] border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-[#e0c588]"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Trường đại diện:</label>
-                <input
-                  type="text"
-                  value={editSchool}
-                  onChange={(e) => setEditSchool(e.target.value)}
-                  className="w-full bg-[#060c1a] border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#e0c588]"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button onClick={handleSaveProfile} className="flex-1 bg-[#c5a059] hover:bg-[#b48f48] text-black font-bold text-xs h-10 rounded-xl cursor-pointer">
-                Lưu Thông Tin
-              </Button>
-              <Button variant="ghost" onClick={() => setIsEditingProfile(false)} className="text-slate-400 text-xs h-10">
-                Hủy
-              </Button>
-            </div>
+        <div className="my-3 p-4 rounded-2xl bg-[#091326] border border-slate-800 space-y-3 animate-in fade-in z-20">
+          <span className="text-xs font-bold text-[#e0c588] uppercase block">CẬP NHẬT THÔNG TIN THÍ SINH:</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Họ và tên..."
+              className="bg-[#060c1a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            />
+            <input
+              type="text"
+              value={editSchool}
+              onChange={(e) => setEditSchool(e.target.value)}
+              placeholder="Trường / Đơn vị..."
+              className="bg-[#060c1a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+            />
           </div>
-        </div>
-      )}
-
-      {/* TRẠNG THÁI TOÀN CẢNH KHI GIÀNH QUYỀN TRẢ LỜI */}
-      {isBuzzerWinner && (
-        <div className="my-3 bg-gradient-to-r from-emerald-900/80 via-emerald-800/90 to-emerald-900/80 border-2 border-emerald-400 rounded-2xl p-4 text-center shadow-2xl animate-pulse">
-          <span className="text-xs font-mono font-black uppercase text-emerald-200 block">🎙️ BẠN ĐÃ GIÀNH QUYỀN TRẢ LỜI!</span>
-          <span className="text-sm font-black text-white uppercase">HÃY PHÁT BIỂU CÂU TRẢ LỜI VỚI BAN GIÁM KHẢO</span>
-        </div>
-      )}
-
-      {/* KHUNG CÂU HỎI THỜI GIAN THỰC */}
-      <main className="my-4 space-y-4">
-        {/* VÒNG 4: NÚT ĐẶT SAO */}
-        {isRound4VeDich && isMyMainTurnInRound4 && (
-          <div className="bg-[#091326] border border-[#e0c588]/40 rounded-2xl p-3.5 flex items-center justify-between shadow-lg">
-            <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-[#e0c588]" />
-              <div>
-                <span className="text-xs font-black text-[#f4e5be] uppercase block">LƯỢT THI CỦA BẠN!</span>
-                <span className="text-[11px] text-slate-400 font-medium">Bạn có thể chọn Ngôi Sao Hy Vọng</span>
-              </div>
-            </div>
-
-            <Button
-              onClick={handleToggleStarOfHope}
-              className={`font-black text-xs h-9 px-3.5 rounded-xl cursor-pointer transition-all ${
-                isStarChosenByMe
-                  ? "bg-[#e0c588] text-black shadow-lg shadow-[#e0c588]/30"
-                  : "bg-[#060c1a] border border-[#e0c588]/50 text-[#e0c588] hover:bg-[#c5a059] hover:text-black"
-              }`}
-            >
-              <Star className={`w-3.5 h-3.5 mr-1 ${isStarChosenByMe ? "fill-black" : ""}`} />
-              {isStarChosenByMe ? "ĐÃ ĐẶT SAO" : "ĐẶT SAO"}
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setIsEditingProfile(false)} className="text-xs h-8">
+              Hủy
+            </Button>
+            <Button size="sm" onClick={handleSaveProfile} className="bg-[#c5a059] text-black font-bold text-xs h-8">
+              Lưu Thông Tin
             </Button>
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="bg-[#091326] border border-slate-800/80 rounded-2xl p-5 space-y-3 shadow-lg">
-          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2.5">
-            <span className="text-xs font-bold text-[#e0c588] uppercase tracking-wider">
-              {currentRound.title} • CÂU {matchState.current_question_index + 1}
+      {/* TOÀN CẢNH BÁO BẤM CHUÔNG THÀNH CÔNG */}
+      {isBuzzerWinner && (
+        <div className="my-3 p-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 border border-white text-white text-center shadow-xl animate-pulse">
+          <div className="flex items-center justify-center gap-2">
+            <Radio className="w-4 h-4 text-emerald-200" />
+            <span className="text-xs font-mono font-black uppercase text-emerald-200 block">BẠN ĐÃ GIÀNH QUYỀN TRẢ LỜI!</span>
+          </div>
+          <span className="text-sm font-black uppercase">HÃY TRẢ LỜI TRỰC TIẾP VỚI BAN GIÁM KHẢO</span>
+        </div>
+      )}
+
+      {/* MAIN ARENA CHO THÍ SINH */}
+      <main className="my-auto py-4 space-y-4 z-10 max-w-2xl mx-auto w-full">
+        {/* NỘI DUNG CÂU HỎI */}
+        <div className="bg-[#091326] border border-[#e0c588]/30 rounded-3xl p-5 md:p-6 shadow-xl space-y-3 relative">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+            <span className="text-[10px] font-mono font-bold text-[#e0c588] uppercase">
+              {currentRound?.title} • CÂU #{matchState.current_question_index + 1}
             </span>
-            <span className="text-[11px] font-mono font-bold text-slate-400">
-              +{currentQuestion?.points_correct || 10}đ
+            <span className="text-[10px] font-mono font-bold text-slate-400">
+              +{currentQuestion?.points_correct || 10} ĐIỂM
             </span>
           </div>
 
-          <h3 className="text-base md:text-lg font-bold text-white leading-relaxed">
-            {currentQuestion?.question_text || "Đang chờ Ban Giám Khảo mở câu hỏi..."}
-          </h3>
+          <h2 className="text-base md:text-lg font-bold text-white leading-relaxed">
+            {matchState.is_standby ? "ĐANG CHỜ BẮT ĐẦU TRẬN ĐẤU..." : currentQuestion?.question_text || "Đang tải câu hỏi..."}
+          </h2>
 
           {isRound2VCNV && currentQuestion?.correct_answer && (
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#060c1a] border border-[#e0c588]/30 text-[#f4e5be] text-xs font-bold">
-              💡 Gợi ý: Gồm <span className="text-white font-black">{countLettersOnly(currentQuestion.correct_answer)}</span> chữ cái
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#060c1a] border border-[#e0c588]/30 text-[#f4e5be] text-[11px] font-bold">
+              <Lightbulb className="w-3.5 h-3.5 text-[#e0c588]" /> Gợi ý: Gồm <span className="text-white font-black">{countLettersOnly(currentQuestion.correct_answer)}</span> chữ cái
             </div>
           )}
         </div>
 
-        {/* VÒNG 4: NÚT BẤM CHUÔNG CƯỚP ĐIỂM (CHO 3 THÍ SINH CÒN LẠI) */}
-        {isRound4VeDich && !isMyMainTurnInRound4 && (
-          <div className="pt-1">
-            <Button
-              onClick={handlePressBuzzer}
-              disabled={!canInteract || !!matchState.buzzer_winner_slot}
-              className={`w-full h-14 rounded-2xl font-black text-sm uppercase tracking-wider cursor-pointer shadow-xl transition-all ${
-                isBuzzerWinner
-                  ? "bg-emerald-600 text-white shadow-emerald-500/30 scale-102"
-                  : matchState.buzzer_winner_slot
-                  ? "bg-slate-900 text-slate-600 border border-slate-800 opacity-60"
-                  : !canInteract
-                  ? "bg-slate-900 text-slate-600 border border-slate-800 opacity-40 cursor-not-allowed"
-                  : "bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-rose-600/30 animate-pulse active:scale-98"
-              }`}
-            >
-              <Zap className="w-5 h-5 mr-2 fill-current" />
-              {isBuzzerWinner
-                ? "BẠN ĐÃ GIÀNH QUYỀN TRẢ LỜI!"
-                : matchState.buzzer_winner_slot
-                ? "ĐÃ CÓ THÍ SINH BẤM CHUÔNG"
-                : !canInteract
-                ? "CHỜ BẮT ĐẦU ĐẾM GIỜ ĐỂ BẤM CHUÔNG"
-                : "BẤM CHUÔNG CƯỚP ĐIỂM NGAY"}
-            </Button>
+        {/* KHU VỰC THAO TÁC TRẢ LỜI CỦA THÍ SINH */}
+        {!canInteract ? (
+          /* TRẠNG THÁI KHÓA / CHƯA ĐẾM GIỜ */
+          <div className="p-6 rounded-3xl bg-[#091326]/60 border border-slate-800 text-center space-y-2">
+            <div className="flex justify-center">
+              <Lock className="w-8 h-8 text-slate-500" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-300 uppercase">BỤC THI ĐANG TẠM KHÓA</h3>
+            <p className="text-xs text-slate-500 font-medium">
+              Thao tác sẽ tự động mở khóa khi Ban Giám Khảo bấm bắt đầu đếm giờ
+            </p>
           </div>
-        )}
-
-        {/* KHU VỰC TRẢ LỜI CÂU HỎI */}
-        <div className="space-y-3 pt-1">
-          {hasSubmitted ? (
-            /* ĐÃ NỘP BÀI */
-            <div className="bg-[#091326] border border-[#e0c588]/60 rounded-2xl p-5 text-center space-y-1.5 shadow-xl animate-in zoom-in-95">
-              <CheckCircle2 className="w-8 h-8 text-[#e0c588] mx-auto" />
-              <h4 className="text-sm font-black text-white uppercase">ĐÃ NỘP BÀI THÀNH CÔNG</h4>
-              <p className="font-mono text-base font-bold text-[#f4e5be] uppercase">
-                &ldquo;{submittedAnswer}&rdquo;
-              </p>
-              <span className="text-[11px] text-slate-500 font-mono block">
-                Thời gian nộp: {(submittedTimeMs / 1000).toFixed(2)}s
-              </span>
+        ) : hasSubmitted ? (
+          /* TRẠNG THÁI ĐÃ NỘP BÀI */
+          <div className="p-6 rounded-3xl bg-[#081814] border border-emerald-500/60 text-center space-y-2 shadow-xl animate-in zoom-in-95">
+            <div className="flex justify-center">
+              <CheckCircle2 className="w-10 h-10 text-emerald-400" />
             </div>
-          ) : !canInteract ? (
-            /* KHÓA: ĐANG CHỜ GIÁM KHẢO BẤM BẮT ĐẦU ĐẾM GIỜ */
-            <div className="bg-[#091326] border border-slate-800 rounded-2xl p-6 text-center space-y-2">
-              <Clock className="w-8 h-8 text-slate-600 mx-auto animate-spin" style={{ animationDuration: "6s" }} />
-              <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
-                ĐANG CHỜ BAN GIÁM KHẢO BẮT ĐẦU ĐẾM GIỜ...
-              </h4>
-              <p className="text-xs text-slate-600">
-                Khi đồng hồ đếm ngược bắt đầu chạy, bạn mới có thể bấm chọn hoặc gửi câu trả lời.
-              </p>
-            </div>
-          ) : isMultipleChoice && currentQuestion?.options ? (
-            /* VÒNG 1 (TRẮC NGHIỆM): BIG TOUCH CARDS CÔNG THÁI HỌC CHO MOBILE */
+            <h3 className="text-base font-black text-white uppercase">ĐÃ NỘP CÂU TRẢ LỜI THÀNH CÔNG!</h3>
+            <p className="text-sm font-mono font-bold text-emerald-300">
+              {submittedAnswer} ({(submittedTimeMs / 1000).toFixed(2)}s)
+            </p>
+            <span className="text-[11px] text-slate-400 block pt-1">Đang chờ Ban Giám Khảo công bố đáp án...</span>
+          </div>
+        ) : isMultipleChoice && currentQuestion?.options && currentQuestion.options.length > 0 ? (
+          /* 4 NÚT TRẮC NGHIỆM TOUCH BIG CARDS CÔNG THÁI HỌC */
+          <div className="space-y-2.5">
+            <span className="text-[11px] font-mono font-bold text-slate-400 uppercase block text-center">
+              CHẠM VÀO 1 PHƯƠNG ÁN ĐỂ NỘP BÀI NGAY:
+            </span>
             <div className="grid grid-cols-2 gap-3">
               {currentQuestion.options.map((opt, idx) => {
                 const label = ["A", "B", "C", "D"][idx] || String(idx + 1);
+
                 return (
                   <button
                     key={idx}
-                    type="button"
                     onClick={() => submitAnswer(opt)}
-                    className="p-4 rounded-2xl bg-[#091326] hover:bg-[#0d1c3a] border-2 border-slate-700 hover:border-[#e0c588] text-left transition-all cursor-pointer flex flex-col justify-between min-h-[90px] group active:scale-95 shadow-lg"
+                    className="min-h-[72px] md:min-h-[85px] p-3 rounded-2xl bg-[#091326] border-2 border-slate-700 active:border-[#e0c588] active:bg-[#e0c588]/10 text-left flex items-center gap-3 transition-all cursor-pointer shadow-lg active:scale-97 group"
                   >
-                    <span className="w-9 h-9 rounded-xl bg-[#060c1a] group-hover:bg-[#e0c588] group-hover:text-black text-[#e0c588] font-black text-base flex items-center justify-center shrink-0 transition-colors border border-slate-800">
+                    <span className="w-10 h-10 rounded-xl bg-[#060c1a] border border-[#e0c588]/40 text-[#e0c588] font-mono font-black text-lg flex items-center justify-center shrink-0 group-active:bg-[#e0c588] group-active:text-black">
                       {label}
                     </span>
-                    <span className="text-xs md:text-sm font-bold text-white group-hover:text-[#f4e5be] leading-snug mt-2">
+                    <span className="text-xs md:text-sm font-bold text-slate-100 leading-snug line-clamp-2">
                       {opt.replace(/^[A-D]\.\s*/, "")}
                     </span>
                   </button>
                 );
               })}
             </div>
-          ) : (
-            /* VÒNG TỰ LUẬN (NHẬP CHỮ) */
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitAnswer(answerInput);
-              }}
-              className="space-y-2.5"
-            >
+          </div>
+        ) : (
+          /* Ô NHẬP TỰ LUẬN */
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitAnswer(answerInput);
+            }}
+            className="space-y-3"
+          >
+            <span className="text-[11px] font-mono font-bold text-slate-400 uppercase block">
+              NHẬP CÂU TRẢ LỜI CỦA BẠN:
+            </span>
+            <div className="flex gap-2">
               <input
                 type="text"
-                autoFocus
                 value={answerInput}
                 onChange={(e) => setAnswerInput(e.target.value)}
-                placeholder="Nhập câu trả lời của bạn..."
-                className="w-full bg-[#091326] border border-slate-700 focus:border-[#e0c588] rounded-xl px-4 py-3.5 text-base font-bold text-white placeholder:text-slate-600 focus:outline-none shadow-lg"
+                placeholder="Gõ đáp án vào đây..."
+                className="flex-1 bg-[#091326] border-2 border-slate-700 focus:border-[#e0c588] rounded-2xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                autoFocus
               />
-
               <Button
                 type="submit"
                 disabled={!answerInput.trim()}
-                className="w-full bg-[#c5a059] hover:bg-[#b48f48] text-black font-black text-xs h-12 uppercase tracking-wider rounded-xl cursor-pointer shadow-lg shadow-[#c5a059]/20 disabled:opacity-30 active:scale-98 transition-all"
+                className="bg-gradient-to-r from-[#c5a059] to-[#e0c588] hover:from-[#b48f48] hover:to-[#c5a059] text-black font-black text-xs px-6 h-auto rounded-2xl cursor-pointer shrink-0 shadow-lg shadow-[#c5a059]/20"
               >
-                <Send className="w-3.5 h-3.5 mr-1.5" /> NỘP CÂU TRẢ LỜI
+                NỘP BÀI
               </Button>
-            </form>
+            </div>
+          </form>
+        )}
+
+        {/* NÚT BẤM CHUÔNG CƯỚP ĐIỂM & SAO HY VỌNG */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+          {/* NÚT CHUÔNG CƯỚP ĐIỂM */}
+          <button
+            onClick={handlePressBuzzer}
+            disabled={!canInteract || !!matchState.buzzer_winner_slot}
+            className={`h-14 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xl ${
+              matchState.buzzer_winner_slot
+                ? "bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed"
+                : "bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-rose-600/30 active:scale-98"
+            }`}
+          >
+            <Zap className="w-5 h-5 fill-white" />
+            <span>{matchState.buzzer_winner_slot ? "ĐÃ CÓ NGƯỜI GIÀNH CHUÔNG" : "BẤM CHUÔNG GIÀNH QUYỀN"}</span>
+          </button>
+
+          {/* NÚT SAO HY VỌNG (VÒNG 4) */}
+          {isRound4VeDich && (
+            <button
+              onClick={handleToggleStarOfHope}
+              className={`h-14 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+                isStarChosenByMe
+                  ? "bg-[#e0c588] text-black border-[#f4e5be] shadow-lg shadow-[#e0c588]/30"
+                  : "bg-[#091326] text-[#f4e5be] border-[#e0c588]/40 hover:border-[#e0c588]"
+              }`}
+            >
+              <Star className={`w-5 h-5 ${isStarChosenByMe ? "fill-black" : ""}`} />
+              <span>{isStarChosenByMe ? "ĐÃ ĐẶT SAO HY VỌNG" : "ĐẶT NGÔI SAO HY VỌNG"}</span>
+            </button>
           )}
         </div>
       </main>
 
       {/* FOOTER */}
-      <footer className="text-center py-2">
-        <Link href="/" className="text-xs text-slate-500 hover:text-slate-300 font-mono">
-          ← Quay lại Trang Chủ
-        </Link>
+      <footer className="border-t border-slate-900 pt-3 text-center text-[11px] text-slate-500 font-mono z-10">
+        Bục Đấu Thí Sinh #{slotNumber} • Nobel Academic Edition
       </footer>
     </div>
   );

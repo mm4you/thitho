@@ -97,7 +97,7 @@ export default function AdminPlayersManagementPage() {
     showToast(`Đã tạo mã mới cho Máy ${slot}: ${newPin}`);
   };
 
-  // 1-CLICK RESET BỤC THÍ SINH CỤ THỂ (Xóa tên, đặt điểm = 0, tạo mã mới)
+  // 1-CLICK RESET BỤC THÍ SINH CỤ THỂ
   const handleResetSingleSlot = (slot: number) => {
     const newPin = generateAlphanumericCode(4);
     const updated = matchState.players.map((p) =>
@@ -109,10 +109,10 @@ export default function AdminPlayersManagementPage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "SYNC_STATE", state: newState });
-    showToast(`Đã Reset hoàn toàn Bục Máy ${slot} về mặc định!`);
+    showToast(`Đã Reset hoàn toàn Bục Máy ${slot} về mặc định`);
   };
 
-  // 1-CLICK TẠO MỚI TOÀN BỘ 4 MÃ PIN (HỦY MÃ CŨ)
+  // 1-CLICK TẠO MỚI TOÀN BỘ 4 MÃ PIN
   const handleGenerateNewPinsForAll = () => {
     const updated = matchState.players.map((p) => ({
       ...p,
@@ -125,7 +125,7 @@ export default function AdminPlayersManagementPage() {
 
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 3000);
-    showToast("Đã tạo mới toàn bộ 4 mã PIN thí sinh!");
+    showToast("Đã tạo mới toàn bộ 4 mã PIN thí sinh");
   };
 
   // 1-CLICK RESET ĐIỂM 4 THÍ SINH VỀ 0
@@ -135,10 +135,10 @@ export default function AdminPlayersManagementPage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "SYNC_STATE", state: newState });
-    showToast("Đã reset điểm số của 4 thí sinh về 0!");
+    showToast("Đã reset điểm số của 4 thí sinh về 0");
   };
 
-  // 1-CLICK RESET TOÀN DIỆN CẢ 4 BỤC ĐẤU (TRẬN THI ĐẤU MỚI)
+  // 1-CLICK RESET TOÀN DIỆN CẢ 4 BỤC ĐẤU
   const handleResetAllSlotsCompletely = () => {
     const updated = matchState.players.map((p) => ({
       ...p,
@@ -163,20 +163,20 @@ export default function AdminPlayersManagementPage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "SYNC_STATE", state: newState });
-    showToast("Đã Reset toàn bộ 4 bục đấu sẵn sàng cho trận mới!");
+    showToast("Đã Reset toàn bộ 4 bục đấu sẵn sàng cho trận mới");
   };
 
   const handleCopyLink = (slot: number) => {
     const p = matchState.players.find((item) => item.slot_number === slot);
     const link = `${originUrl}/player/${slot}`;
-    const textToCopy = `BỤC ĐẤU MÁY ${slot} - ${p?.name || ""}\n🔗 Link: ${link}\n🔑 Mã PIN bảo mật: ${p?.pin_code || ""}`;
+    const textToCopy = `BỤC ĐẤU MÁY ${slot} - ${p?.name || ""}\nLink: ${link}\nMã PIN bảo mật: ${p?.pin_code || ""}`;
 
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(textToCopy).catch(() => {});
       setCopiedSlot(slot);
       setTimeout(() => setCopiedSlot(null), 2500);
     }
-    showToast(`Đã sao chép Link & Mã Máy ${slot} vào Clipboard!`);
+    showToast(`Đã sao chép Link & Mã Máy ${slot} vào Clipboard`);
   };
 
   return (
@@ -205,10 +205,11 @@ export default function AdminPlayersManagementPage() {
           </div>
         </header>
 
-        {/* THÔNG BÁO TOAST NẾU CÓ */}
+        {/* THÔNG BÁO TOAST */}
         {statusMessage && (
-          <div className="p-3 rounded-2xl bg-emerald-950/60 border border-emerald-500/60 text-emerald-200 text-xs font-bold text-center shadow-lg animate-in fade-in">
-            ✓ {statusMessage}
+          <div className="p-3 rounded-2xl bg-emerald-950/60 border border-emerald-500/60 text-emerald-200 text-xs font-bold text-center shadow-lg animate-in fade-in flex items-center justify-center gap-2">
+            <Check className="w-4 h-4 text-emerald-400" />
+            <span>{statusMessage}</span>
           </div>
         )}
 
@@ -275,7 +276,6 @@ export default function AdminPlayersManagementPage() {
                       {p.score} Điểm
                     </span>
 
-                    {/* NÚT RESET RIÊNG CHO BỤC NÀY */}
                     <Button
                       size="sm"
                       variant="ghost"

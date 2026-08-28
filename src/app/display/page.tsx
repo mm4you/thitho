@@ -6,7 +6,7 @@ import confetti from "canvas-confetti";
 import { sound } from "@/lib/sounds";
 import { subscribeToGameChannel, loadSavedMatchState } from "@/lib/supabase";
 import { MatchState, RealtimeEventPayload } from "@/types/game";
-import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home, Star, Crown, Sparkles } from "lucide-react";
+import { Zap, Check, X, Volume2, VolumeX, Maximize, Minimize, Home, Star, Crown, Sparkles, Lightbulb, Radio } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 
 function countLettersOnly(str: string): number {
@@ -233,7 +233,7 @@ export default function DisplayPage() {
 
   return (
     <div className="h-screen w-screen bg-[#060c1a] text-slate-100 flex flex-col justify-between overflow-hidden relative font-sans select-none">
-      {/* THANH LASER TIMER PROGRESS BAR RÚT DẦN TRÊN ĐỈNH MÀN HÌNH */}
+      {/* THANH LASER TIMER PROGRESS BAR */}
       <div className="w-full h-2 bg-slate-900 absolute top-0 left-0 z-50 overflow-hidden">
         <div
           className={`h-full transition-all duration-300 ease-linear ${
@@ -370,7 +370,7 @@ export default function DisplayPage() {
               </div>
             )}
 
-            {/* KHUNG CÂU HỎI SANG TRỌNG */}
+            {/* KHUNG CÂU HỎI */}
             <div className="bg-[#091326] border border-[#e0c588]/30 rounded-3xl p-6 md:p-8 shadow-2xl relative">
               <div className="absolute top-0 right-0 px-5 py-2 bg-[#e0c588]/10 border-b border-l border-[#e0c588]/30 rounded-bl-2xl text-xs font-mono font-bold text-[#e0c588]">
                 +{currentQuestion?.points_correct || 10} ĐIỂM
@@ -384,12 +384,12 @@ export default function DisplayPage() {
 
                 {isRound2VCNV && currentQuestion?.correct_answer && (
                   <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-xl bg-[#060c1a] border border-[#e0c588]/30 text-[#f4e5be] text-xs font-bold">
-                    💡 Gợi ý: Gồm <span className="text-white font-black">{countLettersOnly(currentQuestion.correct_answer)}</span> chữ cái
+                    <Lightbulb className="w-3.5 h-3.5 text-[#e0c588]" /> Gợi ý: Gồm <span className="text-white font-black">{countLettersOnly(currentQuestion.correct_answer)}</span> chữ cái
                   </div>
                 )}
               </div>
 
-              {/* HIỂN THỊ 4 PHƯƠNG ÁN TRẮC NGHIỆM A, B, C, D */}
+              {/* PHƯƠNG ÁN TRẮC NGHIỆM */}
               {isMultipleChoice && currentQuestion?.options && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-5 mt-4 border-t border-slate-800">
                   {currentQuestion.options.map((opt, idx) => {
@@ -435,7 +435,7 @@ export default function DisplayPage() {
                             : "bg-[#060c1a] border-slate-700 text-slate-500"
                         }`}
                       >
-                        {matchState.is_revealed ? "OLYMPIA"[i] || "★" : "?"}
+                        {matchState.is_revealed ? "OLYMPIA"[i] || "?" : "?"}
                       </div>
                     ))}
                   </div>

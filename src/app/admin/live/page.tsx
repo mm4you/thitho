@@ -32,7 +32,9 @@ import {
   Sparkles,
   Command,
   Check,
+  Crown,
   AlertCircle,
+  Radio,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -86,7 +88,7 @@ export default function AdminLivePage() {
           sound.playTimeUp();
           setIsTimerRunning(false);
           handleLockAnswers();
-          showToast("Đã hết giờ làm bài! Tự động khóa nộp bài.");
+          showToast("Đã hết giờ làm bài. Tự động khóa nộp bài.");
         }
       }, 250);
     }
@@ -189,7 +191,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "START_TIMER", time_limit: duration, start_time: now });
-    showToast(`▶️ Đã bắt đầu đếm ngược ${duration}s!`);
+    showToast(`Đã bắt đầu đếm ngược ${duration}s`);
   };
 
   // TẠM DỪNG
@@ -199,7 +201,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "SYNC_STATE", state: newState });
-    showToast("⏸️ Đã tạm dừng đồng hồ đếm giờ");
+    showToast("Đã tạm dừng đồng hồ");
   };
 
   // RESET TIMER
@@ -220,7 +222,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "SYNC_STATE", state: newState });
-    showToast("🔄 Đã reset lại đồng hồ và đáp án");
+    showToast("Đã reset lại đồng hồ và đáp án");
   };
 
   // BẬT / TẮT KHÓA NỘP BÀI
@@ -237,7 +239,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: nextLocked ? "LOCK_ANSWERS" : "SYNC_STATE", state: newState });
-    showToast(nextLocked ? "🔒 ĐÃ KHÓA NỘP BÀI THÍ SINH" : "🔓 ĐÃ MỞ KHÓA NỘP BÀI");
+    showToast(nextLocked ? "Đã khóa nộp bài" : "Đã mở khóa nộp bài");
   };
 
   const handleLockAnswers = () => {
@@ -262,7 +264,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: nextReveal ? "REVEAL_ANSWERS" : "SYNC_STATE", state: newState });
-    showToast(nextReveal ? "👁️ ĐÃ CÔNG BỐ ĐÁP ÁN TRÊN MÀN HÌNH" : "🙈 ĐÃ ẨN ĐÁP ÁN");
+    showToast(nextReveal ? "Đã công bố đáp án" : "Đã ẩn đáp án");
   };
 
   // BẬT / TẮT STANDBY
@@ -272,7 +274,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "TOGGLE_STANDBY", is_standby: next });
-    showToast(next ? "✨ ĐÃ BẬT MÀN HÌNH CHỜ STANDBY" : "🎯 ĐÃ TẮT STANDBY - VÀO SÂN ĐẤU");
+    showToast(next ? "Đã bật màn hình chờ Standby" : "Đã vào trận đấu");
   };
 
   // RESET CHUÔNG
@@ -285,7 +287,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "RESET_BUZZER" });
-    showToast("⚡ Đã mở lại chuông cướp điểm cho 4 thí sinh!");
+    showToast("Đã mở lại chuông cướp điểm");
   };
 
   // BẬT / TẮT SAO HY VỌNG
@@ -295,7 +297,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "TOGGLE_STAR_OF_HOPE", slot_number: nextSlot });
-    showToast(nextSlot ? `⭐ Đã đặt Ngôi Sao Hy Vọng cho Máy ${slot}` : `Đã hủy Sao Hy Vọng Máy ${slot}`);
+    showToast(nextSlot ? `Đã đặt Ngôi Sao Hy Vọng cho Máy ${slot}` : `Đã hủy Sao Hy Vọng Máy ${slot}`);
   };
 
   // LƯỢT THI CHÍNH VÒNG 4
@@ -304,7 +306,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "SET_ACTIVE_PLAYER", slot_number: slot });
-    showToast(slot ? `👑 Đã đặt lượt thi chính cho Máy ${slot}` : "Đã bỏ lượt thi chính");
+    showToast(slot ? `Đã đặt lượt thi chính cho Máy ${slot}` : "Đã bỏ lượt thi chính");
   };
 
   // ĐIỀU CHỈNH ĐIỂM SỐ
@@ -449,7 +451,7 @@ export default function AdminLivePage() {
     setMatchState(newState);
     syncMatchStateToCloud(newState);
     sendGameEvent({ type: "GRADE_ANSWERS", results });
-    showToast("✅ Đã tự động chấm điểm và cập nhật lên bảng điểm!");
+    showToast("Đã tự động chấm điểm xong");
   };
 
   return (
@@ -474,7 +476,7 @@ export default function AdminLivePage() {
             <span>Phím tắt: <kbd className="px-1 bg-black/40 rounded font-mono">Space</kbd> Đếm giờ • <kbd className="px-1 bg-black/40 rounded font-mono">L</kbd> Khóa • <kbd className="px-1 bg-black/40 rounded font-mono">G</kbd> Chấm</span>
           </div>
 
-          {/* NÚT STANDBY CÓ TRẠNG THÁI RÕ RÀNG */}
+          {/* NÚT STANDBY */}
           <Button
             onClick={handleToggleStandby}
             className={`text-xs font-bold h-9 px-3.5 rounded-xl cursor-pointer transition-all ${
@@ -503,7 +505,7 @@ export default function AdminLivePage() {
         </div>
       </header>
 
-      {/* TOAST THÔNG BÁO TRẠNG THÁI THAO TÁC */}
+      {/* TOAST THÔNG BÁO TRẠNG THÁI */}
       {toastMessage && (
         <div className="fixed top-16 right-6 z-50 bg-[#091326] border-2 border-[#e0c588] text-[#f4e5be] px-4 py-2.5 rounded-2xl shadow-2xl font-bold text-xs flex items-center gap-2 animate-in slide-in-from-top-3">
           <Check className="w-4 h-4 text-[#e0c588]" />
@@ -521,8 +523,9 @@ export default function AdminLivePage() {
               <span className="text-xs font-mono font-bold text-[#e0c588] uppercase flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" /> MASTER TIMER:
               </span>
-              <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full ${isTimerRunning ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 animate-pulse font-black" : "bg-slate-800 text-slate-400"}`}>
-                {isTimerRunning ? "● ĐANG ĐẾM" : "DỪNG"}
+              <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 ${isTimerRunning ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 animate-pulse font-black" : "bg-slate-800 text-slate-400"}`}>
+                <Radio className="w-2.5 h-2.5" />
+                {isTimerRunning ? "ĐANG ĐẾM" : "DỪNG"}
               </span>
             </div>
 
@@ -533,7 +536,7 @@ export default function AdminLivePage() {
               </span>
             </div>
 
-            {/* CÁC NÚT ĐIỀU KHIỂN TIMER CÓ TRẠNG THÁI RÕ RÀNG */}
+            {/* CÁC NÚT ĐIỀU KHIỂN TIMER */}
             <div className="grid grid-cols-2 gap-2">
               {isTimerRunning ? (
                 <Button
@@ -615,39 +618,42 @@ export default function AdminLivePage() {
           </div>
         </div>
 
-        {/* CỘT 2: CHI TIẾT CÂU HỎI & BỘ NÚT CÓ HIỂN THỊ TRẠNG THÁI SỐNG ĐỘNG (5/12) */}
+        {/* CỘT 2: CHI TIẾT CÂU HỎI & BỘ NÚT ĐIỀU PHỐI (5/12) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-[#091326] border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-xl">
-            {/* THANH LIVE HUD TRẠNG THÁI CÂU HỎI HIỆN TẠI */}
+            {/* THANH LIVE HUD TRẠNG THÁI CÂU HỎI HIỆN TẠI (NO EMOJIS) */}
             <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
               <span className="text-xs font-bold text-[#e0c588] uppercase">
                 CÂU {matchState.current_question_index + 1} (+{currentQuestion?.points_correct}đ)
               </span>
 
-              {/* 3 BADGE TRẠNG THÁI SỐNG */}
+              {/* 3 BADGE TRẠNG THÁI SVG */}
               <div className="flex items-center gap-1.5">
-                <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded border ${
+                <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded border flex items-center gap-1 ${
                   matchState.is_locked
                     ? "bg-rose-950/80 text-rose-300 border-rose-500/50"
                     : "bg-emerald-950/80 text-emerald-300 border-emerald-500/50"
                 }`}>
-                  {matchState.is_locked ? "🔒 ĐÃ KHÓA NỘP" : "🔓 ĐANG MỞ NỘP"}
+                  {matchState.is_locked ? <Lock className="w-2.5 h-2.5" /> : <Unlock className="w-2.5 h-2.5" />}
+                  {matchState.is_locked ? "ĐÃ KHÓA" : "ĐANG MỞ"}
                 </span>
 
-                <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded border ${
+                <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded border flex items-center gap-1 ${
                   matchState.is_revealed
                     ? "bg-indigo-950/80 text-indigo-300 border-indigo-500/50"
                     : "bg-slate-800 text-slate-500 border-slate-700"
                 }`}>
-                  {matchState.is_revealed ? "👁️ ĐÃ CÔNG BỐ" : "🙈 ĐANG ẨN"}
+                  {matchState.is_revealed ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5" />}
+                  {matchState.is_revealed ? "ĐÃ CÔNG BỐ" : "ĐANG ẨN"}
                 </span>
 
-                <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded border ${
+                <span className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded border flex items-center gap-1 ${
                   matchState.is_scored
                     ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/50"
                     : "bg-slate-800 text-slate-500 border-slate-700"
                 }`}>
-                  {matchState.is_scored ? "✅ ĐÃ CHẤM" : "⏳ CHỜ CHẤM"}
+                  {matchState.is_scored ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                  {matchState.is_scored ? "ĐÃ CHẤM" : "CHỜ CHẤM"}
                 </span>
               </div>
             </div>
@@ -676,9 +682,8 @@ export default function AdminLivePage() {
               </div>
             </div>
 
-            {/* BỘ 3 NÚT ĐIỀU PHỐI VỚI HIỆU ỨNG TRẠNG THÁI SỐNG ĐỘNG */}
+            {/* BỘ 3 NÚT ĐIỀU PHỐI SVG */}
             <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-slate-800/60">
-              {/* NÚT 1: KHÓA NỘP BÀI */}
               <Button
                 onClick={handleToggleLock}
                 className={`font-black text-xs h-11 rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
@@ -691,7 +696,6 @@ export default function AdminLivePage() {
                 <span>{matchState.is_locked ? "ĐÃ KHÓA (Mở)" : "Khóa Nộp (L)"}</span>
               </Button>
 
-              {/* NÚT 2: MỞ ĐÁP ÁN */}
               <Button
                 onClick={handleToggleReveal}
                 className={`font-black text-xs h-11 rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
@@ -704,7 +708,6 @@ export default function AdminLivePage() {
                 <span>{matchState.is_revealed ? "ĐÃ MỞ ĐÁP ÁN" : "Mở Đáp Án"}</span>
               </Button>
 
-              {/* NÚT 3: TỰ ĐỘNG CHẤM ĐIỂM */}
               <Button
                 onClick={executeAutoGrade}
                 className={`font-black text-xs h-11 rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
@@ -735,11 +738,12 @@ export default function AdminLivePage() {
                     <div key={p.slot_number} className="space-y-1">
                       <button
                         onClick={() => handleSetActivePlayer(isMain ? null : p.slot_number)}
-                        className={`w-full py-1.5 rounded-lg text-xs font-black border transition-all cursor-pointer ${
+                        className={`w-full py-1.5 rounded-lg text-xs font-black border transition-all cursor-pointer flex items-center justify-center gap-1 ${
                           isMain ? "bg-[#c5a059] text-black border-[#e0c588] shadow-md scale-102" : "bg-[#060c1a] text-slate-400 border-slate-800"
                         }`}
                       >
-                        MÁY {p.slot_number} {isMain && "👑"}
+                        {isMain && <Crown className="w-3 h-3" />}
+                        <span>MÁY {p.slot_number}</span>
                       </button>
                       <button
                         onClick={() => handleToggleStar(p.slot_number)}
